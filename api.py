@@ -30,7 +30,7 @@ def resolve_runtime_file(filename):
 
 
 RUNTIME_DIR = get_runtime_dir()
-DEFAULT_CSV_PATH = resolve_runtime_file("participants_API.csv")
+DEFAULT_CSV_PATH = resolve_runtime_file("participants.csv")
 ENV_FILE = resolve_runtime_file(".env")
 
 
@@ -64,6 +64,10 @@ INVITES_URL_TEMPLATE = os.getenv(
     "BRELLA_INVITES_URL",
     "https://api.brella.io/api/integration/organizations/{org_id}/events/{event_id}/invites",
 )
+LIST_INVITES_URL_TEMPLATE = os.getenv(
+    "BRELLA_LIST_INVITES_URL",
+    INVITES_URL_TEMPLATE,
+)
 FIND_INVITE_URL_TEMPLATE = os.getenv(
     "BRELLA_FIND_INVITE_URL",
     "https://api.brella.io/api/integration/organizations/{org_id}/events/{event_id}/invites/find/",
@@ -72,11 +76,17 @@ UPDATE_INVITE_URL_TEMPLATE = os.getenv(
     "BRELLA_UPDATE_INVITE_URL",
     "https://api.brella.io/api/integration/organizations/{org_id}/events/{event_id}/invites/{invite_id}",
 )
+DELETE_INVITE_URL_TEMPLATE = os.getenv(
+    "BRELLA_DELETE_INVITE_URL",
+    UPDATE_INVITE_URL_TEMPLATE,
+)
 USER_AGENT = os.getenv(
     "BRELLA_HTTP_USER_AGENT",
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
 )
+LIST_PAGE_SIZE = int(os.getenv("BRELLA_LIST_PAGE_SIZE", "100"))
+LIST_MAX_PAGES = int(os.getenv("BRELLA_LIST_MAX_PAGES", "100"))
 
 
 def parse_args():
@@ -99,6 +109,11 @@ def parse_args():
         type=int,
         default=0,
         help="Only process the first N valid attendees. Use 0 for no limit.",
+    )
+    parser.add_argument(
+        "--prune-missing",
+        action="store_true",
+        help="Delete Brella invites whose external_id is not present in the CSV.",
     )
     return parser.parse_args()
 
@@ -209,6 +224,19 @@ def build_update_url(invite_id):
         ) from exc
 
 
+def build_delete_url(invite_id):
+    try:
+        return DELETE_INVITE_URL_TEMPLATE.format(
+            org_id=ORG_ID,
+            event_id=EVENT_ID,
+            invite_id=invite_id,
+        )
+    except KeyError as exc:
+        raise RuntimeError(
+            "BRELLA_DELETE_INVITE_URL must use {org_id}, {event_id}, and {invite_id} placeholders if overridden."
+        ) from exc
+
+
 def payload_email(payload):
     return payload["event_invite"]["external_email"]
 
@@ -257,6 +285,10 @@ def update_invite(url, headers, payload):
     return api_request(url, headers, "PATCH", payload)
 
 
+def delete_invite(url, headers):
+    return api_request(url, headers, "DELETE")
+
+
 def find_invite_by_external_id(headers, external_id):
     base_url = build_url(FIND_INVITE_URL_TEMPLATE)
     query = parse.urlencode({"external_id": external_id})
@@ -278,11 +310,140 @@ def find_invite_by_external_id(headers, external_id):
     return data.get("id")
 
 
+def collect_csv_payloads(csv_path, limit=0):
+    csv_records = []
+
+    for line_number, row in iter_threecket_rows(csv_path):
+        if limit and len(csv_records) >= limit:
+            break
+
+        payload = build_payload(row)
+        csv_records.append((line_number, payload))
+
+    return csv_records
+
+
+def extract_invite_external_id(invite):
+    if not isinstance(invite, dict):
+        return ""
+
+    event_invite = invite.get("event_invite")
+    if isinstance(event_invite, dict):
+        external_id = event_invite.get("external_id")
+        if external_id:
+            return str(external_id).strip()
+
+    for key in ("external_id", "externalId"):
+        external_id = invite.get(key)
+        if external_id:
+            return str(external_id).strip()
+
+    attributes = invite.get("attributes")
+    if isinstance(attributes, dict):
+        for key in ("external_id", "externalId"):
+            external_id = attributes.get(key)
+            if external_id:
+                return str(external_id).strip()
+
+    return ""
+
+
+def extract_invite_email(invite):
+    if not isinstance(invite, dict):
+        return ""
+
+    event_invite = invite.get("event_invite")
+    if isinstance(event_invite, dict):
+        email = event_invite.get("external_email")
+        if email:
+            return str(email).strip().lower()
+
+    for key in ("external_email", "externalEmail", "email"):
+        email = invite.get(key)
+        if email:
+            return str(email).strip().lower()
+
+    attributes = invite.get("attributes")
+    if isinstance(attributes, dict):
+        for key in ("external_email", "externalEmail", "email"):
+            email = attributes.get(key)
+            if email:
+                return str(email).strip().lower()
+
+    return ""
+
+
+def list_invites(headers):
+    base_url = build_url(LIST_INVITES_URL_TEMPLATE)
+    page = 1
+    all_invites = []
+    seen_ids = set()
+
+    while page <= LIST_MAX_PAGES:
+        query = parse.urlencode({"page": page, "per_page": LIST_PAGE_SIZE})
+        status_code, response_text = api_request(f"{base_url}?{query}", headers, "GET")
+
+        if status_code != 200:
+            raise RuntimeError(
+                f"Brella list invites failed on page {page}: {status_code} - {response_text}"
+            )
+
+        response_json = json.loads(response_text)
+        data = response_json.get("data")
+        if not isinstance(data, list):
+            raise RuntimeError(
+                "Brella list invites response did not include a list in the data field."
+            )
+
+        if not data:
+            break
+
+        page_added = 0
+        for invite in data:
+            invite_id = invite.get("id") if isinstance(invite, dict) else None
+            if invite_id in seen_ids:
+                continue
+
+            if invite_id is not None:
+                seen_ids.add(invite_id)
+
+            all_invites.append(invite)
+            page_added += 1
+
+        next_page = None
+        meta = response_json.get("meta")
+        if isinstance(meta, dict):
+            pagination = meta.get("pagination")
+            if isinstance(pagination, dict):
+                next_page = pagination.get("next_page")
+            if next_page is None:
+                next_page = meta.get("next_page")
+
+        if next_page:
+            page = int(next_page)
+            continue
+
+        if len(data) < LIST_PAGE_SIZE or page_added == 0:
+            break
+
+        page += 1
+
+    if page > LIST_MAX_PAGES:
+        raise RuntimeError(
+            "Brella invite listing reached BRELLA_LIST_MAX_PAGES. Increase the limit or confirm pagination settings."
+        )
+
+    return all_invites
+
+
 def preflight_check(url, headers):
     return api_request(url, headers, "GET")
 
 
-def run_sync_v4(csv_path, dry_run=False, limit=0):
+def run_sync_v4(csv_path, dry_run=False, limit=0, prune_missing=False):
+    if prune_missing and limit:
+        raise RuntimeError("--prune-missing cannot be used together with --limit.")
+
     preflight_url = build_url(PREFLIGHT_URL_TEMPLATE)
     url = build_url(INVITES_URL_TEMPLATE)
     headers = build_request_headers() if not dry_run else None
@@ -313,18 +474,15 @@ def run_sync_v4(csv_path, dry_run=False, limit=0):
                 f"URL: {preflight_url} Response: {response_text}"
             )
 
-    processed = 0
+    csv_records = collect_csv_payloads(csv_path, limit=limit)
+    desired_external_ids = {payload_external_id(payload) for _, payload in csv_records}
+
+    processed = len(csv_records)
     succeeded = 0
     failed = 0
 
-    for line_number, row in iter_threecket_rows(csv_path):
-        if limit and processed >= limit:
-            break
-
+    for line_number, payload in csv_records:
         try:
-            payload = build_payload(row)
-            processed += 1
-
             if dry_run:
                 print(
                     f"[DRY RUN] line {line_number}: {payload_email(payload)} -> "
@@ -365,6 +523,56 @@ def run_sync_v4(csv_path, dry_run=False, limit=0):
             failed += 1
             print(f"[SKIP] line {line_number}: {exc}")
 
+    if prune_missing:
+        existing_invites = list_invites(headers)
+        prune_candidates = []
+
+        for invite in existing_invites:
+            invite_id = invite.get("id") if isinstance(invite, dict) else None
+            external_id = extract_invite_external_id(invite)
+
+            if not invite_id or not external_id:
+                continue
+            if external_id in desired_external_ids:
+                continue
+
+            prune_candidates.append(
+                {
+                    "id": invite_id,
+                    "external_id": external_id,
+                    "email": extract_invite_email(invite),
+                }
+            )
+
+        if dry_run:
+            for candidate in prune_candidates:
+                email_suffix = f" ({candidate['email']})" if candidate["email"] else ""
+                print(
+                    f"[DRY RUN] prune invite {candidate['id']}: "
+                    f"external_id {candidate['external_id']}{email_suffix}"
+                )
+        else:
+            for candidate in prune_candidates:
+                status_code, response_text = delete_invite(
+                    build_delete_url(candidate["id"]),
+                    headers,
+                )
+                email_suffix = f" ({candidate['email']})" if candidate["email"] else ""
+
+                if status_code in (200, 202, 204):
+                    succeeded += 1
+                    print(
+                        f"[OK {succeeded}] DELETED: {candidate['external_id']}{email_suffix}"
+                    )
+                else:
+                    failed += 1
+                    print(
+                        f"[ERROR] prune invite {candidate['id']} {candidate['external_id']}: "
+                        f"{status_code} - {response_text}"
+                    )
+
+                time.sleep(REQUEST_DELAY_SECONDS)
+
     print(
         f"Processed {processed} records. "
         f"Succeeded: {succeeded}. Failed or skipped: {failed}."
@@ -374,6 +582,11 @@ def run_sync_v4(csv_path, dry_run=False, limit=0):
 if __name__ == "__main__":
     try:
         args = parse_args()
-        run_sync_v4(Path(args.csv_path), dry_run=args.dry_run, limit=args.limit)
+        run_sync_v4(
+            Path(args.csv_path),
+            dry_run=args.dry_run,
+            limit=args.limit,
+            prune_missing=args.prune_missing,
+        )
     except Exception as exc:
         print(f"[FATAL] {exc}")
