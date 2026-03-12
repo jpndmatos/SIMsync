@@ -113,7 +113,8 @@ def parse_args():
     )
     parser.add_argument(
         "--prune-missing",
-        action="store_true",
+        action=argparse.BooleanOptionalAction,
+        default=True,
         help="Delete Brella invites whose external_id is not present in the CSV.",
     )
     parser.add_argument(
@@ -435,7 +436,7 @@ def preflight_check(url, headers):
 
 def run_sync_v4(csv_path, dry_run=False, limit=0, prune_missing=False):
     if prune_missing and limit:
-        raise RuntimeError("--prune-missing cannot be used together with --limit.")
+        raise RuntimeError("--limit nao pode ser usado com prune ativo. Usa --no-prune-missing com --limit.")
 
     preflight_url = build_url(PREFLIGHT_URL_TEMPLATE)
     url = build_url(INVITES_URL_TEMPLATE)

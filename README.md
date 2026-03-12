@@ -19,7 +19,9 @@ Este programa serve para importar participantes do 3cket para a Brella.
 
 ## Comandos úteis
 
-- `python api.py --dry-run` mostra os participantes que seriam criados ou atualizados;
-- `python api.py --dry-run --prune-missing` mostra também os participantes da Brella que seriam apagados por não existirem no CSV;
-- `python api.py --prune-missing` cria, atualiza e apaga participantes em falta na Brella.
-- `--prune-missing` compara os `external_id` do CSV com os convites existentes na Brella e só tenta apagar convites que tenham `external_id` e que já não estejam no CSV.
+- `python api.py --dry-run` mostra os participantes que seriam criados, atualizados e removidos;
+- `python api.py` cria, atualiza e apaga participantes em falta na Brella por defeito;
+- `python api.py --no-prune-missing` cria e atualiza sem apagar participantes em falta na Brella;
+- `python api.py --dry-run --no-prune-missing` mostra apenas os participantes que seriam criados ou atualizados.
+
+Por defeito, o programa compara os `external_id` do CSV com os convites existentes na Brella e tenta apagar convites que tenham `external_id` e que já não estejam no CSV.
