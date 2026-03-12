@@ -37,9 +37,9 @@ Se o teu ficheiro tiver outro nome, podes passá-lo por argumento.
 Cria ou ajusta o ficheiro `.env` com estes valores:
 
 ```env
-BRELLA_API_KEY=coloca_aqui_o_teu_token
-BRELLA_ORG_ID=1218
-BRELLA_EVENT_ID=10672
+BRELLA_API_KEY=*****
+BRELLA_ORG_ID=*****
+BRELLA_EVENT_ID=*****
 BRELLA_REQUEST_DELAY=0.2
 BRELLA_EXTERNAL_QR_COLUMN=0
 BRELLA_AUTH_HEADER_NAME=Brella-API-Access-Token
@@ -120,12 +120,14 @@ Depois do build, o ficheiro fica em:
 dist\3cket2brella.exe
 ```
 
-Importante: mantém estes ficheiros na mesma pasta do executável, ou ajusta os caminhos ao chamar a app:
+Importante: o executável procura estes ficheiros primeiro na mesma pasta do `.exe` e, se não os encontrar, tenta também a pasta acima. Isto cobre o caso normal em que o build fica em `dist\` e os ficheiros continuam na raiz do projeto.
+
+Os ficheiros relevantes são:
 
 - `.env`
 - `participants_API.csv`
 
-O executável foi preparado para procurar `.env` e `participants_API.csv` na pasta onde o próprio `.exe` está guardado.
+Se preferires, também podes manter tudo junto na mesma pasta do executável.
 
 ### Gerar o executável
 
