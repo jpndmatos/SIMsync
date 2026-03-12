@@ -1,4 +1,4 @@
-# Importador 3cket -> Brella
+# 3cket 2 Brella
 
 Este programa serve para importar participantes do 3cket para a Brella.
 
@@ -7,14 +7,11 @@ Este programa serve para importar participantes do 3cket para a Brella.
 - atualiza participantes existentes;
 - substitui o QR code da Brella pelo da 3cket.
 
-## Configuração já feita
-
-- preencher o `.env` com a info da Brella (API key, event ID, org ID);
-
 ## O que precisas de fazer
 
 1. ter Python 3.10+;
-2. um ficheiro CSV com os dados dos participantes com o nome `participants_API.csv`;
-3. colocar o CSV na pasta do projeto;
-4. correr `build_exe.bat` uma vez;
-5. correr o `3cket2brella.exe` na pasta do projeto /dist.
+2. preencher o `.env` com a info da Brella (API key, event ID, org ID);
+3. um ficheiro CSV com os dados dos participantes com o nome `participants_API.csv`;
+4. colocar o CSV na pasta do projeto;
+5. correr `build_exe.bat` uma vez;
+6. correr o `3cket2brella.exe` na pasta do projeto /dist.
