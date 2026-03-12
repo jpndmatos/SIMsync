@@ -87,6 +87,7 @@ USER_AGENT = os.getenv(
 )
 LIST_PAGE_SIZE = int(os.getenv("BRELLA_LIST_PAGE_SIZE", "100"))
 LIST_MAX_PAGES = int(os.getenv("BRELLA_LIST_MAX_PAGES", "100"))
+PAUSE_ON_EXIT_DEFAULT = os.getenv("BRELLA_PAUSE_ON_EXIT", "auto").strip().lower()
 
 
 def parse_args():
@@ -115,7 +116,34 @@ def parse_args():
         action="store_true",
         help="Delete Brella invites whose external_id is not present in the CSV.",
     )
+    parser.add_argument(
+        "--pause-on-exit",
+        action="store_true",
+        help="Wait for Enter before closing at the end of execution.",
+    )
     return parser.parse_args()
+
+
+def should_pause_on_exit(force_pause=False):
+    if force_pause:
+        return True
+
+    if PAUSE_ON_EXIT_DEFAULT in ("1", "true", "yes", "on"):
+        return True
+    if PAUSE_ON_EXIT_DEFAULT in ("0", "false", "no", "off"):
+        return False
+
+    return bool(getattr(sys, "frozen", False))
+
+
+def pause_on_exit(force_pause=False):
+    if not should_pause_on_exit(force_pause=force_pause):
+        return
+
+    try:
+        input("\nPress Enter to close...")
+    except EOFError:
+        pass
 
 
 def normalize_export_line(raw_line):
@@ -340,7 +368,7 @@ def extract_invite_external_id(invite):
 
     attributes = invite.get("attributes")
     if isinstance(attributes, dict):
-        for key in ("external_id", "externalId"):
+        for key in ("external_id", "externalId", "external-id"):
             external_id = attributes.get(key)
             if external_id:
                 return str(external_id).strip()
@@ -365,7 +393,7 @@ def extract_invite_email(invite):
 
     attributes = invite.get("attributes")
     if isinstance(attributes, dict):
-        for key in ("external_email", "externalEmail", "email"):
+        for key in ("external_email", "externalEmail", "external-email", "email"):
             email = attributes.get(key)
             if email:
                 return str(email).strip().lower()
@@ -375,65 +403,30 @@ def extract_invite_email(invite):
 
 def list_invites(headers):
     base_url = build_url(LIST_INVITES_URL_TEMPLATE)
-    page = 1
-    all_invites = []
-    seen_ids = set()
+    status_code, response_text = api_request(base_url, headers, "GET")
 
-    while page <= LIST_MAX_PAGES:
-        query = parse.urlencode({"page": page, "per_page": LIST_PAGE_SIZE})
-        status_code, response_text = api_request(f"{base_url}?{query}", headers, "GET")
-
-        if status_code != 200:
-            raise RuntimeError(
-                f"Brella list invites failed on page {page}: {status_code} - {response_text}"
-            )
-
-        response_json = json.loads(response_text)
-        data = response_json.get("data")
-        if not isinstance(data, list):
-            raise RuntimeError(
-                "Brella list invites response did not include a list in the data field."
-            )
-
-        if not data:
-            break
-
-        page_added = 0
-        for invite in data:
-            invite_id = invite.get("id") if isinstance(invite, dict) else None
-            if invite_id in seen_ids:
-                continue
-
-            if invite_id is not None:
-                seen_ids.add(invite_id)
-
-            all_invites.append(invite)
-            page_added += 1
-
-        next_page = None
-        meta = response_json.get("meta")
-        if isinstance(meta, dict):
-            pagination = meta.get("pagination")
-            if isinstance(pagination, dict):
-                next_page = pagination.get("next_page")
-            if next_page is None:
-                next_page = meta.get("next_page")
-
-        if next_page:
-            page = int(next_page)
-            continue
-
-        if len(data) < LIST_PAGE_SIZE or page_added == 0:
-            break
-
-        page += 1
-
-    if page > LIST_MAX_PAGES:
+    if status_code != 200:
         raise RuntimeError(
-            "Brella invite listing reached BRELLA_LIST_MAX_PAGES. Increase the limit or confirm pagination settings."
+            f"Brella list invites failed: {status_code} - {response_text}"
         )
 
-    return all_invites
+    response_json = json.loads(response_text)
+    data = response_json.get("data")
+    if not isinstance(data, list):
+        raise RuntimeError(
+            "Brella list invites response did not include a list in the data field."
+        )
+
+    meta = response_json.get("meta")
+    if isinstance(meta, dict):
+        total_pages = meta.get("total_pages")
+        if isinstance(total_pages, int) and total_pages > 1:
+            raise RuntimeError(
+                "Brella invite listing reports multiple pages, but the current API rejected page query parameters. "
+                "Set BRELLA_LIST_INVITES_URL to a listing endpoint that returns all invites for the event."
+            )
+
+    return data
 
 
 def preflight_check(url, headers):
@@ -446,9 +439,10 @@ def run_sync_v4(csv_path, dry_run=False, limit=0, prune_missing=False):
 
     preflight_url = build_url(PREFLIGHT_URL_TEMPLATE)
     url = build_url(INVITES_URL_TEMPLATE)
-    headers = build_request_headers() if not dry_run else None
+    requires_api_headers = prune_missing or not dry_run
+    headers = build_request_headers() if requires_api_headers else None
 
-    if not dry_run:
+    if not dry_run or prune_missing:
         status_code, response_text = preflight_check(preflight_url, headers)
         if status_code == 401:
             raise RuntimeError(
@@ -590,3 +584,5 @@ if __name__ == "__main__":
         )
     except Exception as exc:
         print(f"[FATAL] {exc}")
+    finally:
+        pause_on_exit(force_pause="args" in locals() and args.pause_on_exit)
