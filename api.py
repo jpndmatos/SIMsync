@@ -141,7 +141,7 @@ def pause_on_exit(force_pause=False):
         return
 
     try:
-        input("\nPress Enter to close...")
+        input("\nCarrega em Enter para fechar...")
     except EOFError:
         pass
 
@@ -479,7 +479,7 @@ def run_sync_v4(csv_path, dry_run=False, limit=0, prune_missing=False):
         try:
             if dry_run:
                 print(
-                    f"[DRY RUN] line {line_number}: {payload_email(payload)} -> "
+                    f"[SIMULACAO] linha {line_number}: {payload_email(payload)} -> "
                     f"external_id {payload_external_id(payload)} qr {payload_external_qr(payload)}"
                 )
                 continue
@@ -491,10 +491,10 @@ def run_sync_v4(csv_path, dry_run=False, limit=0, prune_missing=False):
                     headers,
                     payload,
                 )
-                operation = "UPDATED"
+                operation = "ATUALIZADO"
             else:
                 status_code, response_text = create_invite(url, headers, payload)
-                operation = "CREATED"
+                operation = "ADICIONADO"
 
             if status_code in (200, 201):
                 succeeded += 1
@@ -503,19 +503,19 @@ def run_sync_v4(csv_path, dry_run=False, limit=0, prune_missing=False):
                 failed += 1
                 if status_code == 403 and "browser_signature_banned" in response_text:
                     response_text = (
-                        "Cloudflare blocked the request before it reached Brella. "
-                        "Update BRELLA_HTTP_USER_AGENT in .env or ask Brella to allow your IP/client. "
-                        f"Raw response: {response_text}"
+                        "A Cloudflare bloqueou o pedido antes de chegar à Brella. "
+                        "Atualiza BRELLA_HTTP_USER_AGENT no .env ou pede à Brella para permitir o teu IP/cliente. "
+                        f"Resposta bruta: {response_text}"
                     )
                 print(
-                    f"[ERROR] line {line_number} {payload_email(payload)}: "
+                    f"[ERRO] linha {line_number} {payload_email(payload)}: "
                     f"{status_code} - {response_text}"
                 )
 
             time.sleep(REQUEST_DELAY_SECONDS)
         except Exception as exc:
             failed += 1
-            print(f"[SKIP] line {line_number}: {exc}")
+            print(f"[IGNORADO] linha {line_number}: {exc}")
 
     if prune_missing:
         existing_invites = list_invites(headers)
@@ -542,7 +542,7 @@ def run_sync_v4(csv_path, dry_run=False, limit=0, prune_missing=False):
             for candidate in prune_candidates:
                 email_suffix = f" ({candidate['email']})" if candidate["email"] else ""
                 print(
-                    f"[DRY RUN] prune invite {candidate['id']}: "
+                    f"[SIMULACAO] remover convite {candidate['id']}: "
                     f"external_id {candidate['external_id']}{email_suffix}"
                 )
         else:
@@ -556,20 +556,20 @@ def run_sync_v4(csv_path, dry_run=False, limit=0, prune_missing=False):
                 if status_code in (200, 202, 204):
                     succeeded += 1
                     print(
-                        f"[OK {succeeded}] DELETED: {candidate['external_id']}{email_suffix}"
+                        f"[OK {succeeded}] REMOVIDO: {candidate['external_id']}{email_suffix}"
                     )
                 else:
                     failed += 1
                     print(
-                        f"[ERROR] prune invite {candidate['id']} {candidate['external_id']}: "
+                        f"[ERRO] remover convite {candidate['id']} {candidate['external_id']}: "
                         f"{status_code} - {response_text}"
                     )
 
                 time.sleep(REQUEST_DELAY_SECONDS)
 
     print(
-        f"Processed {processed} records. "
-        f"Succeeded: {succeeded}. Failed or skipped: {failed}."
+        f"Processados {processed} registos. "
+        f"Com sucesso: {succeeded}. Falhados ou ignorados: {failed}."
     )
 
 
@@ -583,6 +583,6 @@ if __name__ == "__main__":
             prune_missing=args.prune_missing,
         )
     except Exception as exc:
-        print(f"[FATAL] {exc}")
+        print(f"[ERRO FATAL] {exc}")
     finally:
         pause_on_exit(force_pause="args" in locals() and args.pause_on_exit)
