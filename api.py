@@ -15,9 +15,23 @@ def get_runtime_dir():
     return Path(__file__).resolve().parent
 
 
+def resolve_runtime_file(filename):
+    runtime_dir = get_runtime_dir()
+    candidate_paths = [runtime_dir / filename]
+
+    if getattr(sys, "frozen", False):
+        candidate_paths.append(runtime_dir.parent / filename)
+
+    for candidate in candidate_paths:
+        if candidate.exists():
+            return candidate
+
+    return candidate_paths[0]
+
+
 RUNTIME_DIR = get_runtime_dir()
-DEFAULT_CSV_PATH = RUNTIME_DIR / "participants_API.csv"
-ENV_FILE = RUNTIME_DIR / ".env"
+DEFAULT_CSV_PATH = resolve_runtime_file("participants_API.csv")
+ENV_FILE = resolve_runtime_file(".env")
 
 
 def load_env_file(env_path):
