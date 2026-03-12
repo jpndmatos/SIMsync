@@ -32,6 +32,10 @@ def resolve_runtime_file(filename):
 RUNTIME_DIR = get_runtime_dir()
 DEFAULT_CSV_PATH = resolve_runtime_file("participants.csv")
 ENV_FILE = resolve_runtime_file(".env")
+DEFAULT_THREECKET_CSV_URL = (
+    "https://app.3cket.com/webservices/backoffice/event-manager/participants/"
+    "participants-info-csv.php?eventExternalId=d16f4292debc4eb6aaaafbf36f2af562"
+)
 
 
 def load_env_file(env_path):
@@ -85,6 +89,11 @@ USER_AGENT = os.getenv(
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
 )
+THREECKET_CSV_URL = os.getenv("THREECKET_CSV_URL", DEFAULT_THREECKET_CSV_URL).strip()
+THREECKET_COOKIE = os.getenv("THREECKET_COOKIE", "").strip()
+THREECKET_AUTH_HEADER_NAME = os.getenv("THREECKET_AUTH_HEADER_NAME", "").strip()
+THREECKET_AUTH_HEADER_VALUE = os.getenv("THREECKET_AUTH_HEADER_VALUE", "").strip()
+THREECKET_HTTP_USER_AGENT = os.getenv("THREECKET_HTTP_USER_AGENT", USER_AGENT).strip()
 LIST_PAGE_SIZE = int(os.getenv("BRELLA_LIST_PAGE_SIZE", "100"))
 LIST_MAX_PAGES = int(os.getenv("BRELLA_LIST_MAX_PAGES", "100"))
 PAUSE_ON_EXIT_DEFAULT = os.getenv("BRELLA_PAUSE_ON_EXIT", "auto").strip().lower()
@@ -122,8 +131,13 @@ def parse_args():
         action="store_true",
         help="Wait for Enter before closing at the end of execution.",
     )
+    parser.add_argument(
+        "--download-csv",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Download the participants CSV from 3cket before importing.",
+    )
     return parser.parse_args()
-
 
 def should_pause_on_exit(force_pause=False):
     if force_pause:
@@ -161,6 +175,52 @@ def clean_csv_value(value):
     return cleaned.strip('"').strip()
 
 
+def build_threecket_headers():
+    headers = {
+        "User-Agent": THREECKET_HTTP_USER_AGENT,
+        "Accept": "text/csv,application/octet-stream;q=0.9,*/*;q=0.8",
+    }
+
+    if THREECKET_COOKIE:
+        headers["Cookie"] = THREECKET_COOKIE
+
+    if THREECKET_AUTH_HEADER_NAME and THREECKET_AUTH_HEADER_VALUE:
+        headers[THREECKET_AUTH_HEADER_NAME] = THREECKET_AUTH_HEADER_VALUE
+
+    return headers
+
+
+def download_threecket_csv(csv_path):
+    if not THREECKET_CSV_URL:
+        return False
+
+    headers = build_threecket_headers()
+    http_request = request.Request(THREECKET_CSV_URL, headers=headers, method="GET")
+
+    try:
+        with request.urlopen(http_request, timeout=60) as response:
+            csv_bytes = response.read()
+    except error.HTTPError as exc:
+        response_text = exc.read().decode("utf-8", errors="replace")
+        if exc.code == 401:
+            raise RuntimeError(
+                "O download do CSV da 3cket devolveu 401. Define THREECKET_COOKIE no .env "
+                "ou configura THREECKET_AUTH_HEADER_NAME e THREECKET_AUTH_HEADER_VALUE com a autenticacao certa."
+            ) from exc
+        raise RuntimeError(
+            f"Falha ao descarregar o CSV da 3cket: {exc.code} - {response_text}"
+        ) from exc
+    except error.URLError as exc:
+        raise RuntimeError(f"Falha ao descarregar o CSV da 3cket: {exc.reason}") from exc
+
+    csv_text = csv_bytes.decode("utf-8-sig", errors="replace")
+    csv_path.parent.mkdir(parents=True, exist_ok=True)
+    csv_path.write_text(csv_text, encoding="utf-8", newline="")
+
+    print(f"[OK] CSV descarregado da 3cket para: {csv_path}")
+    return True
+
+
 def iter_threecket_rows(csv_path):
     with csv_path.open(mode="r", encoding="utf-8-sig", newline="") as handle:
         header_skipped = False
@@ -194,6 +254,24 @@ def pick_email(row):
     return ""
 
 
+def pick_threecket_id(row):
+    return clean_csv_value(row[0]) if len(row) > 0 else ""
+
+
+def pick_full_name(row):
+    return clean_csv_value(row[1]) if len(row) > 1 else ""
+
+
+def format_participant_label(row):
+    full_name = pick_full_name(row) or "Sem nome"
+    threecket_id = pick_threecket_id(row)
+
+    if threecket_id:
+        return f"{full_name} (ID 3cket: {threecket_id})"
+
+    return full_name
+
+
 def pick_external_qr(row, fallback_value):
     if 0 <= EXTERNAL_QR_COLUMN < len(row):
         qr_value = clean_csv_value(row[EXTERNAL_QR_COLUMN])
@@ -203,8 +281,8 @@ def pick_external_qr(row, fallback_value):
 
 
 def build_payload(row):
-    threecket_id = clean_csv_value(row[0]) if len(row) > 0 else ""
-    full_name = clean_csv_value(row[1]) if len(row) > 1 else ""
+    threecket_id = pick_threecket_id(row)
+    full_name = pick_full_name(row)
     email = pick_email(row)
     company = clean_csv_value(row[13]) if len(row) > 13 else ""
     external_qr_string = pick_external_qr(row, threecket_id)
@@ -278,6 +356,25 @@ def payload_external_qr(payload):
     return payload["event_invite"].get("external_qr_string", "")
 
 
+def payload_participant_label(payload):
+    event_invite = payload.get("event_invite", {})
+    first_name = str(event_invite.get("external_first_name", "")).strip()
+    last_name = str(event_invite.get("external_last_name", "")).strip()
+    email = str(event_invite.get("external_email", "")).strip().lower()
+    external_id = str(event_invite.get("external_id", "")).strip()
+
+    full_name = " ".join(part for part in (first_name, last_name) if part and part != ".")
+    if full_name and email:
+        return f"{full_name} <{email}>"
+    if full_name and external_id:
+        return f"{full_name} (ID 3cket: {external_id})"
+    if email:
+        return email
+    if external_id:
+        return f"ID 3cket: {external_id}"
+    return "Participante sem identificacao"
+
+
 def build_request_headers():
     if not API_KEY:
         raise RuntimeError("Set BRELLA_API_KEY in your environment or .env before running the importer.")
@@ -341,15 +438,48 @@ def find_invite_by_external_id(headers, external_id):
 
 def collect_csv_payloads(csv_path, limit=0):
     csv_records = []
+    invalid_rows = []
 
     for line_number, row in iter_threecket_rows(csv_path):
         if limit and len(csv_records) >= limit:
             break
 
-        payload = build_payload(row)
-        csv_records.append((line_number, payload))
+        try:
+            payload = build_payload(row)
+            csv_records.append((line_number, payload))
+        except ValueError as exc:
+            invalid_rows.append(
+                {
+                    "line_number": line_number,
+                    "participant": format_participant_label(row),
+                    "reason": str(exc),
+                }
+            )
 
-    return csv_records
+    return csv_records, invalid_rows
+
+
+def print_invalid_rows(invalid_rows):
+    for invalid_row in invalid_rows:
+        reason = invalid_row["reason"]
+        participant = invalid_row["participant"]
+        line_number = invalid_row["line_number"]
+
+        if reason == "Missing attendee email":
+            print(
+                f"[IGNORADO] linha {line_number}: participante sem email - {participant}"
+            )
+            continue
+
+        if reason == "Missing 3cket attendee ID":
+            print(
+                f"[IGNORADO] linha {line_number}: participante sem ID 3cket - {participant}"
+            )
+            continue
+
+        print(
+            f"[IGNORADO] linha {line_number}: {participant} - {reason}"
+        )
 
 
 def extract_invite_external_id(invite):
@@ -400,6 +530,66 @@ def extract_invite_email(invite):
                 return str(email).strip().lower()
 
     return ""
+
+
+def extract_invite_name(invite):
+    if not isinstance(invite, dict):
+        return ""
+
+    event_invite = invite.get("event_invite")
+    if isinstance(event_invite, dict):
+        first_name = str(event_invite.get("external_first_name", "")).strip()
+        last_name = str(event_invite.get("external_last_name", "")).strip()
+        full_name = " ".join(part for part in (first_name, last_name) if part and part != ".")
+        if full_name:
+            return full_name
+
+    attributes = invite.get("attributes")
+    if isinstance(attributes, dict):
+        first_name = str(
+            attributes.get("external-first-name") or attributes.get("external_first_name") or ""
+        ).strip()
+        last_name = str(
+            attributes.get("external-last-name") or attributes.get("external_last_name") or ""
+        ).strip()
+        full_name = " ".join(part for part in (first_name, last_name) if part and part != ".")
+        if full_name:
+            return full_name
+
+    return ""
+
+
+def format_removed_participant_label(candidate):
+    name = str(candidate.get("name", "")).strip()
+    email = str(candidate.get("email", "")).strip().lower()
+    external_id = str(candidate.get("external_id", "")).strip()
+
+    if name and email:
+        return f"{name} <{email}>"
+    if name and external_id:
+        return f"{name} (ID 3cket: {external_id})"
+    if email:
+        return email
+    if external_id:
+        return f"ID 3cket: {external_id}"
+    return "Participante removido sem identificacao"
+
+
+def print_summary_list(title, items):
+    print(f"\n{title} ({len(items)}):")
+    if not items:
+        print("- nenhum")
+        return
+
+    for item in items:
+        print(f"- {item}")
+
+
+def print_final_lists(missing_email_participants, added_participants, updated_participants, removed_participants):
+    print_summary_list("Participantes sem email no 3cket", missing_email_participants)
+    print_summary_list("Participantes adicionados", added_participants)
+    print_summary_list("Participantes atualizados", updated_participants)
+    print_summary_list("Participantes removidos", removed_participants)
 
 
 def list_invites(headers):
@@ -469,12 +659,22 @@ def run_sync_v4(csv_path, dry_run=False, limit=0, prune_missing=False):
                 f"URL: {preflight_url} Response: {response_text}"
             )
 
-    csv_records = collect_csv_payloads(csv_path, limit=limit)
+    csv_records, invalid_rows = collect_csv_payloads(csv_path, limit=limit)
     desired_external_ids = {payload_external_id(payload) for _, payload in csv_records}
+    missing_email_participants = [
+        invalid_row["participant"]
+        for invalid_row in invalid_rows
+        if invalid_row["reason"] == "Missing attendee email"
+    ]
+    added_participants = []
+    updated_participants = []
+    removed_participants = []
 
     processed = len(csv_records)
     succeeded = 0
-    failed = 0
+    failed = len(invalid_rows)
+
+    print_invalid_rows(invalid_rows)
 
     for line_number, payload in csv_records:
         try:
@@ -499,6 +699,11 @@ def run_sync_v4(csv_path, dry_run=False, limit=0, prune_missing=False):
 
             if status_code in (200, 201):
                 succeeded += 1
+                participant_label = payload_participant_label(payload)
+                if operation == "ADICIONADO":
+                    added_participants.append(participant_label)
+                else:
+                    updated_participants.append(participant_label)
                 print(f"[OK {succeeded}] {operation}: {payload_email(payload)}")
             else:
                 failed += 1
@@ -536,6 +741,7 @@ def run_sync_v4(csv_path, dry_run=False, limit=0, prune_missing=False):
                     "id": invite_id,
                     "external_id": external_id,
                     "email": extract_invite_email(invite),
+                    "name": extract_invite_name(invite),
                 }
             )
 
@@ -556,6 +762,7 @@ def run_sync_v4(csv_path, dry_run=False, limit=0, prune_missing=False):
 
                 if status_code in (200, 202, 204):
                     succeeded += 1
+                    removed_participants.append(format_removed_participant_label(candidate))
                     print(
                         f"[OK {succeeded}] REMOVIDO: {candidate['external_id']}{email_suffix}"
                     )
@@ -572,13 +779,39 @@ def run_sync_v4(csv_path, dry_run=False, limit=0, prune_missing=False):
         f"Processados {processed} registos. "
         f"Com sucesso: {succeeded}. Falhados ou ignorados: {failed}."
     )
+    print_final_lists(
+        missing_email_participants,
+        added_participants,
+        updated_participants,
+        removed_participants,
+    )
+
+
+def prepare_csv(csv_path, download_csv=True):
+    if download_csv:
+        try:
+            downloaded = download_threecket_csv(csv_path)
+            if downloaded:
+                return
+        except RuntimeError:
+            if not csv_path.exists():
+                raise
+            print(
+                "[AVISO] Nao foi possivel descarregar o CSV da 3cket. "
+                "Vou usar o ficheiro local existente."
+            )
+
+    if not csv_path.exists():
+        raise RuntimeError(f"Ficheiro CSV nao encontrado: {csv_path}")
 
 
 if __name__ == "__main__":
     try:
         args = parse_args()
+        csv_path = Path(args.csv_path)
+        prepare_csv(csv_path, download_csv=args.download_csv)
         run_sync_v4(
-            Path(args.csv_path),
+            csv_path,
             dry_run=args.dry_run,
             limit=args.limit,
             prune_missing=args.prune_missing,
