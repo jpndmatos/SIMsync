@@ -5,6 +5,7 @@ import os
 import sys
 import time
 from pathlib import Path
+from typing import Callable
 from urllib import parse
 from urllib import error, request
 
@@ -161,6 +162,12 @@ def pause_on_exit(force_pause=False):
         pass
 
 
+def emit(message, log_callback=None):
+    print(message)
+    if log_callback:
+        log_callback(message)
+
+
 def normalize_export_line(raw_line):
     line = raw_line.strip()
     if line.startswith('"') and line.endswith('"'):
@@ -190,7 +197,7 @@ def build_threecket_headers():
     return headers
 
 
-def download_threecket_csv(csv_path):
+def download_threecket_csv(csv_path, log_callback=None):
     if not THREECKET_CSV_URL:
         return False
 
@@ -217,7 +224,7 @@ def download_threecket_csv(csv_path):
     csv_path.parent.mkdir(parents=True, exist_ok=True)
     csv_path.write_text(csv_text, encoding="utf-8", newline="")
 
-    print(f"[OK] CSV descarregado da 3cket para: {csv_path}")
+    emit(f"[OK] CSV descarregado da 3cket para: {csv_path}", log_callback=log_callback)
     return True
 
 
@@ -459,26 +466,29 @@ def collect_csv_payloads(csv_path, limit=0):
     return csv_records, invalid_rows
 
 
-def print_invalid_rows(invalid_rows):
+def print_invalid_rows(invalid_rows, log_callback=None):
     for invalid_row in invalid_rows:
         reason = invalid_row["reason"]
         participant = invalid_row["participant"]
         line_number = invalid_row["line_number"]
 
         if reason == "Missing attendee email":
-            print(
-                f"[IGNORADO] linha {line_number}: participante sem email - {participant}"
+            emit(
+                f"[IGNORADO] linha {line_number}: participante sem email - {participant}",
+                log_callback=log_callback,
             )
             continue
 
         if reason == "Missing 3cket attendee ID":
-            print(
-                f"[IGNORADO] linha {line_number}: participante sem ID 3cket - {participant}"
+            emit(
+                f"[IGNORADO] linha {line_number}: participante sem ID 3cket - {participant}",
+                log_callback=log_callback,
             )
             continue
 
-        print(
-            f"[IGNORADO] linha {line_number}: {participant} - {reason}"
+        emit(
+            f"[IGNORADO] linha {line_number}: {participant} - {reason}",
+            log_callback=log_callback,
         )
 
 
@@ -575,21 +585,43 @@ def format_removed_participant_label(candidate):
     return "Participante removido sem identificacao"
 
 
-def print_summary_list(title, items):
-    print(f"\n{title} ({len(items)}):")
+def print_summary_list(title, items, log_callback=None):
+    emit(f"\n{title} ({len(items)}):", log_callback=log_callback)
     if not items:
-        print("- nenhum")
+        emit("- nenhum", log_callback=log_callback)
         return
 
     for item in items:
-        print(f"- {item}")
+        emit(f"- {item}", log_callback=log_callback)
 
 
-def print_final_lists(missing_email_participants, added_participants, updated_participants, removed_participants):
-    print_summary_list("Participantes sem email no 3cket", missing_email_participants)
-    print_summary_list("Participantes adicionados", added_participants)
-    print_summary_list("Participantes atualizados", updated_participants)
-    print_summary_list("Participantes removidos", removed_participants)
+def print_final_lists(
+    missing_email_participants,
+    added_participants,
+    updated_participants,
+    removed_participants,
+    log_callback=None,
+):
+    print_summary_list(
+        "Participantes sem email no 3cket",
+        missing_email_participants,
+        log_callback=log_callback,
+    )
+    print_summary_list(
+        "Participantes adicionados",
+        added_participants,
+        log_callback=log_callback,
+    )
+    print_summary_list(
+        "Participantes atualizados",
+        updated_participants,
+        log_callback=log_callback,
+    )
+    print_summary_list(
+        "Participantes removidos",
+        removed_participants,
+        log_callback=log_callback,
+    )
 
 
 def list_invites(headers):
@@ -620,11 +652,60 @@ def list_invites(headers):
     return data
 
 
+def build_existing_invite_id_map(headers):
+    invites = list_invites(headers)
+    invite_map = {}
+
+    for invite in invites:
+        if not isinstance(invite, dict):
+            continue
+
+        invite_id = str(invite.get("id") or "").strip()
+        external_id = extract_invite_external_id(invite)
+
+        if invite_id and external_id:
+            invite_map[external_id] = invite_id
+
+    return invite_map
+
+
 def preflight_check(url, headers):
     return api_request(url, headers, "GET")
 
 
-def run_sync_v4(csv_path, dry_run=False, limit=0, prune_missing=False):
+def collect_prune_candidates(headers, desired_external_ids):
+    existing_invites = list_invites(headers)
+    prune_candidates = []
+
+    for invite in existing_invites:
+        invite_id = invite.get("id") if isinstance(invite, dict) else None
+        external_id = extract_invite_external_id(invite)
+
+        if not invite_id or not external_id:
+            continue
+        if external_id in desired_external_ids:
+            continue
+
+        prune_candidates.append(
+            {
+                "id": invite_id,
+                "external_id": external_id,
+                "email": extract_invite_email(invite),
+                "name": extract_invite_name(invite),
+            }
+        )
+
+    return prune_candidates
+
+
+def run_sync_v4(
+    csv_path,
+    dry_run=False,
+    limit=0,
+    prune_missing=False,
+    log_callback=None,
+    include_final_report=True,
+):
     if prune_missing and limit:
         raise RuntimeError("--limit nao pode ser usado com prune ativo. Usa --no-prune-missing com --limit.")
 
@@ -659,6 +740,18 @@ def run_sync_v4(csv_path, dry_run=False, limit=0, prune_missing=False):
                 f"URL: {preflight_url} Response: {response_text}"
             )
 
+    existing_invite_id_map = {}
+    if not dry_run:
+        try:
+            existing_invite_id_map = build_existing_invite_id_map(headers)
+        except Exception as exc:
+            emit(
+                "[AVISO] Nao foi possivel listar convites existentes antes do import. "
+                "Vou continuar em modo de procura por participante.",
+                log_callback=log_callback,
+            )
+            emit(f"[AVISO] detalhe: {exc}", log_callback=log_callback)
+
     csv_records, invalid_rows = collect_csv_payloads(csv_path, limit=limit)
     desired_external_ids = {payload_external_id(payload) for _, payload in csv_records}
     missing_email_participants = [
@@ -674,18 +767,22 @@ def run_sync_v4(csv_path, dry_run=False, limit=0, prune_missing=False):
     succeeded = 0
     failed = len(invalid_rows)
 
-    print_invalid_rows(invalid_rows)
+    print_invalid_rows(invalid_rows, log_callback=log_callback)
 
     for line_number, payload in csv_records:
         try:
             if dry_run:
-                print(
+                emit(
                     f"[SIMULACAO] linha {line_number}: {payload_email(payload)} -> "
-                    f"external_id {payload_external_id(payload)} qr {payload_external_qr(payload)}"
+                    f"external_id {payload_external_id(payload)} qr {payload_external_qr(payload)}",
+                    log_callback=log_callback,
                 )
                 continue
 
-            invite_id = find_invite_by_external_id(headers, payload_external_id(payload))
+            external_id = payload_external_id(payload)
+            invite_id = existing_invite_id_map.get(external_id)
+            if not invite_id:
+                invite_id = find_invite_by_external_id(headers, external_id)
             if invite_id:
                 status_code, response_text = update_invite(
                     build_update_url(invite_id),
@@ -704,7 +801,10 @@ def run_sync_v4(csv_path, dry_run=False, limit=0, prune_missing=False):
                     added_participants.append(participant_label)
                 else:
                     updated_participants.append(participant_label)
-                print(f"[OK {succeeded}] {operation}: {payload_email(payload)}")
+                emit(
+                    f"[OK {succeeded}] {operation}: {payload_email(payload)}",
+                    log_callback=log_callback,
+                )
             else:
                 failed += 1
                 if status_code == 403 and "browser_signature_banned" in response_text:
@@ -713,44 +813,27 @@ def run_sync_v4(csv_path, dry_run=False, limit=0, prune_missing=False):
                         "Atualiza BRELLA_HTTP_USER_AGENT no .env ou pede à Brella para permitir o teu IP/cliente. "
                         f"Resposta bruta: {response_text}"
                     )
-                print(
+                emit(
                     f"[ERRO] linha {line_number} {payload_email(payload)}: "
-                    f"{status_code} - {response_text}"
+                    f"{status_code} - {response_text}",
+                    log_callback=log_callback,
                 )
 
             time.sleep(REQUEST_DELAY_SECONDS)
         except Exception as exc:
             failed += 1
-            print(f"[IGNORADO] linha {line_number}: {exc}")
+            emit(f"[IGNORADO] linha {line_number}: {exc}", log_callback=log_callback)
 
     if prune_missing:
-        existing_invites = list_invites(headers)
-        prune_candidates = []
-
-        for invite in existing_invites:
-            invite_id = invite.get("id") if isinstance(invite, dict) else None
-            external_id = extract_invite_external_id(invite)
-
-            if not invite_id or not external_id:
-                continue
-            if external_id in desired_external_ids:
-                continue
-
-            prune_candidates.append(
-                {
-                    "id": invite_id,
-                    "external_id": external_id,
-                    "email": extract_invite_email(invite),
-                    "name": extract_invite_name(invite),
-                }
-            )
+        prune_candidates = collect_prune_candidates(headers, desired_external_ids)
 
         if dry_run:
             for candidate in prune_candidates:
                 email_suffix = f" ({candidate['email']})" if candidate["email"] else ""
-                print(
+                emit(
                     f"[SIMULACAO] remover convite {candidate['id']}: "
-                    f"external_id {candidate['external_id']}{email_suffix}"
+                    f"external_id {candidate['external_id']}{email_suffix}",
+                    log_callback=log_callback,
                 )
         else:
             for candidate in prune_candidates:
@@ -763,42 +846,160 @@ def run_sync_v4(csv_path, dry_run=False, limit=0, prune_missing=False):
                 if status_code in (200, 202, 204):
                     succeeded += 1
                     removed_participants.append(format_removed_participant_label(candidate))
-                    print(
-                        f"[OK {succeeded}] REMOVIDO: {candidate['external_id']}{email_suffix}"
+                    emit(
+                        f"[OK {succeeded}] REMOVIDO: {candidate['external_id']}{email_suffix}",
+                        log_callback=log_callback,
                     )
                 else:
                     failed += 1
-                    print(
+                    emit(
                         f"[ERRO] remover convite {candidate['id']} {candidate['external_id']}: "
-                        f"{status_code} - {response_text}"
+                        f"{status_code} - {response_text}",
+                        log_callback=log_callback,
                     )
 
                 time.sleep(REQUEST_DELAY_SECONDS)
 
-    print(
-        f"Processados {processed} registos. "
-        f"Com sucesso: {succeeded}. Falhados ou ignorados: {failed}."
-    )
-    print_final_lists(
-        missing_email_participants,
-        added_participants,
-        updated_participants,
-        removed_participants,
-    )
+    if include_final_report:
+        emit(
+            f"Processados {processed} registos. "
+            f"Com sucesso: {succeeded}. Falhados ou ignorados: {failed}.",
+            log_callback=log_callback,
+        )
+        print_final_lists(
+            missing_email_participants,
+            added_participants,
+            updated_participants,
+            removed_participants,
+            log_callback=log_callback,
+        )
+
+    return {
+        "processed": processed,
+        "succeeded": succeeded,
+        "failed": failed,
+        "missing_email_participants": missing_email_participants,
+        "added_participants": added_participants,
+        "updated_participants": updated_participants,
+        "removed_participants": removed_participants,
+    }
 
 
-def prepare_csv(csv_path, download_csv=True):
+def preview_sync_v4(
+    csv_path,
+    limit=0,
+    prune_missing=False,
+    log_callback=None,
+    include_final_report=True,
+):
+    preflight_url = build_url(PREFLIGHT_URL_TEMPLATE)
+    headers = build_request_headers()
+
+    status_code, response_text = preflight_check(preflight_url, headers)
+    if status_code == 401:
+        raise RuntimeError(
+            "Brella authentication failed during preflight. "
+            "Check BRELLA_API_KEY and whether BRELLA_AUTH_HEADER_NAME or BRELLA_AUTH_HEADER_PREFIX need to change. "
+            f"Response: {response_text}"
+        )
+    if status_code == 403 and "browser_signature_banned" in response_text:
+        raise RuntimeError(
+            "Cloudflare blocked the request before it reached Brella. "
+            "Update BRELLA_HTTP_USER_AGENT in .env or ask Brella to allow your client."
+        )
+    if status_code == 403:
+        raise RuntimeError(
+            "Brella rejected the API token during preflight. "
+            "Per Brella docs, the token owner may need Organization Administrator privileges. "
+            f"Response: {response_text}"
+        )
+    if status_code == 404:
+        raise RuntimeError(
+            "Brella preflight returned 404 for the integration event endpoint. "
+            "This usually means BRELLA_ORG_ID or BRELLA_EVENT_ID is wrong, or BRELLA_PREFLIGHT_URL needs a different path template. "
+            f"URL: {preflight_url} Response: {response_text}"
+        )
+
+    existing_invite_id_map = build_existing_invite_id_map(headers)
+
+    csv_records, invalid_rows = collect_csv_payloads(csv_path, limit=limit)
+    desired_external_ids = {payload_external_id(payload) for _, payload in csv_records}
+
+    missing_email_participants = [
+        invalid_row["participant"]
+        for invalid_row in invalid_rows
+        if invalid_row["reason"] == "Missing attendee email"
+    ]
+    would_add = []
+    would_update = []
+    would_remove = []
+
+    print_invalid_rows(invalid_rows, log_callback=log_callback)
+
+    for line_number, payload in csv_records:
+        invite_id = existing_invite_id_map.get(payload_external_id(payload))
+        participant_label = payload_participant_label(payload)
+
+        if invite_id:
+            would_update.append(participant_label)
+            emit(
+                f"[PREVIEW] linha {line_number}: ATUALIZARIA {participant_label}",
+                log_callback=log_callback,
+            )
+        else:
+            would_add.append(participant_label)
+            emit(
+                f"[PREVIEW] linha {line_number}: ADICIONARIA {participant_label}",
+                log_callback=log_callback,
+            )
+
+    if prune_missing:
+        prune_candidates = collect_prune_candidates(headers, desired_external_ids)
+        for candidate in prune_candidates:
+            label = format_removed_participant_label(candidate)
+            would_remove.append(label)
+            emit(
+                f"[PREVIEW] REMOVERIA {label}",
+                log_callback=log_callback,
+            )
+
+    if include_final_report:
+        emit(
+            f"Preview completo: processados {len(csv_records)} registos validos.",
+            log_callback=log_callback,
+        )
+
+        print_final_lists(
+            missing_email_participants,
+            would_add,
+            would_update,
+            would_remove,
+            log_callback=log_callback,
+        )
+
+    return {
+        "processed": len(csv_records),
+        "failed": len(invalid_rows),
+        "missing_email_participants": missing_email_participants,
+        "added_participants": would_add,
+        "updated_participants": would_update,
+        "removed_participants": would_remove,
+    }
+
+
+def prepare_csv(csv_path, download_csv=True, log_callback=None):
     if download_csv:
         try:
-            downloaded = download_threecket_csv(csv_path)
+            downloaded = download_threecket_csv(csv_path, log_callback=log_callback)
             if downloaded:
                 return
         except RuntimeError:
             if not csv_path.exists():
                 raise
-            print(
+            emit(
                 "[AVISO] Nao foi possivel descarregar o CSV da 3cket. "
-                "Vou usar o ficheiro local existente."
+                "Vou usar o ficheiro local existente.",
+                log_callback=log_callback,
             )
 
     if not csv_path.exists():
