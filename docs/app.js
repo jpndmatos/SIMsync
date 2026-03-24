@@ -10,8 +10,6 @@ const el = {
   pat: document.querySelector("#github-pat"),
   persistPat: document.querySelector("#persist-pat"),
   optPrune: document.querySelector("#opt-prune"),
-  optDownload: document.querySelector("#opt-download"),
-  optLimit: document.querySelector("#opt-limit"),
   btnPreview: document.querySelector("#btn-preview"),
   btnImport: document.querySelector("#btn-import"),
   btnClearLog: document.querySelector("#btn-clear-log"),
@@ -21,6 +19,7 @@ const el = {
   secretBrellaOrg: document.querySelector("#secret-brella-org"),
   secretBrellaEvent: document.querySelector("#secret-brella-event"),
   secretThreecketCookie: document.querySelector("#secret-threecket-cookie"),
+  threecketCookieInline: document.querySelector("#secret-threecket-cookie-inline"),
   runStatus: document.querySelector("#run-status"),
   logConsole: document.querySelector("#log-console"),
   historyList: document.querySelector("#history-list"),
@@ -33,10 +32,15 @@ const el = {
   uploadFileName: document.querySelector("#upload-file-name"),
   uploadFileSize: document.querySelector("#upload-file-size"),
   uploadFileRemove: document.querySelector("#upload-file-remove"),
+  sourceDownload: document.querySelector("#source-download"),
+  sourceUpload: document.querySelector("#source-upload"),
+  panelDownload: document.querySelector("#panel-download"),
+  panelUpload: document.querySelector("#panel-upload"),
 };
 
 let polling = false;
 let uploadedFile = null;
+let dataSource = "download";
 
 // --- Tab navigation ---
 
@@ -163,8 +167,8 @@ async function dispatchWorkflow(mode) {
   const inputs = {
     mode,
     prune_missing: String(el.optPrune.checked),
-    download_csv: String(el.optDownload.checked),
-    limit: String(el.optLimit.value || "0"),
+    download_csv: String(dataSource === "download"),
+    limit: "0",
   };
 
   log(`Dispatching workflow (${mode})...`);
@@ -348,6 +352,25 @@ function conclusionBadge(status, conclusion) {
   return { text: conclusion || status, cls: "badge-neutral" };
 }
 
+// --- Source toggle ---
+
+function initSourceToggle() {
+  el.sourceDownload.addEventListener("click", () => {
+    dataSource = "download";
+    el.sourceDownload.classList.add("active");
+    el.sourceUpload.classList.remove("active");
+    el.panelDownload.hidden = false;
+    el.panelUpload.hidden = true;
+  });
+  el.sourceUpload.addEventListener("click", () => {
+    dataSource = "upload";
+    el.sourceUpload.classList.add("active");
+    el.sourceDownload.classList.remove("active");
+    el.panelUpload.hidden = false;
+    el.panelDownload.hidden = true;
+  });
+}
+
 // --- File upload ---
 
 function initUpload() {
@@ -509,6 +532,7 @@ function bindEvents() {
 
 function init() {
   initTabs();
+  initSourceToggle();
   initUpload();
   loadPat();
   bindEvents();
