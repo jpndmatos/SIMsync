@@ -18,7 +18,6 @@ const el = {
   secretBrellaKey: document.querySelector("#secret-brella-key"),
   secretBrellaOrg: document.querySelector("#secret-brella-org"),
   secretBrellaEvent: document.querySelector("#secret-brella-event"),
-  secretThreecketCookie: document.querySelector("#secret-threecket-cookie"),
   threecketCookieInline: document.querySelector("#secret-threecket-cookie-inline"),
   runStatus: document.querySelector("#run-status"),
   logConsole: document.querySelector("#log-console"),
@@ -126,8 +125,8 @@ async function saveSecrets() {
     secrets.push(["BRELLA_ORG_ID", el.secretBrellaOrg.value.trim()]);
   if (el.secretBrellaEvent.value.trim())
     secrets.push(["BRELLA_EVENT_ID", el.secretBrellaEvent.value.trim()]);
-  if (el.secretThreecketCookie.value.trim())
-    secrets.push(["THREECKET_COOKIE", el.secretThreecketCookie.value.trim()]);
+  if (el.threecketCookieInline.value.trim())
+    secrets.push(["THREECKET_COOKIE", el.threecketCookieInline.value.trim()]);
 
   if (!secrets.length) {
     log("No fields filled — nothing to save.", "error");
@@ -156,8 +155,6 @@ async function saveSecrets() {
   el.secretBrellaKey.value = "";
   el.secretBrellaOrg.value = "";
   el.secretBrellaEvent.value = "";
-  el.secretThreecketCookie.value = "";
-
   log("All secrets saved to GitHub.", "success");
 }
 
