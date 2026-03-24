@@ -1,9 +1,9 @@
 :root {
-  --bg: #0a0a0f;
-  --surface: #121218;
-  --surface-raised: #1a1a22;
-  --border: rgba(255, 255, 255, 0.06);
-  --border-active: rgba(255, 255, 255, 0.12);
+  --bg: #101016;
+  --surface: #19191f;
+  --surface-raised: #222229;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-active: rgba(255, 255, 255, 0.16);
   --text: #f0f0f5;
   --text-secondary: #8e8e9a;
   --text-tertiary: #55555f;
@@ -693,7 +693,7 @@ body {
   flex: 1;
   overflow-y: auto;
   padding: 10px 14px;
-  background: #08080c;
+  background: #0e0e14;
   color: var(--accent-light);
   font-family: var(--mono);
   font-size: 11.5px;
