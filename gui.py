@@ -377,19 +377,33 @@ class App:
         except Exception:
             pass
 
-        # Main layout
-        main = tk.Frame(self.root, bg=BG)
-        main.pack(fill="both", expand=True)
+        # Main layout: sidebar left, right side split top/bottom
+        outer = tk.Frame(self.root, bg=BG)
+        outer.pack(fill="both", expand=True)
 
         # Sidebar
-        sidebar = tk.Frame(main, bg=SURFACE, width=180)
+        sidebar = tk.Frame(outer, bg=SURFACE, width=180)
         sidebar.pack(side="left", fill="y")
         sidebar.pack_propagate(False)
 
-        # Brand - text only, no logo image
+        # Brand with logo
         brand = tk.Frame(sidebar, bg=SURFACE)
         brand.pack(fill="x", padx=14, pady=(16, 6))
-        tk.Label(brand, text="SIMsync", font=("Segoe UI", 15, "bold"), fg=TEXT,
+
+        self._logo_img = None
+        try:
+            png_path = BASE_DIR / "simlogo.png"
+            if png_path.exists():
+                self._logo_img = tk.PhotoImage(file=str(png_path))
+                # Subsample to ~80px wide (natural aspect ratio)
+                orig_w = self._logo_img.width()
+                factor = max(1, orig_w // 80)
+                self._logo_img = self._logo_img.subsample(factor, factor)
+                tk.Label(brand, image=self._logo_img, bg=SURFACE).pack(anchor="w", pady=(0, 6))
+        except Exception:
+            pass
+
+        tk.Label(brand, text="SIMsync", font=("Segoe UI", 13, "bold"), fg=TEXT,
                  bg=SURFACE).pack(anchor="w")
         tk.Label(brand, text="EVENT PLATFORM", font=("Segoe UI", 7, "bold"),
                  fg=TEXT_TER, bg=SURFACE).pack(anchor="w")
@@ -402,17 +416,28 @@ class App:
         self.panels = {}
         self.active_panel = None
 
-        # Content
-        self.content = tk.Frame(main, bg=BG)
-        self.content.pack(side="left", fill="both", expand=True)
+        # Right side: content (top 3/5) + log (bottom 2/5)
+        right = tk.PanedWindow(outer, orient="vertical", bg=SURFACE_RAISED,
+                               sashwidth=2, sashrelief="flat")
+        right.pack(side="left", fill="both", expand=True)
 
-        # Log panel
-        log_frame = tk.Frame(main, bg=SURFACE, width=280)
-        log_frame.pack(side="right", fill="y")
-        log_frame.pack_propagate(False)
+        # Content area (top)
+        self.content = tk.Frame(right, bg=BG)
+        right.add(self.content, stretch="always")
+
+        # Log panel (bottom)
+        log_frame = tk.Frame(right, bg=SURFACE)
+        right.add(log_frame, stretch="never")
+
+        # Set initial sash position after window renders
+        def set_sash():
+            h = self.root.winfo_height()
+            if h > 1:
+                right.sash_place(0, 0, int(h * 0.6))
+        self.root.after(50, set_sash)
 
         log_header = tk.Frame(log_frame, bg=SURFACE)
-        log_header.pack(fill="x", padx=10, pady=(10, 4))
+        log_header.pack(fill="x", padx=10, pady=(6, 2))
         tk.Label(log_header, text="LOG", font=FONT_SECTION, fg=TEXT_SEC,
                  bg=SURFACE).pack(side="left")
         tk.Button(log_header, text="Clear", font=("Segoe UI", 8), bg=SURFACE,
@@ -421,7 +446,7 @@ class App:
 
         self.log_text = tk.Text(log_frame, font=FONT_MONO, bg="#0e0e14", fg=ACCENT_LIGHT,
                                 relief="flat", wrap="word", insertbackground=ACCENT_LIGHT,
-                                state="disabled", padx=10, pady=8)
+                                state="disabled", padx=10, pady=6)
         self.log_text.pack(fill="both", expand=True, padx=6, pady=(0, 6))
 
         # --- Setup ---
