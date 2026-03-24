@@ -24,9 +24,27 @@ const el = {
   runStatus: document.querySelector("#run-status"),
   logConsole: document.querySelector("#log-console"),
   historyList: document.querySelector("#history-list"),
+  connectionDot: document.querySelector("#connection-dot"),
+  connectionLabel: document.querySelector("#connection-label"),
 };
 
 let polling = false;
+
+// --- Tab navigation ---
+
+function initTabs() {
+  const navItems = document.querySelectorAll(".nav-item[data-tab]");
+  navItems.forEach((item) => {
+    item.addEventListener("click", () => {
+      navItems.forEach((n) => n.classList.remove("active"));
+      item.classList.add("active");
+
+      document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+      const target = document.querySelector(`#tab-${item.dataset.tab}`);
+      if (target) target.classList.add("active");
+    });
+  });
+}
 
 // --- Logging ---
 
@@ -71,6 +89,13 @@ async function ghJSON(path) {
   return (await ghFetch(path)).json();
 }
 
+// --- Connection status ---
+
+function setConnected(connected) {
+  el.connectionDot.classList.toggle("connected", connected);
+  el.connectionLabel.textContent = connected ? "Connected" : "Disconnected";
+}
+
 // --- Secrets management ---
 
 async function encryptSecret(publicKey, value) {
@@ -99,7 +124,6 @@ async function saveSecrets() {
 
   log(`Saving ${secrets.length} secret(s)...`);
 
-  // Get repo public key for encryption
   const keyData = await ghJSON(
     `/repos/${OWNER}/${REPO}/actions/secrets/public-key`
   );
@@ -117,7 +141,6 @@ async function saveSecrets() {
     log(`Saved ${name}.`, "success");
   }
 
-  // Clear inputs after saving
   el.secretBrellaKey.value = "";
   el.secretBrellaOrg.value = "";
   el.secretBrellaEvent.value = "";
@@ -137,6 +160,7 @@ async function dispatchWorkflow(mode) {
   };
 
   log(`Dispatching workflow (${mode})...`);
+  switchToTab("log");
   const beforeDispatch = new Date().toISOString();
 
   await ghFetch(
@@ -262,6 +286,7 @@ async function fetchAndDisplayLogs(runId) {
 }
 
 async function viewRunLogs(runId) {
+  switchToTab("log");
   log(`Loading logs for run #${runId}...`);
   await fetchAndDisplayLogs(runId);
 }
@@ -274,14 +299,16 @@ async function refreshHistory() {
       `/repos/${OWNER}/${REPO}/actions/workflows/${WORKFLOW_FILE}/runs?per_page=10&branch=main`
     );
     renderHistory(data.workflow_runs || []);
+    setConnected(true);
   } catch (err) {
-    el.historyList.innerHTML = `<p class="muted-text">Failed to load: ${err.message}</p>`;
+    el.historyList.innerHTML = `<p class="empty-state">Failed to load: ${err.message}</p>`;
+    setConnected(false);
   }
 }
 
 function renderHistory(runs) {
   if (!runs.length) {
-    el.historyList.innerHTML = '<p class="muted-text">No runs found.</p>';
+    el.historyList.innerHTML = '<p class="empty-state">No runs found.</p>';
     return;
   }
 
@@ -296,7 +323,7 @@ function renderHistory(runs) {
             <strong>#${r.run_number}</strong> ${r.display_title || ""}
             <span class="history-date">${date}</span>
           </span>
-          <button class="ghost-button history-log-btn" data-run-id="${r.id}" type="button">
+          <button class="btn btn-ghost history-log-btn" data-run-id="${r.id}" type="button">
             Logs
           </button>
         </div>`;
@@ -316,6 +343,15 @@ function conclusionBadge(status, conclusion) {
 }
 
 // --- UI helpers ---
+
+function switchToTab(tabName) {
+  document.querySelectorAll(".nav-item[data-tab]").forEach((n) => {
+    n.classList.toggle("active", n.dataset.tab === tabName);
+  });
+  document.querySelectorAll(".tab-panel").forEach((p) => {
+    p.classList.toggle("active", p.id === `tab-${tabName}`);
+  });
+}
 
 function setStatus(text, level) {
   el.runStatus.textContent = text;
@@ -407,6 +443,7 @@ function bindEvents() {
 // --- Init ---
 
 function init() {
+  initTabs();
   loadPat();
   bindEvents();
   log("Dashboard ready.");
