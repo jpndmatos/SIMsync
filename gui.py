@@ -272,12 +272,43 @@ class SyncTab:
                                      fg=TEXT_SEC, bg=SURFACE, anchor="w", padx=10, pady=6)
         self.status_label.pack(fill="x", padx=24, pady=(8, 0))
 
+        # Summary cards
+        summary_row = tk.Frame(self.frame, bg=BG)
+        summary_row.pack(fill="x", padx=24, pady=(8, 0))
+        summary_row.columnconfigure(0, weight=1)
+        summary_row.columnconfigure(1, weight=1)
+        summary_row.columnconfigure(2, weight=1)
+
+        self.card_added, self.card_added_title = self._make_summary_card(summary_row, "ADDED", "0", SUCCESS, 0)
+        self.card_removed, _ = self._make_summary_card(summary_row, "REMOVED", "0", DANGER, 1)
+        self.card_missing, _ = self._make_summary_card(summary_row, "MISSING INFO", "0", "#f0a030", 2)
+
         if not enabled:
             self.preview_btn.config(state="disabled")
             self.import_btn.config(state="disabled")
             self.browse_btn.config(state="disabled")
             self.path_entry.config(state="disabled")
             self.dry_cb.config(state="disabled")
+
+    def _make_summary_card(self, parent, title, value, color, col):
+        card = tk.Frame(parent, bg=SURFACE, highlightbackground=SURFACE_RAISED,
+                        highlightthickness=1)
+        card.grid(row=0, column=col, sticky="nsew", padx=(0 if col == 0 else 4, 0))
+        title_label = tk.Label(card, text=title, font=("Segoe UI", 7, "bold"), fg=TEXT_TER,
+                               bg=SURFACE)
+        title_label.pack(padx=10, pady=(8, 0))
+        count_label = tk.Label(card, text=value, font=("Segoe UI", 18, "bold"),
+                               fg=color, bg=SURFACE)
+        count_label.pack(padx=10, pady=(0, 8))
+        return count_label, title_label
+
+    def update_summary(self, added=0, removed=0, missing=0):
+        def _update():
+            self.card_added.config(text=str(added))
+            self.card_added_title.config(text="TO SYNC" if self.dry_run.get() else "ADDED")
+            self.card_removed.config(text=str(removed))
+            self.card_missing.config(text=str(missing))
+        self.frame.after(0, _update)
 
     def _toggle_source(self):
         """Enable/disable CSV picker based on download toggle."""
@@ -523,12 +554,21 @@ class App:
             csv_path = Path(tab.csv_path.get())
 
         api.prepare_csv(csv_path, download_csv=downloading, log_callback=self.log)
-        api.run_sync_v4(
+        result = api.run_sync_v4(
             csv_path,
             dry_run=tab.dry_run.get(),
             prune_missing=tab.prune.get(),
             log_callback=self.log,
         )
+
+        if result:
+            added = len(result.get("added_participants", []))
+            removed = len(result.get("removed_participants", []))
+            missing = len(result.get("missing_email_participants", []))
+            # In dry-run, added/removed are empty — use processed as "to sync"
+            if tab.dry_run.get():
+                added = result.get("processed", 0)
+            tab.update_summary(added=added, removed=removed, missing=missing)
 
     def run(self):
         self.root.mainloop()
