@@ -13,7 +13,6 @@ const el = {
   btnImport: document.querySelector("#btn-import"),
   btnClearLog: document.querySelector("#btn-clear-log"),
   btnRefresh: document.querySelector("#btn-refresh"),
-  btnSaveSecrets: document.querySelector("#btn-save-secrets"),
   secretBrellaKey: document.querySelector("#secret-brella-key"),
   secretBrellaOrg: document.querySelector("#secret-brella-org"),
   secretBrellaEvent: document.querySelector("#secret-brella-event"),
@@ -104,54 +103,6 @@ async function ghJSON(path) {
 function setConnected(connected) {
   el.connectionDot.classList.toggle("connected", connected);
   el.connectionLabel.textContent = connected ? "Connected" : "Disconnected";
-}
-
-// --- Secrets management ---
-
-async function encryptSecret(publicKey, value) {
-  await sodium.ready;
-  const keyBytes = sodium.from_base64(publicKey, sodium.base64_variants.ORIGINAL);
-  const msgBytes = sodium.from_string(value);
-  const encrypted = sodium.crypto_box_seal(msgBytes, keyBytes);
-  return sodium.to_base64(encrypted, sodium.base64_variants.ORIGINAL);
-}
-
-async function saveSecrets() {
-  const secrets = [];
-  if (el.secretBrellaKey.value.trim())
-    secrets.push(["BRELLA_API_KEY", el.secretBrellaKey.value.trim()]);
-  if (el.secretBrellaOrg.value.trim())
-    secrets.push(["BRELLA_ORG_ID", el.secretBrellaOrg.value.trim()]);
-  if (el.secretBrellaEvent.value.trim())
-    secrets.push(["BRELLA_EVENT_ID", el.secretBrellaEvent.value.trim()]);
-  if (el.threecketCookieInline.value.trim())
-    secrets.push(["THREECKET_COOKIE", el.threecketCookieInline.value.trim()]);
-
-  if (!secrets.length) {
-    log("No fields filled — nothing to save.", "error");
-    return;
-  }
-
-  log(`Saving ${secrets.length} secret(s)...`);
-
-  const keyData = await ghJSON(
-    `/repos/${OWNER}/${REPO}/actions/secrets/public-key`
-  );
-
-  for (const [name, value] of secrets) {
-    const encryptedValue = await encryptSecret(keyData.key, value);
-    await ghFetch(`/repos/${OWNER}/${REPO}/actions/secrets/${name}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        encrypted_value: encryptedValue,
-        key_id: keyData.key_id,
-      }),
-    });
-    log(`Saved ${name}.`, "success");
-  }
-
-  log("All secrets saved to GitHub.", "success");
 }
 
 // --- Workflow dispatch ---
@@ -521,18 +472,6 @@ function bindEvents() {
       log(`Import failed: ${err.message}`, "error");
       setStatus("Failed", "error");
       setBusy(false);
-    }
-  });
-
-  el.btnSaveSecrets.addEventListener("click", async () => {
-    el.btnSaveSecrets.disabled = true;
-    try {
-      savePat();
-      await saveSecrets();
-    } catch (err) {
-      log(`Failed to save secrets: ${err.message}`, "error");
-    } finally {
-      el.btnSaveSecrets.disabled = false;
     }
   });
 

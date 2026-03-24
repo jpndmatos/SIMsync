@@ -2,7 +2,14 @@
   "permissions": {
     "allow": [
       "Bash(ls:*)",
-      "Bash(gh api:*)"
+      "Bash(gh api:*)",
+      "Bash(curl -sI \"https://cdn.jsdelivr.net/npm/libsodium-wrappers@0.7.15/dist/modules-sumo/libsodium-wrappers.min.js\")",
+      "Bash(curl -sI \"https://cdn.jsdelivr.net/npm/libsodium-wrappers@0.7.15/dist/modules/libsodium-wrappers.min.js\")",
+      "Bash(curl -sI \"https://cdn.jsdelivr.net/npm/libsodium-wrappers-sumo@0.7.15/dist/modules-sumo/libsodium-wrappers.min.js\")",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git remote:*)"
     ]
   },
   "outputStyle": "default",
