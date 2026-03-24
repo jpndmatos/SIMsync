@@ -8,7 +8,6 @@ const POLL_MAX_ATTEMPTS = 120;
 
 const el = {
   pat: document.querySelector("#github-pat"),
-  persistPat: document.querySelector("#persist-pat"),
   optPrune: document.querySelector("#opt-prune"),
   btnPreview: document.querySelector("#btn-preview"),
   btnImport: document.querySelector("#btn-import"),
@@ -152,9 +151,6 @@ async function saveSecrets() {
     log(`Saved ${name}.`, "success");
   }
 
-  el.secretBrellaKey.value = "";
-  el.secretBrellaOrg.value = "";
-  el.secretBrellaEvent.value = "";
   log("All secrets saved to GitHub.", "success");
 }
 
@@ -455,21 +451,48 @@ function sleep(ms) {
 
 // --- PAT persistence ---
 
-function loadPat() {
-  const saved = sessionStorage.getItem(STORAGE_KEY);
-  if (saved) {
-    el.pat.value = saved;
-    el.persistPat.checked = true;
+const LOCAL_KEYS = {
+  pat: "simsync-pat",
+  brellaKey: "simsync-brella-key",
+  brellaOrg: "simsync-brella-org",
+  brellaEvent: "simsync-brella-event",
+  threecketCookie: "simsync-threecket-cookie",
+};
+
+function loadSetupValues() {
+  const map = {
+    pat: LOCAL_KEYS.pat,
+    secretBrellaKey: LOCAL_KEYS.brellaKey,
+    secretBrellaOrg: LOCAL_KEYS.brellaOrg,
+    secretBrellaEvent: LOCAL_KEYS.brellaEvent,
+    threecketCookieInline: LOCAL_KEYS.threecketCookie,
+  };
+  for (const [elKey, storageKey] of Object.entries(map)) {
+    const saved = localStorage.getItem(storageKey);
+    if (saved && el[elKey]) el[elKey].value = saved;
   }
 }
 
-function savePat() {
-  if (el.persistPat.checked && el.pat.value.trim()) {
-    sessionStorage.setItem(STORAGE_KEY, el.pat.value.trim());
-  } else {
-    sessionStorage.removeItem(STORAGE_KEY);
+function saveSetupValues() {
+  const map = {
+    pat: LOCAL_KEYS.pat,
+    secretBrellaKey: LOCAL_KEYS.brellaKey,
+    secretBrellaOrg: LOCAL_KEYS.brellaOrg,
+    secretBrellaEvent: LOCAL_KEYS.brellaEvent,
+    threecketCookieInline: LOCAL_KEYS.threecketCookie,
+  };
+  for (const [elKey, storageKey] of Object.entries(map)) {
+    const val = el[elKey]?.value.trim();
+    if (val) {
+      localStorage.setItem(storageKey, val);
+    } else {
+      localStorage.removeItem(storageKey);
+    }
   }
 }
+
+function loadPat() { loadSetupValues(); }
+function savePat() { saveSetupValues(); }
 
 // --- Event binding ---
 
