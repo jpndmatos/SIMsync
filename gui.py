@@ -494,7 +494,8 @@ class App:
         for name, desc, prune, cookie, func, en in [
             ("Participants", "Sync 3cket participants to Brella.", True, True,
              self._run_participants, True),
-            ("Speakers", "Import speaker profiles to Brella.", False, False, None, False),
+            ("Speakers", "Sync published speakers to Brella.", True, False,
+             self._run_speakers, True),
             ("Sponsors", "Sync sponsor data to Brella.", False, False, None, False),
             ("Schedule", "Sync event sessions to Brella.", False, False, None, False),
         ]:
@@ -566,6 +567,23 @@ class App:
             removed = len(result.get("removed_participants", []))
             missing = len(result.get("missing_email_participants", []))
             # In dry-run, added/removed are empty — use processed as "to sync"
+            if tab.dry_run.get():
+                added = result.get("processed", 0)
+            tab.update_summary(added=added, removed=removed, missing=missing)
+
+    def _run_speakers(self, tab):
+        from speakers import run_speakers_sync
+        csv_path = Path(tab.csv_path.get())
+        result = run_speakers_sync(
+            csv_path,
+            dry_run=tab.dry_run.get(),
+            prune_missing=tab.prune.get(),
+            log_callback=self.log,
+        )
+        if result:
+            added = len(result.get("added_participants", []))
+            removed = len(result.get("removed_participants", []))
+            missing = len(result.get("missing_email_participants", []))
             if tab.dry_run.get():
                 added = result.get("processed", 0)
             tab.update_summary(added=added, removed=removed, missing=missing)

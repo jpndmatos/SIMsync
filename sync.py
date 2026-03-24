@@ -27,8 +27,12 @@ def cmd_participants(args):
 
 
 def cmd_speakers(args):
-    print(f"[speakers] CSV: {args.csv}")
-    print("[speakers] Not implemented yet — coming soon.")
+    from speakers import run_speakers_sync
+    run_speakers_sync(
+        args.csv,
+        dry_run=args.dry_run,
+        prune_missing=getattr(args, "prune", False),
+    )
 
 
 def cmd_sponsors(args):
