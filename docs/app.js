@@ -26,9 +26,17 @@ const el = {
   historyList: document.querySelector("#history-list"),
   connectionDot: document.querySelector("#connection-dot"),
   connectionLabel: document.querySelector("#connection-label"),
+  uploadZone: document.querySelector("#upload-zone"),
+  uploadInput: document.querySelector("#upload-input"),
+  uploadBrowse: document.querySelector("#upload-browse"),
+  uploadFileInfo: document.querySelector("#upload-file-info"),
+  uploadFileName: document.querySelector("#upload-file-name"),
+  uploadFileSize: document.querySelector("#upload-file-size"),
+  uploadFileRemove: document.querySelector("#upload-file-remove"),
 };
 
 let polling = false;
+let uploadedFile = null;
 
 // --- Tab navigation ---
 
@@ -340,6 +348,65 @@ function conclusionBadge(status, conclusion) {
   return { text: conclusion || status, cls: "badge-neutral" };
 }
 
+// --- File upload ---
+
+function initUpload() {
+  el.uploadBrowse.addEventListener("click", (e) => {
+    e.stopPropagation();
+    el.uploadInput.click();
+  });
+  el.uploadZone.addEventListener("click", () => {
+    el.uploadInput.click();
+  });
+
+  el.uploadInput.addEventListener("change", () => {
+    if (el.uploadInput.files.length > 0) {
+      handleFileSelected(el.uploadInput.files[0]);
+    }
+  });
+
+  el.uploadZone.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    el.uploadZone.classList.add("drag-over");
+  });
+  el.uploadZone.addEventListener("dragleave", () => {
+    el.uploadZone.classList.remove("drag-over");
+  });
+  el.uploadZone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    el.uploadZone.classList.remove("drag-over");
+    if (e.dataTransfer.files.length > 0) {
+      handleFileSelected(e.dataTransfer.files[0]);
+    }
+  });
+
+  el.uploadFileRemove.addEventListener("click", () => {
+    clearUploadedFile();
+  });
+}
+
+function handleFileSelected(file) {
+  uploadedFile = file;
+  el.uploadFileName.textContent = file.name;
+  el.uploadFileSize.textContent = formatFileSize(file.size);
+  el.uploadZone.hidden = true;
+  el.uploadFileInfo.hidden = false;
+  log(`File loaded: ${file.name} (${formatFileSize(file.size)})`);
+}
+
+function clearUploadedFile() {
+  uploadedFile = null;
+  el.uploadInput.value = "";
+  el.uploadZone.hidden = false;
+  el.uploadFileInfo.hidden = true;
+}
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 // --- UI helpers ---
 
 function switchToTab(tabName) {
@@ -442,6 +509,7 @@ function bindEvents() {
 
 function init() {
   initTabs();
+  initUpload();
   loadPat();
   bindEvents();
   log("Dashboard ready.");

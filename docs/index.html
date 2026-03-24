@@ -17,16 +17,32 @@
           <img src="./logo.png" alt="SIM" class="brand-logo" />
           <div class="brand-text">
             <strong>SIMsync</strong>
-            <span>Participant Sync</span>
+            <span>Event Platform</span>
           </div>
         </div>
 
         <div class="nav-group">
-          <p class="nav-label">Dashboard</p>
-          <button class="nav-item active" data-tab="sync">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
-            <span>Sync</span>
+          <p class="nav-label">Sync Modules</p>
+          <button class="nav-item active" data-tab="participants">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span>Participants</span>
           </button>
+          <button class="nav-item" data-tab="speakers">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+            <span>Speakers</span>
+          </button>
+          <button class="nav-item" data-tab="sponsors">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+            <span>Sponsors</span>
+          </button>
+          <button class="nav-item" data-tab="schedule">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+            <span>Schedule</span>
+          </button>
+        </div>
+
+        <div class="nav-group nav-group-bottom">
+          <p class="nav-label">System</p>
           <button class="nav-item" data-tab="settings">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
             <span>Settings</span>
@@ -46,13 +62,15 @@
       <div class="main-area">
         <!-- Top: tab content (3/5) -->
         <main class="content">
-          <!-- Sync -->
-          <section class="tab-panel active" id="tab-sync">
+
+          <!-- ==================== PARTICIPANTS ==================== -->
+          <section class="tab-panel active" id="tab-participants">
             <div class="tab-header">
               <div>
-                <h1>Sync</h1>
-                <p class="tab-desc">Push 3cket participants to Brella via GitHub Actions.</p>
+                <h1>Participants</h1>
+                <p class="tab-desc">Sync 3cket participants to Brella — create, update, and prune invites.</p>
               </div>
+              <span class="module-badge">3cket → Brella</span>
             </div>
 
             <div class="card">
@@ -66,6 +84,28 @@
                   <input id="persist-pat" type="checkbox" />
                   <span>Remember for this session</span>
                 </label>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3 class="card-title">Participant List</h3>
+              <div class="upload-zone" id="upload-zone">
+                <div class="upload-zone-content">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                  <p class="upload-zone-label">Drop CSV file here or <button type="button" class="link-btn" id="upload-browse">browse</button></p>
+                  <p class="upload-zone-hint">Semicolon-delimited CSV, UTF-8 encoded</p>
+                </div>
+                <input type="file" id="upload-input" accept=".csv,.txt" hidden />
+              </div>
+              <div class="upload-file-info" id="upload-file-info" hidden>
+                <div class="upload-file-row">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  <span class="upload-file-name" id="upload-file-name"></span>
+                  <span class="upload-file-size" id="upload-file-size"></span>
+                  <button type="button" class="btn btn-ghost upload-file-remove" id="upload-file-remove">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -104,7 +144,106 @@
             </div>
           </section>
 
-          <!-- Settings -->
+          <!-- ==================== SPEAKERS ==================== -->
+          <section class="tab-panel" id="tab-speakers">
+            <div class="tab-header">
+              <div>
+                <h1>Speakers</h1>
+                <p class="tab-desc">Import and sync speaker profiles with the event platform.</p>
+              </div>
+              <span class="module-badge coming-soon">Coming soon</span>
+            </div>
+
+            <div class="placeholder-panel">
+              <div class="placeholder-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+              </div>
+              <h2 class="placeholder-title">Speaker Sync</h2>
+              <p class="placeholder-desc">Upload speaker data from a CSV or connect to your speaker management tool. Sync names, bios, photos, and session assignments.</p>
+              <div class="placeholder-features">
+                <div class="placeholder-feature">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>Profile import (name, bio, photo)</span>
+                </div>
+                <div class="placeholder-feature">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>Session assignment mapping</span>
+                </div>
+                <div class="placeholder-feature">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>Diff preview before sync</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ==================== SPONSORS ==================== -->
+          <section class="tab-panel" id="tab-sponsors">
+            <div class="tab-header">
+              <div>
+                <h1>Sponsors</h1>
+                <p class="tab-desc">Manage sponsor tiers, logos, and booth assignments.</p>
+              </div>
+              <span class="module-badge coming-soon">Coming soon</span>
+            </div>
+
+            <div class="placeholder-panel">
+              <div class="placeholder-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+              </div>
+              <h2 class="placeholder-title">Sponsor Sync</h2>
+              <p class="placeholder-desc">Import sponsor information and map them to tiers, booth locations, and branding slots on the event platform.</p>
+              <div class="placeholder-features">
+                <div class="placeholder-feature">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>Tier-based sponsor import</span>
+                </div>
+                <div class="placeholder-feature">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>Logo and branding assets</span>
+                </div>
+                <div class="placeholder-feature">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>Booth assignment mapping</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ==================== SCHEDULE ==================== -->
+          <section class="tab-panel" id="tab-schedule">
+            <div class="tab-header">
+              <div>
+                <h1>Schedule</h1>
+                <p class="tab-desc">Sync event sessions, time slots, and room assignments.</p>
+              </div>
+              <span class="module-badge coming-soon">Coming soon</span>
+            </div>
+
+            <div class="placeholder-panel">
+              <div class="placeholder-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+              </div>
+              <h2 class="placeholder-title">Schedule Sync</h2>
+              <p class="placeholder-desc">Import your event agenda and sync sessions, time slots, tracks, and room assignments to the platform.</p>
+              <div class="placeholder-features">
+                <div class="placeholder-feature">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>Session and track import</span>
+                </div>
+                <div class="placeholder-feature">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>Time slot and room mapping</span>
+                </div>
+                <div class="placeholder-feature">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>Speaker-to-session linking</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ==================== SETTINGS ==================== -->
           <section class="tab-panel" id="tab-settings">
             <div class="tab-header">
               <div>
@@ -152,7 +291,7 @@
             </div>
           </section>
 
-          <!-- History -->
+          <!-- ==================== HISTORY ==================== -->
           <section class="tab-panel" id="tab-history">
             <div class="tab-header">
               <div>

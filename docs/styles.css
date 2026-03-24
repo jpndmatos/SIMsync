@@ -87,7 +87,13 @@ body {
   flex-direction: column;
   padding: 10px 10px;
   gap: 2px;
+}
+.nav-group:first-of-type {
   flex: 1;
+}
+.nav-group-bottom {
+  border-top: 1px solid var(--border);
+  flex: 0 !important;
 }
 .nav-label {
   font-size: 10px;
@@ -203,6 +209,27 @@ body {
   font-size: 12.5px;
 }
 
+/* ===== Module badge ===== */
+.module-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: var(--accent-dim);
+  color: var(--accent-light);
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.module-badge.coming-soon {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-tertiary);
+}
+
 /* ===== Cards ===== */
 .card {
   background: var(--surface);
@@ -286,6 +313,155 @@ body {
   font-size: 11px;
   color: var(--text-tertiary);
   margin-top: 8px;
+}
+
+/* ===== Upload zone ===== */
+.upload-zone {
+  border: 2px dashed var(--border-active);
+  border-radius: var(--radius);
+  padding: 28px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 200ms var(--ease);
+  background: var(--bg);
+}
+.upload-zone:hover,
+.upload-zone.drag-over {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+.upload-zone.drag-over {
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+.upload-zone-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+.upload-zone-content svg {
+  color: var(--text-tertiary);
+  margin-bottom: 4px;
+}
+.upload-zone:hover .upload-zone-content svg,
+.upload-zone.drag-over .upload-zone-content svg {
+  color: var(--accent-light);
+}
+.upload-zone-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.upload-zone-hint {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--accent-light);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  padding: 0;
+  pointer-events: auto;
+}
+.link-btn:hover {
+  color: var(--accent);
+}
+
+/* Upload file info */
+.upload-file-info {
+  margin-top: 10px;
+}
+.upload-file-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.upload-file-row svg {
+  color: var(--accent-light);
+  flex-shrink: 0;
+}
+.upload-file-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.upload-file-size {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-family: var(--mono);
+  flex-shrink: 0;
+}
+.upload-file-remove {
+  padding: 4px !important;
+  flex-shrink: 0;
+}
+
+/* ===== Placeholder panels (coming soon modules) ===== */
+.placeholder-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 48px 32px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.placeholder-icon {
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+  color: var(--text-tertiary);
+  margin-bottom: 20px;
+}
+.placeholder-title {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+.placeholder-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  max-width: 400px;
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+.placeholder-features {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+.placeholder-feature {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+.placeholder-feature svg {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
 }
 
 /* ===== Buttons ===== */
@@ -468,4 +644,5 @@ body {
   .content { padding: 16px; }
   .field-row { grid-template-columns: 1fr; }
   .action-row { flex-direction: column; }
+  .placeholder-panel { padding: 32px 16px; }
 }
