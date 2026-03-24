@@ -12,7 +12,8 @@
       "Bash(git remote:*)",
       "Bash(python sync.py --help)",
       "Bash(python sync.py participants --help)",
-      "Bash(python sync.py speakers --csv test.csv)"
+      "Bash(python sync.py speakers --csv test.csv)",
+      "Bash(python sync.py participants --csv participants_tester.csv --dry-run)"
     ]
   },
   "outputStyle": "default",
