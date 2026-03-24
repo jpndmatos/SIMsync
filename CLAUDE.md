@@ -4,24 +4,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-3cket2brella imports event participants from 3cket (ticketing platform) into Brella (networking platform). It reads a semicolon-delimited CSV export from 3cket and syncs participants via the Brella REST API — creating, updating, and optionally pruning invites. The 3cket QR code replaces Brella's default QR.
+SIMsync imports event data from local CSVs into Brella (networking platform) via the Brella REST API. It supports syncing participants, speakers, sponsors, and schedule — creating, updating, and optionally pruning entries. Currently only participant sync is implemented.
 
-The project is written in Portuguese (UI strings, log messages, README).
+The project is written in Portuguese (log messages, some UI strings).
 
 ## Architecture
 
-- **`api.py`** — all business logic: CSV parsing, Brella API calls (create/update/delete invites via `urllib`), ticket-type-to-attendee-group mapping, CSV download from 3cket, and the CLI entrypoint. Key functions: `run_sync_v4` (full import), `preview_sync_v4` (dry-run diff), `prepare_csv` (download + fallback). Configuration is loaded from `.env` / environment variables at module level. Uses only Python stdlib.
-- **`docs/`** — static GitHub Pages dashboard (HTML/JS/CSS) that triggers GitHub Actions workflows via the GitHub API. User enters a PAT, clicks Preview or Import, and sees logs.
-- **`.github/workflows/sync.yml`** — GitHub Actions workflow triggered by `workflow_dispatch`. Runs `python api.py` with flags from the dispatch inputs. Secrets (API keys, cookies) come from GitHub repo secrets.
+- **`api.py`** — all participant sync logic: CSV parsing, Brella API calls (create/update/delete invites via `urllib`), ticket-type-to-attendee-group mapping, CSV download from 3cket. Key functions: `run_sync_v4` (full import), `preview_sync_v4` (dry-run diff), `prepare_csv` (download + fallback). Configuration from `.env` / environment variables. Uses only Python stdlib.
+- **`sync.py`** — CLI entrypoint with subcommands: `participants`, `speakers`, `sponsors`, `schedule`. Each takes `--csv` and `--dry-run`. Speakers/sponsors/schedule are stubs.
+- **`gui.py`** — Local tkinter GUI with sidebar navigation, file pickers per sync type, dry-run/prune options, and a log panel. Runs the sync directly from the local machine.
 
 ## Commands
 
 ```bash
-python api.py                          # full sync: create + update + prune
-python api.py --dry-run                # preview only
-python api.py --no-prune-missing       # sync without deleting
-python api.py --no-download-csv        # skip 3cket CSV download
-python api.py --limit N                # process only first N attendees
+# CLI
+python sync.py participants --csv data/participants.csv              # full sync
+python sync.py participants --csv data/participants.csv --dry-run    # preview
+python sync.py participants --csv data/participants.csv --no-prune   # sync without deleting
+
+# GUI
+python gui.py
+
+# Legacy CLI (still works)
+python api.py --csv participants.csv --dry-run --no-download-csv
 ```
 
 No test suite, no linter config, no package manager — stdlib only.
