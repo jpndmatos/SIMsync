@@ -2,6 +2,7 @@ import argparse
 import csv
 import json
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -98,6 +99,92 @@ THREECKET_HTTP_USER_AGENT = os.getenv("THREECKET_HTTP_USER_AGENT", USER_AGENT).s
 LIST_PAGE_SIZE = int(os.getenv("BRELLA_LIST_PAGE_SIZE", "100"))
 LIST_MAX_PAGES = int(os.getenv("BRELLA_LIST_MAX_PAGES", "100"))
 PAUSE_ON_EXIT_DEFAULT = os.getenv("BRELLA_PAUSE_ON_EXIT", "auto").strip().lower()
+TICKETS_COLUMN = int(os.getenv("BRELLA_TICKETS_COLUMN", "10"))
+
+BRELLA_ATTENDEE_GROUP_IDS = {
+    "general": "36042",
+    "sponsors": "36043",
+    "investors": "36333",
+    "speakers": "36334",
+    "partners": "36335",
+    "incubators": "36336",
+    "corporate": "36337",
+    "startup_showcase": "36338",
+    "startup_simple": "36339",
+    "student": "36340",
+    "guest": "36341",
+    "press_media": "36342",
+    "staff": "36343",
+}
+
+GROUP_PRIORITY = [
+    BRELLA_ATTENDEE_GROUP_IDS["startup_showcase"],
+    BRELLA_ATTENDEE_GROUP_IDS["startup_simple"],
+    BRELLA_ATTENDEE_GROUP_IDS["investors"],
+    BRELLA_ATTENDEE_GROUP_IDS["corporate"],
+    BRELLA_ATTENDEE_GROUP_IDS["incubators"],
+    BRELLA_ATTENDEE_GROUP_IDS["speakers"],
+    BRELLA_ATTENDEE_GROUP_IDS["partners"],
+    BRELLA_ATTENDEE_GROUP_IDS["student"],
+    BRELLA_ATTENDEE_GROUP_IDS["general"],
+]
+
+TICKET_TYPE_TO_GROUP_ID = {
+    "corporate//1st wave": BRELLA_ATTENDEE_GROUP_IDS["corporate"],
+    "corporate//2nd wave": BRELLA_ATTENDEE_GROUP_IDS["corporate"],
+    "corporate//early bird": BRELLA_ATTENDEE_GROUP_IDS["corporate"],
+    "corporate ticket//super early bird": BRELLA_ATTENDEE_GROUP_IDS["corporate"],
+    "corporate ticket//early bird": BRELLA_ATTENDEE_GROUP_IDS["corporate"],
+    "corporate ticket//standard": BRELLA_ATTENDEE_GROUP_IDS["corporate"],
+    "corporate atendee": BRELLA_ATTENDEE_GROUP_IDS["corporate"],
+    "digital ticket": BRELLA_ATTENDEE_GROUP_IDS["general"],
+    "general//1st wave": BRELLA_ATTENDEE_GROUP_IDS["general"],
+    "general//2nd wave": BRELLA_ATTENDEE_GROUP_IDS["general"],
+    "general//early bird": BRELLA_ATTENDEE_GROUP_IDS["general"],
+    "general//super early bird": BRELLA_ATTENDEE_GROUP_IDS["general"],
+    "general//standard": BRELLA_ATTENDEE_GROUP_IDS["general"],
+    "general//late release": BRELLA_ATTENDEE_GROUP_IDS["general"],
+    "general atendee": BRELLA_ATTENDEE_GROUP_IDS["general"],
+    "general invite": BRELLA_ATTENDEE_GROUP_IDS["general"],
+    "incubator/accelerator//1st wave": BRELLA_ATTENDEE_GROUP_IDS["incubators"],
+    "incubator/accelerator//2nd wave": BRELLA_ATTENDEE_GROUP_IDS["incubators"],
+    "incubator/accelerator//early bird": BRELLA_ATTENDEE_GROUP_IDS["incubators"],
+    "incubator/accelerator//super early bird": BRELLA_ATTENDEE_GROUP_IDS["incubators"],
+    "incubator/accelerator//standard": BRELLA_ATTENDEE_GROUP_IDS["incubators"],
+    "incubator/accelerator//late release": BRELLA_ATTENDEE_GROUP_IDS["incubators"],
+    "incubator showcase ticket": BRELLA_ATTENDEE_GROUP_IDS["incubators"],
+    "rni incubator/accelerator//invite": BRELLA_ATTENDEE_GROUP_IDS["incubators"],
+    "investor/": BRELLA_ATTENDEE_GROUP_IDS["investors"],
+    "/investor": BRELLA_ATTENDEE_GROUP_IDS["investors"],
+    "investor//1st wave": BRELLA_ATTENDEE_GROUP_IDS["investors"],
+    "investor//2nd wave": BRELLA_ATTENDEE_GROUP_IDS["investors"],
+    "investor//early bird": BRELLA_ATTENDEE_GROUP_IDS["investors"],
+    "investor//super early bird": BRELLA_ATTENDEE_GROUP_IDS["investors"],
+    "investor//standard": BRELLA_ATTENDEE_GROUP_IDS["investors"],
+    "investor//late release": BRELLA_ATTENDEE_GROUP_IDS["investors"],
+    "partner/": BRELLA_ATTENDEE_GROUP_IDS["partners"],
+    "/partner": BRELLA_ATTENDEE_GROUP_IDS["partners"],
+    "speaker/": BRELLA_ATTENDEE_GROUP_IDS["speakers"],
+    "/speaker": BRELLA_ATTENDEE_GROUP_IDS["speakers"],
+    "startup/": BRELLA_ATTENDEE_GROUP_IDS["startup_simple"],
+    "startup showcase 2nd ticket": BRELLA_ATTENDEE_GROUP_IDS["startup_showcase"],
+    "startup showcase//2nd ticket": BRELLA_ATTENDEE_GROUP_IDS["startup_simple"],
+    "startup showcase ticket//1st wave": BRELLA_ATTENDEE_GROUP_IDS["startup_showcase"],
+    "startup showcase ticket//2nd wave": BRELLA_ATTENDEE_GROUP_IDS["startup_showcase"],
+    "startup showcase ticket//early bird": BRELLA_ATTENDEE_GROUP_IDS["startup_showcase"],
+    "startup showcase ticket//super early bird": BRELLA_ATTENDEE_GROUP_IDS["startup_showcase"],
+    "startup showcase ticket//standard": BRELLA_ATTENDEE_GROUP_IDS["startup_showcase"],
+    "startup showcase ticket//late release": BRELLA_ATTENDEE_GROUP_IDS["startup_showcase"],
+    "startup simple ticket": BRELLA_ATTENDEE_GROUP_IDS["startup_simple"],
+    "startup simple ticket//1st wave": BRELLA_ATTENDEE_GROUP_IDS["startup_simple"],
+    "startup simple ticket//2nd wave": BRELLA_ATTENDEE_GROUP_IDS["startup_simple"],
+    "startup simple ticket//early bird": BRELLA_ATTENDEE_GROUP_IDS["startup_simple"],
+    "startup simple ticket//super early bird": BRELLA_ATTENDEE_GROUP_IDS["startup_simple"],
+    "startup simple ticket//standard": BRELLA_ATTENDEE_GROUP_IDS["startup_simple"],
+    "startup simple ticket//late release": BRELLA_ATTENDEE_GROUP_IDS["startup_simple"],
+    "student": BRELLA_ATTENDEE_GROUP_IDS["student"],
+    "student//standard": BRELLA_ATTENDEE_GROUP_IDS["general"],
+}
 
 
 def parse_args():
@@ -287,12 +374,84 @@ def pick_external_qr(row, fallback_value):
     return fallback_value
 
 
+def normalize_ticket_type(ticket_type):
+    normalized = re.sub(r"\s+", " ", str(ticket_type or "").strip().lower())
+    normalized = re.sub(r"\s*//\s*", "//", normalized)
+    normalized = re.sub(r"\s*/\s*", "/", normalized)
+    return normalized
+
+
+def pick_ticket_types(row):
+    if not (0 <= TICKETS_COLUMN < len(row)):
+        return []
+
+    raw_tickets = clean_csv_value(row[TICKETS_COLUMN])
+    if not raw_tickets:
+        return []
+
+    tickets = [clean_csv_value(part) for part in raw_tickets.split("|")]
+    return [ticket for ticket in tickets if ticket]
+
+
+def map_ticket_type_to_group_id(ticket_type):
+    normalized = normalize_ticket_type(ticket_type)
+
+    if normalized in TICKET_TYPE_TO_GROUP_ID:
+        return TICKET_TYPE_TO_GROUP_ID[normalized]
+
+    if normalized.startswith("student//") and "standard" not in normalized:
+        return BRELLA_ATTENDEE_GROUP_IDS["student"]
+
+    if "startup showcase" in normalized:
+        return BRELLA_ATTENDEE_GROUP_IDS["startup_showcase"]
+    if "startup simple" in normalized or normalized in ("startup", "startup/"):
+        return BRELLA_ATTENDEE_GROUP_IDS["startup_simple"]
+    if "incubator" in normalized or "accelerator" in normalized:
+        return BRELLA_ATTENDEE_GROUP_IDS["incubators"]
+    if "investor" in normalized:
+        return BRELLA_ATTENDEE_GROUP_IDS["investors"]
+    if "corporate" in normalized:
+        return BRELLA_ATTENDEE_GROUP_IDS["corporate"]
+    if "partner" in normalized:
+        return BRELLA_ATTENDEE_GROUP_IDS["partners"]
+    if "speaker" in normalized:
+        return BRELLA_ATTENDEE_GROUP_IDS["speakers"]
+    if "student" in normalized:
+        return BRELLA_ATTENDEE_GROUP_IDS["student"]
+    if "general" in normalized or "digital ticket" in normalized:
+        return BRELLA_ATTENDEE_GROUP_IDS["general"]
+
+    return ""
+
+
+def pick_attendee_group_id(row):
+    mapped_group_ids = []
+
+    for ticket_type in pick_ticket_types(row):
+        group_id = map_ticket_type_to_group_id(ticket_type)
+        if group_id and group_id not in mapped_group_ids:
+            mapped_group_ids.append(group_id)
+
+    if not mapped_group_ids:
+        return ""
+
+    if len(mapped_group_ids) == 1:
+        return mapped_group_ids[0]
+
+    for group_id in GROUP_PRIORITY:
+        if group_id in mapped_group_ids:
+            return group_id
+
+    return mapped_group_ids[0]
+
+
 def build_payload(row):
     threecket_id = pick_threecket_id(row)
     full_name = pick_full_name(row)
     email = pick_email(row)
     company = clean_csv_value(row[13]) if len(row) > 13 else ""
     external_qr_string = pick_external_qr(row, threecket_id)
+    attendee_group_id = pick_attendee_group_id(row)
 
     if not threecket_id:
         raise ValueError("Missing 3cket attendee ID")
@@ -301,7 +460,7 @@ def build_payload(row):
 
     first_name, last_name = split_name(full_name)
 
-    return {
+    payload = {
         "event_invite": {
             "external_email": email,
             "external_id": threecket_id,
@@ -314,6 +473,11 @@ def build_payload(row):
         "import_interest_selections": False,
         "import_identity_selections": False,
     }
+
+    if attendee_group_id:
+        payload["event_invite"]["attendee_group_id"] = attendee_group_id
+
+    return payload
 
 
 def build_url(template):
@@ -361,6 +525,10 @@ def payload_external_id(payload):
 
 def payload_external_qr(payload):
     return payload["event_invite"].get("external_qr_string", "")
+
+
+def payload_attendee_group_id(payload):
+    return payload["event_invite"].get("attendee_group_id", "")
 
 
 def payload_participant_label(payload):
@@ -774,7 +942,8 @@ def run_sync_v4(
             if dry_run:
                 emit(
                     f"[SIMULACAO] linha {line_number}: {payload_email(payload)} -> "
-                    f"external_id {payload_external_id(payload)} qr {payload_external_qr(payload)}",
+                    f"external_id {payload_external_id(payload)} qr {payload_external_qr(payload)} "
+                    f"grupo {payload_attendee_group_id(payload) or '-'}",
                     log_callback=log_callback,
                 )
                 continue

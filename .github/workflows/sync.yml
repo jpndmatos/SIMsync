@@ -1,0 +1,53 @@
+name: 3cket to Brella Sync
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Run mode"
+        required: true
+        type: choice
+        options:
+          - preview
+          - import
+      prune_missing:
+        description: "Prune participants no longer in 3cket"
+        required: true
+        type: boolean
+        default: true
+      download_csv:
+        description: "Download CSV from 3cket first"
+        required: true
+        type: boolean
+        default: true
+      limit:
+        description: "Limit number of participants (0 = no limit)"
+        required: false
+        type: string
+        default: "0"
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run sync
+        env:
+          BRELLA_API_KEY: ${{ secrets.BRELLA_API_KEY }}
+          BRELLA_ORG_ID: ${{ secrets.BRELLA_ORG_ID }}
+          BRELLA_EVENT_ID: ${{ secrets.BRELLA_EVENT_ID }}
+          THREECKET_COOKIE: ${{ secrets.THREECKET_COOKIE }}
+          BRELLA_REQUEST_DELAY: ${{ secrets.BRELLA_REQUEST_DELAY }}
+        run: |
+          FLAGS=""
+          if [ "${{ inputs.mode }}" = "preview" ]; then FLAGS="$FLAGS --dry-run"; fi
+          if [ "${{ inputs.prune_missing }}" = "false" ]; then FLAGS="$FLAGS --no-prune-missing"; fi
+          if [ "${{ inputs.download_csv }}" = "false" ]; then FLAGS="$FLAGS --no-download-csv"; fi
+          if [ "${{ inputs.limit }}" != "0" ] && [ -n "${{ inputs.limit }}" ]; then FLAGS="$FLAGS --limit ${{ inputs.limit }}"; fi
+          echo "Running: python api.py $FLAGS"
+          python api.py $FLAGS

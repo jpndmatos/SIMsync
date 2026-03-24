@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3cket Control Room</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <p class="eyebrow">3cket -> Brella</p>
+        <h1>Control Room</h1>
+        <p class="hero-text">
+          Sync 3cket participants to Brella. Runs via GitHub Actions.
+        </p>
+      </header>
+
+      <main class="dashboard-grid">
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Connection</h2>
+          </div>
+          <div class="form-stack">
+            <label class="field">
+              <span>GitHub PAT (<code>repo</code> scope)</span>
+              <input id="github-pat" type="password" placeholder="ghp_..." />
+            </label>
+            <label class="field checkbox-field">
+              <input id="persist-pat" type="checkbox" />
+              <span>Remember for this session</span>
+            </label>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Options</h2>
+          </div>
+          <div class="form-stack">
+            <label class="field checkbox-field">
+              <input id="opt-prune" type="checkbox" checked />
+              <span>Prune missing participants</span>
+            </label>
+            <label class="field checkbox-field">
+              <input id="opt-download" type="checkbox" checked />
+              <span>Download CSV from 3cket</span>
+            </label>
+            <label class="field">
+              <span>Limit (0 = all)</span>
+              <input id="opt-limit" type="number" value="0" min="0" />
+            </label>
+          </div>
+        </section>
+
+        <section class="panel panel-wide">
+          <div class="panel-header">
+            <h2>Settings</h2>
+            <button class="ghost-button" id="btn-save-secrets" type="button">Save to GitHub</button>
+          </div>
+          <div class="form-stack">
+            <label class="field">
+              <span>Brella API Key</span>
+              <input id="secret-brella-key" type="password" placeholder="Enter to update" />
+            </label>
+            <label class="field">
+              <span>Brella Org ID</span>
+              <input id="secret-brella-org" type="text" placeholder="e.g. 1218" />
+            </label>
+            <label class="field">
+              <span>Brella Event ID</span>
+              <input id="secret-brella-event" type="text" placeholder="e.g. 10672" />
+            </label>
+            <label class="field">
+              <span>3cket Cookie</span>
+              <input id="secret-threecket-cookie" type="password" placeholder="Enter to update" />
+            </label>
+            <p class="settings-note">
+              Only filled fields are updated. Values are encrypted and stored as GitHub repo secrets.
+            </p>
+          </div>
+        </section>
+
+        <section class="panel panel-wide">
+          <div class="action-row">
+            <button class="secondary-button" id="btn-preview" type="button">Preview</button>
+            <button class="primary-button" id="btn-import" type="button">Import</button>
+          </div>
+          <div class="status-strip" id="run-status">
+            Ready. Add your PAT and click Preview or Import.
+          </div>
+        </section>
+
+        <section class="panel panel-wide">
+          <div class="panel-header">
+            <h2>Log</h2>
+            <button class="ghost-button" id="btn-clear-log" type="button">Clear</button>
+          </div>
+          <div class="log-console" id="log-console" aria-live="polite"></div>
+        </section>
+
+        <section class="panel panel-wide">
+          <div class="panel-header">
+            <h2>Recent Runs</h2>
+            <button class="ghost-button" id="btn-refresh" type="button">Refresh</button>
+          </div>
+          <div id="history-list" class="history-list">
+            <p class="muted-text">Enter PAT to load run history.</p>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/libsodium-wrappers@0.7.15/dist/modules/libsodium-wrappers.min.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
