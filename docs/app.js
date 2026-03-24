@@ -140,8 +140,8 @@ async function dispatchWorkflow(mode) {
 }
 
 async function findTriggeredRun(afterTimestamp) {
-  for (let attempt = 0; attempt < 12; attempt++) {
-    await sleep(2500);
+  for (let attempt = 0; attempt < 24; attempt++) {
+    await sleep(3000);
     try {
       const data = await ghJSON(
         `/repos/${OWNER}/${REPO}/actions/workflows/${WORKFLOW_FILE}/runs?per_page=5&branch=main`
