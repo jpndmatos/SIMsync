@@ -160,7 +160,6 @@ async function dispatchWorkflow(mode) {
   };
 
   log(`Dispatching workflow (${mode})...`);
-  switchToTab("log");
   const beforeDispatch = new Date().toISOString();
 
   await ghFetch(
@@ -286,7 +285,6 @@ async function fetchAndDisplayLogs(runId) {
 }
 
 async function viewRunLogs(runId) {
-  switchToTab("log");
   log(`Loading logs for run #${runId}...`);
   await fetchAndDisplayLogs(runId);
 }
