@@ -105,9 +105,64 @@ function setConnected(connected) {
   el.connectionLabel.textContent = connected ? "Connected" : "Disconnected";
 }
 
+// --- CSV upload to repo ---
+
+async function uploadCsvToRepo(file) {
+  const repoPath = "participants.csv";
+  log(`Uploading ${file.name} to repo as ${repoPath}...`);
+
+  const content = await readFileAsBase64(file);
+
+  // Get current file SHA if it exists (needed for updates)
+  let sha = null;
+  try {
+    const existing = await ghJSON(`/repos/${OWNER}/${REPO}/contents/${repoPath}`);
+    sha = existing.sha;
+  } catch (e) {
+    // File doesn't exist yet, that's fine
+  }
+
+  const body = {
+    message: `Upload ${file.name} for sync`,
+    content,
+    branch: "main",
+  };
+  if (sha) body.sha = sha;
+
+  await ghFetch(`/repos/${OWNER}/${REPO}/contents/${repoPath}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  log(`Uploaded ${file.name} to repo.`, "success");
+}
+
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = btoa(
+        new Uint8Array(reader.result).reduce((s, b) => s + String.fromCharCode(b), "")
+      );
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
+}
+
 // --- Workflow dispatch ---
 
 async function dispatchWorkflow(mode) {
+  // If upload mode, push CSV to repo first
+  if (dataSource === "upload") {
+    if (!uploadedFile) {
+      throw new Error("No CSV file selected. Upload a file first.");
+    }
+    await uploadCsvToRepo(uploadedFile);
+  }
+
   const inputs = {
     mode,
     prune_missing: String(el.optPrune.checked),
