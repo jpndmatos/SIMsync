@@ -1,5 +1,5 @@
 const OWNER = "jpndmatos";
-const REPO = "3cket2brellaAPI";
+const REPO = "SIMsync";
 const WORKFLOW_FILE = "sync.yml";
 const API = "https://api.github.com";
 const STORAGE_KEY = "threecket-control-room-pat";
