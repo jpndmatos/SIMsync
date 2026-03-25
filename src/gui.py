@@ -43,7 +43,7 @@ FONT_MONO = ("Consolas", 9)
 FONT_TITLE = ("Poppins", 14, "bold")
 FONT_SECTION = ("Poppins", 9, "bold")
 
-CARD_PAD_X = 8
+CARD_PAD_X = 12
 CARD_PAD_INNER = 10
 CARD_PAD_Y_TOP = 8
 CARD_PAD_Y_BOT = 8
@@ -789,12 +789,12 @@ class App:
                 right.sash_place(0, max(300, int(w * 0.50)), 0)
         self.root.after(300, set_sash)
 
-        # Log header — status dot + label (replaces "Activity Log" title)
+        # Log header — status dot + label
         log_header = tk.Frame(log_frame, bg=SURFACE)
-        log_header.pack(fill="x", padx=0, pady=0)
+        log_header.pack(fill="x")
 
         log_title_row = tk.Frame(log_header, bg=SURFACE)
-        log_title_row.pack(fill="x", padx=14, pady=(10, 0))
+        log_title_row.pack(fill="x", padx=CARD_PAD_X, pady=(CARD_PAD_X, 0))
 
         self._log_status_dot = tk.Frame(log_title_row, bg=TEXT_TER, width=8, height=8)
         self._log_status_dot.pack(side="left", padx=(0, 8), pady=1)
@@ -817,17 +817,17 @@ class App:
         clear_btn.bind("<Leave>", lambda e: clear_btn.config(fg=TEXT_TER))
 
         log_sep = tk.Frame(log_header, bg=SURFACE_RAISED, height=1)
-        log_sep.pack(fill="x", padx=10, pady=(6, 0))
+        log_sep.pack(fill="x", padx=CARD_PAD_X, pady=(GAP, 0))
 
         # Log text widget with color tags
         self.log_text = tk.Text(log_frame, font=FONT_MONO, bg="#0c0c12", fg=TEXT_SEC,
                                 relief="flat", wrap="word", insertbackground=ACCENT_LIGHT,
                                 state="disabled", padx=12, pady=8)
-        self.log_text.pack(fill="both", expand=True, padx=GAP, pady=(4, GAP))
+        self.log_text.pack(fill="both", expand=True, padx=CARD_PAD_X, pady=(GAP, 0))
 
         # Action buttons below the log
         action_bar = tk.Frame(log_frame, bg=SURFACE)
-        action_bar.pack(fill="x", padx=8, pady=(0, GAP))
+        action_bar.pack(fill="x", padx=CARD_PAD_X, pady=(GAP, CARD_PAD_X))
 
         self._global_preview_btn = tk.Button(action_bar, text="Preview", font=FONT_BOLD,
                                               bg=SURFACE_RAISED, fg=TEXT_SEC,
