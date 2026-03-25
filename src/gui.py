@@ -43,7 +43,7 @@ FONT_MONO = ("Consolas", 9)
 FONT_TITLE = ("Poppins", 14, "bold")
 FONT_SECTION = ("Poppins", 9, "bold")
 
-CARD_PAD_X = 12
+CARD_PAD_X = 10
 CARD_PAD_INNER = 10
 CARD_PAD_Y_TOP = 8
 CARD_PAD_Y_BOT = 8
@@ -133,11 +133,12 @@ def save_env_values(updates):
 
 # --- Card helpers ---
 
-GAP = 6  # universal gap between elements
+GAP = 8  # universal gap between elements
 
 def make_card(parent):
     card = tk.Frame(parent, bg=SURFACE, highlightbackground=SURFACE_RAISED, highlightthickness=1)
     card.pack(fill="x", padx=CARD_PAD_X, pady=(0, GAP))
+
     return card
 
 
@@ -206,7 +207,7 @@ class SetupTab:
         scroller = ScrollableFrame(self.frame)
         inner_frame = scroller.frame
 
-        tk.Frame(inner_frame, bg=BG, height=GAP).pack(fill="x")
+        tk.Frame(inner_frame, bg=BG, height=CARD_PAD_X).pack(fill="x")
 
         # Brella card
         card = make_card(inner_frame)
@@ -241,12 +242,9 @@ class SetupTab:
         make_field(left, "Org ID", self.org_id)
         make_field(right, "Event ID", self.event_id)
 
-        # Admin credentials card (for Tags endpoint)
-        tk.Frame(inner_frame, bg=SURFACE_RAISED, height=1).pack(
-            fill="x", padx=CARD_PAD_X, pady=(12, 16))
-
+        # Admin credentials card
         admin_card = make_card(inner_frame)
-        card_title(admin_card, "BRELLA ADMIN SESSION  —  Tags sync")
+        card_title(admin_card, "BRELLA ADMIN SESSION")
         admin_inner = tk.Frame(admin_card, bg=SURFACE)
         admin_inner.pack(fill="x", padx=CARD_PAD_INNER, pady=(0, CARD_PAD_Y_BOT))
 
@@ -289,32 +287,6 @@ class SetupTab:
         make_field(admin_inner, "client", self.admin_client, show="*")
         make_field(admin_inner, "uid  (your login email)", self.admin_uid)
 
-        # Action buttons row: Save + Test Connection
-        actions = tk.Frame(inner_frame, bg=BG)
-        actions.pack(fill="x", padx=CARD_PAD_X, pady=(16, 0))
-
-        self._save_btn = tk.Button(actions, text="Save", font=FONT_BOLD, bg=ACCENT, fg="white",
-                  activebackground=ACCENT_LIGHT, activeforeground="white",
-                  relief="flat", cursor="hand2", padx=24, pady=8,
-                  command=self._save)
-        self._save_btn.pack(side="left", padx=(0, 8))
-
-        self._test_btn = tk.Button(actions, text="Test Connection", font=FONT_BOLD,
-                  bg=SURFACE_RAISED, fg=TEXT,
-                  activebackground=SURFACE, activeforeground=TEXT_SEC,
-                  relief="flat", cursor="hand2", padx=24, pady=8,
-                  highlightthickness=1, highlightbackground=TEXT_TER,
-                  command=self._test_connection)
-        self._test_btn.pack(side="left")
-
-        # Button press feedback
-        _bind_button_flash(self._save_btn, ACCENT, ACCENT_LIGHT)
-        _bind_button_flash(self._test_btn, SURFACE_RAISED, "#2e2e38")
-
-        self.status_var = tk.StringVar(value="")
-        self.status_label = tk.Label(inner_frame, textvariable=self.status_var, font=FONT_SMALL,
-                                     fg=TEXT_SEC, bg=BG, anchor="w", padx=4, pady=6)
-        self.status_label.pack(fill="x", padx=CARD_PAD_X, pady=(8, 0))
 
     def _save(self):
         save_env_values({
@@ -333,8 +305,6 @@ class SetupTab:
         os.environ["BRELLA_ADMIN_CLIENT"] = self.admin_client.get().strip()
         os.environ["BRELLA_ADMIN_UID"] = self.admin_uid.get().strip()
 
-        self.status_var.set("Saved to .env")
-        self.status_label.config(fg=SUCCESS)
 
         # Update API status pill
         api_ok = bool(self.api_key.get().strip())
@@ -357,10 +327,62 @@ class SetupTab:
             self.log_callback("Setup saved to .env")
 
     def _test_connection(self):
-        self.status_var.set("Test connection not yet implemented.")
-        self.status_label.config(fg=WARN)
-        if self.log_callback:
-            self.log_callback("[INFO] Test connection placeholder — not yet implemented.")
+        """Test both the integration API and admin panel API connections."""
+        import threading
+
+        def _test():
+            from urllib import request as url_req, error as url_err
+            import json
+
+            log = self.log_callback or (lambda m: None)
+            org = os.environ.get("BRELLA_ORG_ID", "")
+            event = os.environ.get("BRELLA_EVENT_ID", "")
+            api_key = os.environ.get("BRELLA_API_KEY", "")
+
+            # Test integration API
+            if api_key and org and event:
+                url = f"https://api.brella.io/api/integration/organizations/{org}/events/{event}"
+                headers = {
+                    os.environ.get("BRELLA_AUTH_HEADER_NAME", "Brella-API-Access-Token"): api_key,
+                    "User-Agent": os.environ.get("BRELLA_HTTP_USER_AGENT", "SIMsync"),
+                }
+                try:
+                    req = url_req.Request(url, headers=headers)
+                    resp = url_req.urlopen(req, timeout=10)
+                    log(f"[OK] Integration API: {resp.status} — connected to event {event}")
+                except url_err.HTTPError as e:
+                    log(f"[ERROR] Integration API: {e.code}")
+                except Exception as e:
+                    log(f"[ERROR] Integration API: {e}")
+            else:
+                log("[WARN] Integration API: missing API key, org, or event ID")
+
+            # Test admin panel API
+            token = os.environ.get("BRELLA_ADMIN_ACCESS_TOKEN", "")
+            client = os.environ.get("BRELLA_ADMIN_CLIENT", "")
+            uid = os.environ.get("BRELLA_ADMIN_UID", "")
+            if token and client and uid and event:
+                url = f"https://api.brella.io/api/admin_panel/events/{event}/tags"
+                headers = {
+                    "access-token": token, "client": client, "uid": uid,
+                    "token-type": "Bearer",
+                    "Accept": "application/vnd.brella.v4+json",
+                    "User-Agent": "Mozilla/5.0",
+                }
+                try:
+                    req = url_req.Request(url, headers=headers)
+                    resp = url_req.urlopen(req, timeout=10)
+                    body = json.loads(resp.read().decode())
+                    count = len(body) if isinstance(body, list) else len(body.get("data", body.get("tags", [])))
+                    log(f"[OK] Admin API: {resp.status} — {count} tags found")
+                except url_err.HTTPError as e:
+                    log(f"[ERROR] Admin API: {e.code} — tokens may be expired")
+                except Exception as e:
+                    log(f"[ERROR] Admin API: {e}")
+            else:
+                log("[WARN] Admin API: missing admin tokens")
+
+        threading.Thread(target=_test, daemon=True).start()
 
 
 # --- Button press flash helper ---
@@ -460,7 +482,7 @@ class SyncTab:
         inner_frame = tk.Frame(self.frame, bg=BG)
         inner_frame.pack(fill="x", side="top")
 
-        tk.Frame(inner_frame, bg=BG, height=GAP).pack(fill="x")
+        tk.Frame(inner_frame, bg=BG, height=CARD_PAD_X).pack(fill="x")
 
         # CSV picker
         csv_card = make_card(inner_frame)
@@ -509,7 +531,7 @@ class SyncTab:
 
         # --- Detail boxes: 2x2 grid packed directly in self.frame ---
         detail_container = tk.Frame(self.frame, bg=BG)
-        detail_container.pack(fill="both", expand=True, padx=CARD_PAD_X, pady=(0, GAP))
+        detail_container.pack(fill="both", expand=True, padx=CARD_PAD_X, pady=(0, CARD_PAD_X))
         detail_container.columnconfigure(0, weight=1)
         detail_container.columnconfigure(1, weight=1)
         detail_container.rowconfigure(0, weight=1)
@@ -532,9 +554,8 @@ class SyncTab:
         """Create a unified card: colored accent bar on top, header with title+count, list below."""
         outer = tk.Frame(parent, bg=SURFACE, highlightbackground=SURFACE_RAISED,
                          highlightthickness=1)
-        half = GAP // 2
-        padx = (0 if col == 0 else half, 0 if col == 1 else half)
-        pady = (0 if row == 0 else half, 0 if row == 1 else half)
+        padx = (0 if col == 0 else GAP, 0 if col == 1 else GAP)
+        pady = (0 if row == 0 else GAP, 0 if row == 1 else GAP)
         outer.grid(row=row, column=col, sticky="nsew", padx=padx, pady=pady)
         outer.columnconfigure(0, weight=1)
 
@@ -846,6 +867,18 @@ class App:
         _bind_button_flash(self._global_preview_btn, SURFACE_RAISED, "#2e2e38")
         _bind_button_flash(self._global_import_btn, ACCENT, ACCENT_LIGHT)
 
+        # Setup-specific buttons (Test Connection + Save) — same bar, shown on Setup tab
+        self._global_test_btn = tk.Button(action_bar, text="Test Connection", font=FONT_BOLD,
+                                           bg=SURFACE_RAISED, fg=TEXT_SEC,
+                                           activebackground="#2e2e38", activeforeground=TEXT,
+                                           relief="flat", cursor="hand2", pady=7)
+        self._global_save_btn = tk.Button(action_bar, text="Save", font=FONT_BOLD,
+                                           bg=ACCENT, fg="white",
+                                           activebackground=ACCENT_LIGHT, activeforeground="white",
+                                           relief="flat", cursor="hand2", pady=7)
+        _bind_button_flash(self._global_test_btn, SURFACE_RAISED, "#2e2e38")
+        _bind_button_flash(self._global_save_btn, ACCENT, ACCENT_LIGHT)
+
         # Configure text tags for log colorization
         self.log_text.tag_configure("timestamp", foreground=TEXT_TER)
         self.log_text.tag_configure("msg_default", foreground=TEXT_SEC)
@@ -858,6 +891,10 @@ class App:
         # --- Setup nav + tab ---
         self._add_nav(sidebar, "Setup")
         setup = SetupTab(self.content, log_callback=self.log)
+        self._setup_tab = setup
+        # Wire global buttons to setup actions
+        self._global_test_btn.config(command=setup._test_connection)
+        self._global_save_btn.config(command=setup._save)
         self.panels["Setup"] = setup.frame
 
         nav_sep = tk.Frame(sidebar, bg=SURFACE_RAISED, height=1)
@@ -1009,14 +1046,18 @@ class App:
         for ind_name, indicator in self.nav_indicators:
             indicator.config(bg=ACCENT if ind_name == name else SURFACE)
 
-        # Show/hide action buttons based on whether active panel is a sync tab
-        is_sync = name in self._sync_tabs
-        if is_sync:
+        # Show/hide action buttons based on active panel
+        self._global_preview_btn.pack_forget()
+        self._global_import_btn.pack_forget()
+        self._global_test_btn.pack_forget()
+        self._global_save_btn.pack_forget()
+
+        if name in self._sync_tabs:
             self._global_preview_btn.pack(side="left", fill="x", expand=True, padx=(0, 3))
             self._global_import_btn.pack(side="left", fill="x", expand=True, padx=(3, 0))
-        else:
-            self._global_preview_btn.pack_forget()
-            self._global_import_btn.pack_forget()
+        elif name == "Setup":
+            self._global_test_btn.pack(side="left", fill="x", expand=True, padx=(0, 3))
+            self._global_save_btn.pack(side="left", fill="x", expand=True, padx=(3, 0))
 
     def _run_active_tab(self, dry_run=False):
         tab = self._sync_tabs.get(self.active_panel)
