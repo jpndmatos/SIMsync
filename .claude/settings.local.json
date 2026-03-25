@@ -29,7 +29,10 @@
       "WebFetch(domain:api.brella.io)",
       "WebFetch(domain:help.brella.io)",
       "WebFetch(domain:apitracker.io)",
-      "Bash(rm -rf build/)"
+      "Bash(rm -rf build/)",
+      "Bash(mkdir -p src data)",
+      "Bash(mv api.py gui.py speakers.py schedule_sync.py sync.py src/)",
+      "Bash(mv participants.csv speakers.csv schedule.csv data/)"
     ]
   },
   "outputStyle": "default",

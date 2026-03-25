@@ -14,7 +14,7 @@ from urllib import error, request
 def get_runtime_dir():
     if getattr(sys, "frozen", False):
         return Path(sys.executable).resolve().parent
-    return Path(__file__).resolve().parent
+    return Path(__file__).resolve().parent.parent  # src/ -> project root
 
 
 def resolve_runtime_file(filename):
@@ -32,7 +32,7 @@ def resolve_runtime_file(filename):
 
 
 RUNTIME_DIR = get_runtime_dir()
-DEFAULT_CSV_PATH = resolve_runtime_file("participants.csv")
+DEFAULT_CSV_PATH = resolve_runtime_file("data/participants.csv")
 ENV_FILE = resolve_runtime_file(".env")
 DEFAULT_THREECKET_CSV_URL = (
     "https://app.3cket.com/webservices/backoffice/event-manager/participants/"

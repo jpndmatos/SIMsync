@@ -64,6 +64,90 @@ def _api_call(url, headers, method="GET", payload=None):
         return e.code, body
 
 
+def _admin_headers():
+    """Build DeviseTokenAuth headers for the Brella admin panel API."""
+    token = os.environ.get("BRELLA_ADMIN_ACCESS_TOKEN", "")
+    client = os.environ.get("BRELLA_ADMIN_CLIENT", "")
+    uid = os.environ.get("BRELLA_ADMIN_UID", "")
+    if not (token and client and uid):
+        return None
+    return {
+        "access-token": token,
+        "client": client,
+        "uid": uid,
+        "token-type": "Bearer",
+        "Accept": "application/vnd.brella.v4+json",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Origin": "https://manager.brella.io",
+        "Referer": "https://manager.brella.io/",
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) "
+            "Gecko/20100101 Firefox/151.0"
+        ),
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "same-site",
+    }
+
+
+def _upload_speaker_photo(speaker_id, photo_url, log_callback=None):
+    """Download photo from URL and upload to Brella via admin panel API (base64 data URI)."""
+    import base64
+    from urllib.parse import quote
+
+    admin_hdrs = _admin_headers()
+    if not admin_hdrs:
+        emit("[WARN] Photo upload skipped — admin tokens not set", log_callback=log_callback)
+        return None
+
+    # Download the image
+    try:
+        encoded_url = quote(photo_url, safe=':/?#[]@!$&\'()*+,;=-_.~')
+        req = url_request.Request(encoded_url)
+        resp = url_request.urlopen(req, timeout=15)
+        image_data = resp.read()
+        content_type = resp.headers.get("Content-Type", "image/jpeg")
+        # Normalize content type
+        if "jpeg" in content_type or "jpg" in content_type:
+            mime = "image/jpeg"
+        elif "png" in content_type:
+            mime = "image/png"
+        else:
+            mime = content_type.split(";")[0].strip()
+    except Exception as e:
+        emit(f"[WARN] Photo download failed: {e}", log_callback=log_callback)
+        return None
+
+    # Convert to base64 data URI
+    b64 = base64.b64encode(image_data).decode("ascii")
+    data_uri = f"data:{mime};base64,{b64}"
+
+    # PATCH via admin panel API with base64 photo
+    event = os.environ.get("BRELLA_EVENT_ID", "10672")
+    url = f"https://api.brella.io/api/admin_panel/events/{event}/speakers/{speaker_id}"
+    admin_hdrs["Content-Type"] = "application/json"
+    payload = json.dumps({"speaker": {"photo": data_uri}}).encode()
+
+    req = url_request.Request(url, data=payload, headers=admin_hdrs, method="PATCH")
+    try:
+        resp = url_request.urlopen(req)
+        return resp.status
+    except url_error.HTTPError as e:
+        err_body = e.read().decode()[:300]
+        emit(f"[WARN] Photo upload (base64): {e.code} {err_body}", log_callback=log_callback)
+        # Fallback: try field name "photo_url" with data URI
+        try:
+            payload2 = json.dumps({"speaker": {"photo_url": data_uri}}).encode()
+            req2 = url_request.Request(url, data=payload2, headers=admin_hdrs, method="PATCH")
+            resp2 = url_request.urlopen(req2)
+            return resp2.status
+        except url_error.HTTPError as e2:
+            emit(f"[WARN] Photo upload (photo_url): {e2.code} {e2.read().decode()[:200]}",
+                 log_callback=log_callback)
+            return e2.code
+
+
 def list_speakers(headers):
     status, data = _api_call(_speakers_url(), headers)
     if status != 200:
@@ -136,8 +220,6 @@ def parse_speakers_csv(csv_path, log_callback=None):
             "bio": bio,
             "external_id": external_id,
         }
-        if photo_url:
-            speaker_data["photo_url"] = photo_url
 
         records.append((line_num, speaker_data, f"{first_name} {last_name}", email, photo_url))
 
@@ -212,6 +294,7 @@ def run_speakers_sync(csv_path, dry_run=False, prune_missing=False, log_callback
 
         try:
             # --- Speaker profile ---
+            sp_id = None
             if ext_id in existing_map:
                 sp_id = existing_map[ext_id]["id"]
                 status, resp = update_speaker(headers, sp_id, speaker_data)
@@ -226,11 +309,18 @@ def run_speakers_sync(csv_path, dry_run=False, prune_missing=False, log_callback
                 status, resp = create_speaker(headers, speaker_data)
                 if status in (200, 201, 204):
                     added.append(name)
-                    emit(f"[OK] Speaker created: {name}", log_callback=log_callback)
+                    sp_id = resp.get("data", {}).get("id") if isinstance(resp, dict) else None
+                    emit(f"[OK] Speaker created: {name} (id: {sp_id})", log_callback=log_callback)
                 else:
                     failed += 1
-                    emit(f"[ERROR] line {line_num} speaker create: {status}",
+                    emit(f"[ERROR] line {line_num} speaker create: {status} {resp}",
                          log_callback=log_callback)
+
+            # --- Upload photo via admin panel API ---
+            if sp_id and photo_url:
+                sc = _upload_speaker_photo(sp_id, photo_url, log_callback=log_callback)
+                if sc and sc in (200, 201, 204):
+                    emit(f"[OK] Photo uploaded: {name}", log_callback=log_callback)
 
             time.sleep(REQUEST_DELAY_SECONDS)
 

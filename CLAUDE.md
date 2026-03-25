@@ -8,27 +8,44 @@ SIMsync imports event data from local CSVs into Brella (networking platform) via
 
 The project is written in Portuguese (log messages, some UI strings).
 
+## Project Structure
+
+```
+SIMsync/
+├── src/              # All Python source
+│   ├── api.py        # Participant sync logic, Brella API, .env loader
+│   ├── gui.py        # Tkinter desktop GUI
+│   ├── speakers.py   # Speakers sync logic
+│   ├── schedule_sync.py  # Schedule sync logic
+│   └── sync.py       # CLI entrypoint
+├── data/             # CSV data files
+├── build.bat         # Build exe (outputs SIMsync.exe to root)
+├── .env              # Config (not committed)
+└── CLAUDE.md
+```
+
 ## Architecture
 
-- **`api.py`** — all participant sync logic: CSV parsing, Brella API calls (create/update/delete invites via `urllib`), ticket-type-to-attendee-group mapping, CSV download from 3cket. Key functions: `run_sync_v4` (full import), `preview_sync_v4` (dry-run diff), `prepare_csv` (download + fallback). Configuration from `.env` / environment variables. Uses only Python stdlib.
-- **`speakers.py`** — speakers sync logic: comma-delimited Typeform CSV (only `Publish == "Publish"` rows), calls the Brella speakers API (`/speakers`) for speaker profiles AND the invites API for participant entries. `external_id` is the Typeform token (falls back to email). Imports helpers from `api.py`.
-- **`schedule_sync.py`** — schedule sync logic: comma-delimited CSV (`date`, `start_time`, `duration`, `title`, `subtitle`, `content`, `location`, `tags`, `speakers`). Creates/updates Brella timeslots and assigns speakers by matching full names against existing Brella speaker profiles. `external_id` is slugified `subtitle`. Run speakers sync first.
-- **`sync.py`** — CLI entrypoint with subcommands: `participants`, `speakers`, `schedule`, `sponsors`. Each takes `--csv` and `--dry-run`. Sponsors is a stub.
-- **`gui.py`** — Local tkinter GUI with sidebar navigation, file pickers per sync type, dry-run/prune options, and a log panel. Runs the sync directly from the local machine.
+- **`src/api.py`** — all participant sync logic: CSV parsing, Brella API calls (create/update/delete invites via `urllib`), ticket-type-to-attendee-group mapping, CSV download from 3cket. Key functions: `run_sync_v4` (full import), `preview_sync_v4` (dry-run diff), `prepare_csv` (download + fallback). Configuration from `.env` / environment variables. Uses only Python stdlib.
+- **`src/speakers.py`** — speakers sync logic: comma-delimited Typeform CSV (only `Publish == "Publish"` rows), calls the Brella speakers API (`/speakers`) for speaker profiles AND the invites API for participant entries. `external_id` is the Typeform token (falls back to email). Imports helpers from `api.py`.
+- **`src/schedule_sync.py`** — schedule sync logic: comma-delimited CSV (`date`, `start_time`, `duration`, `title`, `subtitle`, `content`, `location`, `tags`, `speakers`). Creates/updates Brella timeslots and assigns speakers by matching full names against existing Brella speaker profiles. `external_id` is slugified `subtitle`. Run speakers sync first.
+- **`src/sync.py`** — CLI entrypoint with subcommands: `participants`, `speakers`, `schedule`, `sponsors`. Each takes `--csv` and `--dry-run`. Sponsors is a stub.
+- **`src/gui.py`** — Local tkinter GUI with sidebar navigation, file pickers per sync type, dry-run/prune options, and a log panel. Runs the sync directly from the local machine.
 
 ## Commands
 
 ```bash
-# CLI
-python sync.py participants --csv data/participants.csv              # full sync
-python sync.py participants --csv data/participants.csv --dry-run    # preview
-python sync.py participants --csv data/participants.csv --no-prune   # sync without deleting
-
 # GUI
-python gui.py
+python src/gui.py
 
-# Legacy CLI (still works)
-python api.py --csv participants.csv --dry-run --no-download-csv
+# CLI
+python src/sync.py participants --csv data/participants.csv
+python src/sync.py participants --csv data/participants.csv --dry-run
+python src/sync.py speakers --csv data/speakers.csv
+python src/sync.py schedule --csv data/schedule.csv
+
+# Build exe (outputs SIMsync.exe to project root)
+build.bat
 ```
 
 No test suite, no linter config, no package manager — stdlib only.
@@ -40,3 +57,4 @@ No test suite, no linter config, no package manager — stdlib only.
 - **Matching logic**: participants matched by `external_id` (3cket row ID). Fetches all Brella invites via paginated API, builds lookup map, diffs against CSV.
 - **HTTP**: all via `urllib.request` (no `requests`). Rate limiting via `REQUEST_DELAY_SECONDS`.
 - **Environment**: all config from env vars (with a custom `.env` loader, not `python-dotenv`).
+- **Path resolution**: `get_runtime_dir()` returns project root (parent of `src/` in dev, exe dir when frozen).

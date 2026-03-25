@@ -19,7 +19,7 @@ import api as _api  # noqa: F401
 def get_base_dir():
     if getattr(sys, "frozen", False):
         return Path(sys.executable).resolve().parent
-    return Path(__file__).resolve().parent
+    return Path(__file__).resolve().parent.parent  # src/ -> project root
 
 BASE_DIR = get_base_dir()
 ENV_PATH = BASE_DIR / ".env"
@@ -133,9 +133,11 @@ def save_env_values(updates):
 
 # --- Card helpers ---
 
+GAP = 6  # universal gap between elements
+
 def make_card(parent):
     card = tk.Frame(parent, bg=SURFACE, highlightbackground=SURFACE_RAISED, highlightthickness=1)
-    card.pack(fill="x", padx=CARD_PAD_X, pady=(0, 6))
+    card.pack(fill="x", padx=CARD_PAD_X, pady=(0, GAP))
     return card
 
 
@@ -204,7 +206,7 @@ class SetupTab:
         scroller = ScrollableFrame(self.frame)
         inner_frame = scroller.frame
 
-        tk.Frame(inner_frame, bg=BG, height=20).pack(fill="x")
+        tk.Frame(inner_frame, bg=BG, height=GAP * 2).pack(fill="x")
 
         # Brella card
         card = make_card(inner_frame)
@@ -438,10 +440,11 @@ class StatusPulse:
 
 class SyncTab:
     def __init__(self, parent, name, description, has_prune=False, has_cookie=False,
-                 run_func=None, enabled=True):
+                 run_func=None, enabled=True, app=None):
         self.name = name
         self.run_func = run_func
         self.enabled = enabled
+        self._app = app
         self.csv_path = tk.StringVar()
         self.dry_run = tk.BooleanVar(value=False)
         self.prune = tk.BooleanVar(value=True)
@@ -457,7 +460,7 @@ class SyncTab:
         inner_frame = tk.Frame(self.frame, bg=BG)
         inner_frame.pack(fill="x", side="top")
 
-        tk.Frame(inner_frame, bg=BG, height=20).pack(fill="x")
+        tk.Frame(inner_frame, bg=BG, height=GAP * 2).pack(fill="x")
 
         # CSV picker
         csv_card = make_card(inner_frame)
@@ -478,7 +481,7 @@ class SyncTab:
                                     command=self._browse)
         self.browse_btn.pack(side="right", padx=(8, 0))
 
-        # Options card — shown when there are prune or 3cket options
+        # Options card
         if has_prune or has_cookie:
             opts = make_card(inner_frame)
             card_title(opts, "OPTIONS")
@@ -504,49 +507,9 @@ class SyncTab:
                 self.dl_cb.pack(fill="x", pady=(4, 0))
                 self.cookie_entry = make_field(opts_inner, "Session Cookie", self.cookie, show="*")
 
-        # Action row: Preview (ghost) + Import (solid)
-        actions = tk.Frame(inner_frame, bg=BG)
-        actions.pack(fill="x", padx=CARD_PAD_X, pady=(6, 0))
-
-        btn_pady = 8
-
-        self.preview_btn = tk.Button(actions, text="Preview", font=FONT_BOLD,
-                                     bg=SURFACE_RAISED, fg=TEXT_SEC,
-                                     activebackground="#2e2e38", activeforeground=TEXT,
-                                     relief="flat", cursor="hand2", padx=20, pady=btn_pady,
-                                     command=lambda: self._run(dry_run=True))
-        self.preview_btn.pack(side="left", fill="x", expand=True, padx=(0, 4))
-
-        self.import_btn = tk.Button(actions, text="Import", font=FONT_BOLD,
-                                    bg=ACCENT, fg="white",
-                                    activebackground=ACCENT_LIGHT, activeforeground="white",
-                                    relief="flat", cursor="hand2", padx=20, pady=btn_pady,
-                                    command=lambda: self._run(dry_run=False))
-        self.import_btn.pack(side="left", fill="x", expand=True, padx=(4, 0))
-
-        # Button press feedback
-        _bind_button_flash(self.preview_btn, SURFACE_RAISED, "#2e2e38")
-        _bind_button_flash(self.import_btn, ACCENT, ACCENT_LIGHT)
-
-        # Status badge
-        status_row = tk.Frame(inner_frame, bg=BG)
-        status_row.pack(fill="x", padx=CARD_PAD_X, pady=(6, 8))
-
-        self.status_dot = tk.Frame(status_row, bg=TEXT_TER, width=7, height=7)
-        self.status_dot.pack(side="left", padx=(4, 8), pady=1)
-        self.status_dot.pack_propagate(False)
-
-        # Pulse animator for status dot
-        self._pulse = StatusPulse(self.status_dot)
-
-        self.status_var = tk.StringVar(value="Ready")
-        self.status_label = tk.Label(status_row, textvariable=self.status_var, font=FONT_SMALL,
-                                     fg=TEXT_TER, bg=BG, anchor="w")
-        self.status_label.pack(side="left")
-
         # --- Detail boxes: 2x2 grid packed directly in self.frame ---
         detail_container = tk.Frame(self.frame, bg=BG)
-        detail_container.pack(fill="both", expand=True, padx=CARD_PAD_X, pady=(0, 14))
+        detail_container.pack(fill="both", expand=True, padx=CARD_PAD_X, pady=(0, GAP))
         detail_container.columnconfigure(0, weight=1)
         detail_container.columnconfigure(1, weight=1)
         detail_container.rowconfigure(0, weight=1)
@@ -562,8 +525,6 @@ class SyncTab:
             detail_container, "MISSING INFO", "0", WARN, row=1, col=1)
 
         if not enabled:
-            self.preview_btn.config(state="disabled")
-            self.import_btn.config(state="disabled")
             self.browse_btn.config(state="disabled")
             self.path_entry.config(state="disabled")
 
@@ -571,8 +532,9 @@ class SyncTab:
         """Create a unified card: colored accent bar on top, header with title+count, list below."""
         outer = tk.Frame(parent, bg=SURFACE, highlightbackground=SURFACE_RAISED,
                          highlightthickness=1)
-        padx = (0 if col == 0 else 3, 0 if col == 1 else 3)
-        pady = (0 if row == 0 else 3, 0 if row == 1 else 3)
+        half = GAP // 2
+        padx = (0 if col == 0 else half, 0 if col == 1 else half)
+        pady = (0 if row == 0 else half, 0 if row == 1 else half)
         outer.grid(row=row, column=col, sticky="nsew", padx=padx, pady=pady)
         outer.columnconfigure(0, weight=1)
 
@@ -674,8 +636,8 @@ class SyncTab:
         self._set_busy(True)
         mode = "preview" if dry_run else "import"
         self._set_status(f"Running {mode}...", ACCENT_LIGHT)
-        # Start pulsing the status dot
-        self._pulse.start(ACCENT_LIGHT)
+        if self._app:
+            self._app._log_status_pulse.start(ACCENT_LIGHT)
 
         thread = threading.Thread(target=self._run_thread, daemon=True)
         thread.start()
@@ -693,26 +655,28 @@ class SyncTab:
             self._set_status(f"Failed: {exc}", DANGER)
         finally:
             self.running = False
-            self._pulse.stop()
+            if self._app:
+                self._app._log_status_pulse.stop()
             self.frame.after(0, lambda: self._set_busy(False))
 
     def _set_busy(self, busy):
         state = "disabled" if busy else "normal"
-        self.preview_btn.config(state=state)
-        self.import_btn.config(state=state)
+        if self._app:
+            self._app._global_preview_btn.config(state=state)
+            self._app._global_import_btn.config(state=state)
         if not (self.has_cookie and self.download_from_3cket.get()):
             self.browse_btn.config(state=state)
 
     def _set_status(self, text, color=TEXT_TER):
         def _update():
-            self.status_var.set(text)
-            self.status_label.config(fg=color)
-            # Only set dot color directly when not pulsing
-            if not self._pulse._running:
-                self.status_dot.config(bg=color)
-            else:
-                # Stop pulse and set final color
-                self._pulse.stop(final_color=color)
+            if self._app:
+                self._app._log_status_var.set(text)
+                self._app._log_status_label.config(fg=color)
+                pulse = self._app._log_status_pulse
+                if not pulse._running:
+                    self._app._log_status_dot.config(bg=color)
+                else:
+                    pulse.stop(final_color=color)
         self.frame.after(0, _update)
 
     def _log(self, msg):
@@ -746,14 +710,6 @@ class App:
         self.root.state("zoomed")  # start maximized
         _apply_dark_title_bar(self.root)
 
-        # Set window icon
-        try:
-            png_path = BASE_DIR / "assets" / "SIMlogo.png"
-            if png_path.exists():
-                self._icon_img = tk.PhotoImage(file=str(png_path))
-                self.root.iconphoto(True, self._icon_img)
-        except Exception:
-            pass
 
         # Track pending nav animations to cancel on rapid switching
         self._nav_anim_ids = {}
@@ -775,18 +731,8 @@ class App:
         brand = tk.Frame(sidebar, bg=SURFACE)
         brand.pack(fill="x", padx=16, pady=(18, 8))
 
-        self._logo_img = None
-        try:
-            png_path = BASE_DIR / "assets" / "SIMlogo.png"
-            if png_path.exists():
-                raw = tk.PhotoImage(file=str(png_path))
-                orig_w = raw.width()
-                factor = max(1, orig_w // 160)
-                self._logo_img = raw.subsample(factor, factor)
-                tk.Label(brand, image=self._logo_img, bg=SURFACE).pack(anchor="w")
-        except Exception:
-            tk.Label(brand, text="SIMconference2Brella", font=("Poppins", 12, "bold"),
-                     fg=TEXT, bg=SURFACE).pack(anchor="w")
+        tk.Label(brand, text="SIM", font=("Poppins", 22, "bold"),
+                 fg=ACCENT, bg=SURFACE).pack(anchor="w")
 
         sep = tk.Frame(sidebar, bg=SURFACE_RAISED, height=1)
         sep.pack(fill="x", padx=16, pady=(12, 12))
@@ -795,6 +741,7 @@ class App:
         self.nav_buttons = []
         self.nav_indicators = []
         self.panels = {}
+        self._sync_tabs = {}
         self.active_panel = None
         # Track current bg color per nav button for smooth interpolation
         self._nav_current_bg = {}
@@ -822,18 +769,22 @@ class App:
                 right.sash_place(0, max(300, int(w * 0.67)), 0)
         self.root.after(300, set_sash)
 
-        # Log header
+        # Log header — status dot + label (replaces "Activity Log" title)
         log_header = tk.Frame(log_frame, bg=SURFACE)
         log_header.pack(fill="x", padx=0, pady=0)
 
         log_title_row = tk.Frame(log_header, bg=SURFACE)
         log_title_row.pack(fill="x", padx=14, pady=(10, 0))
 
-        # Log icon + title
-        tk.Label(log_title_row, text="\u2261", font=("Poppins", 12, "bold"), fg=TEXT_TER,
-                 bg=SURFACE).pack(side="left", padx=(0, 6))
-        tk.Label(log_title_row, text="Activity Log", font=("Poppins", 10, "bold"), fg=TEXT_SEC,
-                 bg=SURFACE).pack(side="left")
+        self._log_status_dot = tk.Frame(log_title_row, bg=TEXT_TER, width=8, height=8)
+        self._log_status_dot.pack(side="left", padx=(0, 8), pady=1)
+        self._log_status_dot.pack_propagate(False)
+        self._log_status_pulse = StatusPulse(self._log_status_dot)
+
+        self._log_status_var = tk.StringVar(value="Ready")
+        self._log_status_label = tk.Label(log_title_row, textvariable=self._log_status_var,
+                                           font=("Poppins", 10, "bold"), fg=TEXT_SEC, bg=SURFACE)
+        self._log_status_label.pack(side="left")
 
         clear_btn = tk.Button(log_title_row, text="Clear", font=("Poppins", 8),
                               bg=SURFACE, fg=TEXT_TER,
@@ -852,7 +803,28 @@ class App:
         self.log_text = tk.Text(log_frame, font=FONT_MONO, bg="#0c0c12", fg=TEXT_SEC,
                                 relief="flat", wrap="word", insertbackground=ACCENT_LIGHT,
                                 state="disabled", padx=12, pady=8)
-        self.log_text.pack(fill="both", expand=True, padx=8, pady=(4, 8))
+        self.log_text.pack(fill="both", expand=True, padx=GAP, pady=(4, GAP))
+
+        # Action buttons below the log
+        action_bar = tk.Frame(log_frame, bg=SURFACE)
+        action_bar.pack(fill="x", padx=8, pady=(0, GAP))
+
+        self._global_preview_btn = tk.Button(action_bar, text="Preview", font=FONT_BOLD,
+                                              bg=SURFACE_RAISED, fg=TEXT_SEC,
+                                              activebackground="#2e2e38", activeforeground=TEXT,
+                                              relief="flat", cursor="hand2", pady=7,
+                                              command=lambda: self._run_active_tab(dry_run=True))
+        self._global_preview_btn.pack(side="left", fill="x", expand=True, padx=(0, 3))
+
+        self._global_import_btn = tk.Button(action_bar, text="Import", font=FONT_BOLD,
+                                             bg=ACCENT, fg="white",
+                                             activebackground=ACCENT_LIGHT, activeforeground="white",
+                                             relief="flat", cursor="hand2", pady=7,
+                                             command=lambda: self._run_active_tab(dry_run=False))
+        self._global_import_btn.pack(side="left", fill="x", expand=True, padx=(3, 0))
+
+        _bind_button_flash(self._global_preview_btn, SURFACE_RAISED, "#2e2e38")
+        _bind_button_flash(self._global_import_btn, ACCENT, ACCENT_LIGHT)
 
         # Configure text tags for log colorization
         self.log_text.tag_configure("timestamp", foreground=TEXT_TER)
@@ -874,6 +846,13 @@ class App:
                  fg=TEXT_TER, bg=SURFACE).pack(fill="x", padx=18, pady=(0, 6))
 
         # --- Sync tabs ---
+        # Default CSV paths per sync tab
+        _default_csvs = {
+            "Participants": BASE_DIR / "data" / "participants.csv",
+            "Speakers": BASE_DIR / "data" / "speakers.csv",
+            "Schedule": BASE_DIR / "data" / "schedule.csv",
+        }
+
         for name, desc, prune, cookie, func, en in [
             ("Participants", "Sync 3cket participants to Brella.", True, True,
              self._run_participants, True),
@@ -885,9 +864,14 @@ class App:
         ]:
             self._add_nav(sidebar, name)
             tab = SyncTab(self.content, name, desc, has_prune=prune, has_cookie=cookie,
-                          run_func=func, enabled=en)
+                          run_func=func, enabled=en, app=self)
             tab._log_callback = self.log
+            # Preload default CSV path if file exists
+            default_csv = _default_csvs.get(name)
+            if default_csv and default_csv.exists():
+                tab.csv_path.set(str(default_csv))
             self.panels[name] = tab.frame
+            self._sync_tabs[name] = tab
 
         self._switch_panel("Setup")
         self._apply_env()
@@ -1004,6 +988,20 @@ class App:
         # Update indicators
         for ind_name, indicator in self.nav_indicators:
             indicator.config(bg=ACCENT if ind_name == name else SURFACE)
+
+        # Show/hide action buttons based on whether active panel is a sync tab
+        is_sync = name in self._sync_tabs
+        if is_sync:
+            self._global_preview_btn.pack(side="left", fill="x", expand=True, padx=(0, 3))
+            self._global_import_btn.pack(side="left", fill="x", expand=True, padx=(3, 0))
+        else:
+            self._global_preview_btn.pack_forget()
+            self._global_import_btn.pack_forget()
+
+    def _run_active_tab(self, dry_run=False):
+        tab = self._sync_tabs.get(self.active_panel)
+        if tab:
+            tab._run(dry_run=dry_run)
 
     def log(self, msg):
         ts = datetime.datetime.now().strftime("%H:%M:%S")
@@ -1122,7 +1120,7 @@ class App:
 
         downloading = tab.download_from_3cket.get()
         if downloading:
-            csv_path = BASE_DIR / "participants.csv"
+            csv_path = BASE_DIR / "data" / "participants.csv"
         else:
             csv_path = Path(tab.csv_path.get())
 
