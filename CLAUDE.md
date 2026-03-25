@@ -4,14 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-SIMsync imports event data from local CSVs into Brella (networking platform) via the Brella REST API. It supports syncing participants, speakers, sponsors, and schedule — creating, updating, and optionally pruning entries. Currently only participant sync is implemented.
+SIMsync imports event data from local CSVs into Brella (networking platform) via the Brella REST API. It supports syncing participants, speakers, sponsors, and schedule — creating, updating, and optionally pruning entries. Participants, speakers, and schedule are fully implemented; sponsors is a stub.
 
 The project is written in Portuguese (log messages, some UI strings).
 
 ## Architecture
 
 - **`api.py`** — all participant sync logic: CSV parsing, Brella API calls (create/update/delete invites via `urllib`), ticket-type-to-attendee-group mapping, CSV download from 3cket. Key functions: `run_sync_v4` (full import), `preview_sync_v4` (dry-run diff), `prepare_csv` (download + fallback). Configuration from `.env` / environment variables. Uses only Python stdlib.
-- **`sync.py`** — CLI entrypoint with subcommands: `participants`, `speakers`, `sponsors`, `schedule`. Each takes `--csv` and `--dry-run`. Speakers/sponsors/schedule are stubs.
+- **`speakers.py`** — speakers sync logic: comma-delimited Typeform CSV (only `Publish == "Publish"` rows), calls the Brella speakers API (`/speakers`) for speaker profiles AND the invites API for participant entries. `external_id` is the Typeform token (falls back to email). Imports helpers from `api.py`.
+- **`schedule_sync.py`** — schedule sync logic: comma-delimited CSV (`date`, `start_time`, `duration`, `title`, `subtitle`, `content`, `location`, `tags`, `speakers`). Creates/updates Brella timeslots and assigns speakers by matching full names against existing Brella speaker profiles. `external_id` is slugified `subtitle`. Run speakers sync first.
+- **`sync.py`** — CLI entrypoint with subcommands: `participants`, `speakers`, `schedule`, `sponsors`. Each takes `--csv` and `--dry-run`. Sponsors is a stub.
 - **`gui.py`** — Local tkinter GUI with sidebar navigation, file pickers per sync type, dry-run/prune options, and a log panel. Runs the sync directly from the local machine.
 
 ## Commands

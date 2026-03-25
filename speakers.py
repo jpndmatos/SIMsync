@@ -117,6 +117,7 @@ def parse_speakers_csv(csv_path, log_callback=None):
         company = row[COL_COMPANY].strip()
         job_title = row[COL_JOB_TITLE].strip()
         bio = row[COL_BIO].strip() if len(row) > COL_BIO else ""
+        photo_url = row[COL_PHOTO].strip() if len(row) > COL_PHOTO else ""
         token = row[COL_TOKEN].strip()
 
         if not email:
@@ -135,8 +136,10 @@ def parse_speakers_csv(csv_path, log_callback=None):
             "bio": bio,
             "external_id": external_id,
         }
+        if photo_url:
+            speaker_data["photo_url"] = photo_url
 
-        records.append((line_num, speaker_data, f"{first_name} {last_name}", email))
+        records.append((line_num, speaker_data, f"{first_name} {last_name}", email, photo_url))
 
     emit(f"Parsed {len(records)} published speakers, {skipped} skipped.",
          log_callback=log_callback)
@@ -193,7 +196,7 @@ def run_speakers_sync(csv_path, dry_run=False, prune_missing=False, log_callback
     removed = []
     failed = 0
 
-    for line_num, speaker_data, name, email in records:
+    for line_num, speaker_data, name, email, photo_url in records:
         ext_id = speaker_data["external_id"]
         desired_external_ids.add(ext_id)
 

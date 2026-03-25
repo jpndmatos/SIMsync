@@ -41,8 +41,12 @@ def cmd_sponsors(args):
 
 
 def cmd_schedule(args):
-    print(f"[schedule] CSV: {args.csv}")
-    print("[schedule] Not implemented yet — coming soon.")
+    from schedule_sync import run_schedule_sync
+    run_schedule_sync(
+        args.csv,
+        dry_run=args.dry_run,
+        prune_missing=getattr(args, "prune", False),
+    )
 
 
 def build_parser():
@@ -78,6 +82,9 @@ def build_parser():
     p = sub.add_parser("schedule", help="Sync schedule to Brella")
     p.add_argument("--csv", required=True, help="Path to schedule CSV")
     p.add_argument("--dry-run", action="store_true", help="Preview without changes")
+    p.add_argument("--prune", action="store_true", default=False,
+                   help="Remove Brella timeslots not in CSV")
+    p.add_argument("--no-prune", dest="prune", action="store_false")
     p.set_defaults(func=cmd_schedule)
 
     return parser

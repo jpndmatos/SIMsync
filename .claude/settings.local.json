@@ -1,6 +1,8 @@
 {
   "permissions": {
     "allow": [
+      "Edit",
+      "Write",
       "Bash(ls:*)",
       "Bash(gh api:*)",
       "Bash(curl -sI \"https://cdn.jsdelivr.net/npm/libsodium-wrappers@0.7.15/dist/modules-sumo/libsodium-wrappers.min.js\")",
@@ -15,7 +17,19 @@
       "Bash(python sync.py speakers --csv test.csv)",
       "Bash(python sync.py participants --csv participants_tester.csv --dry-run)",
       "Bash(cd:*)",
-      "Bash(timeout 3 python gui.py)"
+      "Bash(timeout 3 python gui.py)",
+      "Bash(python:*)",
+      "Bash(pip install:*)",
+      "Bash(rm -rf build/ SIMsync.spec)",
+      "Bash(rm -f dist/SIMsync.exe)",
+      "Bash(taskkill /f /im SIMsync.exe)",
+      "WebSearch",
+      "WebFetch(domain:help-organizers.brella.io)",
+      "WebFetch(domain:developer.brella.io)",
+      "WebFetch(domain:api.brella.io)",
+      "WebFetch(domain:help.brella.io)",
+      "WebFetch(domain:apitracker.io)",
+      "Bash(rm -rf build/)"
     ]
   },
   "outputStyle": "default",

@@ -1,0 +1,522 @@
+﻿#;Name;Phone;Email;Gender;"Birth date";Country;Language;"Check in";"Marketing authorization";Tickets;"Total tickets";E-mail;"Company // Empresa";Group;
+112dd707ad984846bd40e98e1e6ba6e1;"Madalena Cardoso";351912124614;madalena.cardoso@startupportugal.com;female;1998-09-07;PT;en;out;1;"Digital ticket | Startup Showcase Ticket // Standard";2;madalena.cardoso@startupportugal.com;SUP
+90b63a2b71a94e70b4dfc15eb06960f2;Pedro;351910618341;pedrorodrigues@3cket.com;;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird";1
+a5161b439afe45258b8b9a1e20040129;"Luís Lamy";351919780521;luis.lamy@safetyscope.eu;;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird | Startup Showcase // 2nd Ticket";2
+e2803697319a4315b74333f4d29d5657;"Santiago Fernandez Bender";351910490444;santi@sumaapp.io;;;PT;en;out;0;"Startup Simple Ticket // Super Early Bird | Startup Simple Ticket // Super Early Bird";2
+2e403f62c89d42b19e92173a7c8f8bb0;"Pedro Rocha";351918418116;pmanjorocha@gmail.com;male;;PT;en;out;0;"Corporate Ticket // Super Early Bird";1;pmanjorocha@gmail.com;Siemens
+391355df9d4442448721a62369f55038;"Artem Kuznetsoc";420774954996;ajaritus@gmail.com;;;CZ;en;out;0;"Startup Simple Ticket // Super Early Bird";1;ajaritus@gmail.com;Dealsy
+7e9d6122e99f47059696b4a240f99c1f;"Daniel Pereira";351928251008;danielpereira@hestiatechnology.pt;male;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird | Startup Showcase // 2nd Ticket";2;danielpereira@hestiatechnology.pt;"Hestia Technology"
+d610cd5aa1b647729314dba1eb9ed867;"Tiago Alves";351939349334;tiago.falves98@gmail.com;;;PT;en;out;0;"Startup Simple Ticket // Super Early Bird";1
+44c4042df542463baf515bbe435d6c7e;"Anastasiia Krokhmaleva";351915639558;krohmaleva.nastya@icloud.com;female;;PT;en;out;0;"Startup Simple Ticket // Super Early Bird | Startup Simple Ticket // Super Early Bird";2;krohmaleva.nastya@icloud.com;"Rising Formula LDA"
+d64185f02ec24a93b4f9bd309e331af6;"Nuno Frutuoso";351933191616;nuno@fabinventors.com;male;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird";1;nuno@fabinventors.com;FABINVENTORS
+d3a1a3a0ccc946d9abdfcfb08739f035;"Rafhael Monteiro";351915392239;rafhael.monteiro@upinc.pt;male;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird | Startup Simple Ticket // Super Early Bird | Startup Simple Ticket // Super Early Bird | Startup Showcase // 2nd Ticket";4;rafhael.monteiro@upinc.pt;"UPINC "
+273acf179bcf4330a8dc5463cfb65029;"Madalina Grama";351968376090;madalina.m.grama@gmail.com;female;;PT;en;out;0;"Startup Simple Ticket // Super Early Bird";1
+b51f09ada3624cad98afc26c2bfaf4c5;"Tijani Olatunji";351912351720;Jc@joinonemai.com;male;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird | Startup Showcase // 2nd Ticket";2;Jc@joinonemai.com;OneMAI
+535a547a097e4510baf2f7f52282801a;"Aleksandr Chereshnev";351961523295;Alex@magicpot.app;male;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird | Startup Showcase // 2nd Ticket";2;Alex@magicpot.app;"Magic pot LDA"
+963267bd6e064303bf9a8235433295b8;"Javier Juncadella";34609419902;javier.juncadella@digio.es;male;;ES;en;out;0;"Corporate Ticket // Super Early Bird";1;javier.juncadella@digio.es;Digio
+53c677baed9c44fb81f7cb9f71fb111b;"Marco Barbosa";351913623212;marco.barbosa2209@gmail.com;male;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird | Startup Showcase // 2nd Ticket";2;marco.barbosa2209@gmail.com;TagAlong
+05d10673cebe476984535c2cb79689ef;"Brendon McCarthy";351936288819;brendon@mccarthy.im;male;;PT;en;out;0;"Startup Simple Ticket // Super Early Bird";1
+6b0cb3c032204981812ea1bcce1b5c49;"Diogo Maia Caetano";351914121127;diogo@jamminstudio.co;male;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird | Startup Simple Ticket // Super Early Bird | Startup Simple Ticket // Super Early Bird";3;diogo@jamminstudio.co;Jammin'
+382cd0b3fe494a3eb02efc9968ea1852;"Mohamed Hani ElMasry";351934673838;info@sentivue.com;male;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird | Startup Showcase // 2nd Ticket";2;info@sentivue.com;SentiVue
+8a542887721a4336a8116e249e924df1;"Alexander Cherkasov";351939057996;a.s.cherkasov@gmail.com;male;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird";1;a.s.cherkasov@gmail.com;"Autismify "
+d3b8bad12f8441bbb367537eabce26a1;"Yuliia Bilyk";380660287948;julia.belik2000@gmail.com;female;;UA;en;out;0;"Startup Showcase Ticket // Super Early Bird | Startup Showcase // 2nd Ticket";2
+a98814ea15e74f3bae4649ce4f061ab0;"Melanie Ligeiro";351912992040;melanie.ligeiro@empreendedor-hub.com;female;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird | Startup Showcase // 2nd Ticket";2;melanie.ligeiro@empreendedor-hub.com;"Lusohub unipessoal- lda"
+a7a6130dc38141b78fa4f7d48556acd3;"Daniell Krawczyk";16172451744;dank@municipalcaptioning.com;male;;US;en;out;0;"Startup Showcase Ticket // Super Early Bird";1
+28e02f93f76f480b8a6bb8550ac4080e;"Priska Djohari-Oroz";351910828938;priska@getsadie.com;female;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird";1;priska@getsadie.com;Sadie
+e5e1181236b64a03b5b7c2512e58c85e;"Emanuel Sousa";351965220266;emanuel.avsousa@gmail.com;male;;PT;en;out;0;"General // Super Early Bird";1
+355595c2ff0146c98acbdadd810d2928;"Alexandre Pereira";351968690326;alexandre.azevedo.pereira@outlook.com;male;;PT;en;out;0;"Corporate Ticket // Super Early Bird";1;alexandre.azevedo.pereira@outlook.com;"JAP Consulting U. Lda"
+3ddc75b5bc7049d0b69f1273a0f0fdf1;"Hamilton Freitas";351910597392;hamiltontfd@gmail.com;male;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird";1
+98bc650eb00b4688b62941b00c881665;"AMC António Mello Campello";351917109641;amc@bluecrowcapital.com;male;;PT;en;out;0;"Investor // Super Early Bird | Investor // Super Early Bird";2;amc@bluecrowcapital.com;"BlueCrow Capital"
+9711fc669703485289317315bf192aec;"Marcos Almeida";351910655754;marcos.almeida@reverlog.eu;male;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird | Startup Showcase // 2nd Ticket";2;marcos.almeida@reverlog.eu;ReverLog
+cda88de1fcd241bdad1ca5dcc85875f1;"Bernard Lynch";34615353297;bernard@visitlgbtq.com;male;;ES;en;out;0;"Startup Simple Ticket // Super Early Bird";1;bernard@visitlgbtq.com;"QuRated Tech SL"
+1793c750fac24c158ada6af0e508af2c;"David de Paula Santos Silva";351930514340;david@cyberx.pt;male;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird | Startup Showcase // 2nd Ticket";2;david@cyberx.pt;"CyberX - The Ethical Hacking Services"
+e906d4d7b3ce4c24b0e224c1a084cb7e;"Daniela Seixas";351936099363;daniela.seixas@tonicapp.com;female;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird | Startup Simple Ticket // Super Early Bird | Startup Showcase // 2nd Ticket";3;daniela.seixas@tonicapp.com;"Tonic Easy Medical"
+025e6781ccbd479489b627bed9b1e2fb;"Klarissa Djajalie";351915623168;klarissa@getsadie.com;female;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird";1
+1a7002614e88429096f5e8b42d212d06;"Shivam Dhawan";351912159105;learn@lerenlabs.com;male;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird | Startup Showcase // 2nd Ticket";2
+da4d17139ee5432984e8f9e93cc5a547;"Mariah Nascimento";351910242333;mentor@incubou.com;female;;PT;en;out;0;"Incubator/Accelerator // Super Early Bird";1
+a987e264c93b4d638172000849069e68;"Ana Barros";351914199476;ana.barros@impacthub.net;female;;PT;en;out;0;"Incubator/Accelerator // Super Early Bird";1;ana.barros@impacthub.net;"Impact Hub Porto"
+66f57b5832214cd293f0fc48beb46d4c;"Andreia Martins";351937208059;andreia@codepoint.pt;female;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird | Startup Showcase // 2nd Ticket";2
+26e79a46546d4c648c3281de34ff44fe;"Daniil Savchuk";351930495062;dsavchuk@its.xyz;male;;PT;en;out;0;"Startup Simple Ticket // Super Early Bird";1;dsavchuk@its.xyz;"xthon "
+b3c5f07cf33a4adfaa5634241253322e;"Aleksandr Markelov";351920501827;sashmark97@gmail.com;male;;PT;en;out;0;"Startup Simple Ticket // Super Early Bird";1;sashmark97@gmail.com;Manuscript
+be086c537a0f43689a184c165bdfbc5f;"Anabell Acevedo";351912177199;anabell@equivalence.world;female;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird | Startup Showcase // 2nd Ticket";2
+469897e9b9f34b12a8dee3b5e6a44224;"Ahmad Waseem Mahmasa";351925622920;w.mahmasa@gmail.com;male;;PT;en;out;0;"Startup Simple Ticket // Super Early Bird";1;w.mahmasa@gmail.com;MetaCalc
+9cdea6d7df4a418b99a07b232a835a3b;"Nadeem Mahmasa";351924353841;nadeemfouad9@gmail.com;male;;PT;en;out;0;"Startup Simple Ticket // Super Early Bird";1;nadeemfouad9@gmail.com;MetaCalc
+d5a50299d8f247ffbdf5d5017a20e55d;"Tiago Faustino Andrade";351964396704;tiago.andrade@wisifytech.com;male;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird | Startup Showcase // 2nd Ticket";2
+285ad4f323f54c208aeeb51eb9722f2a;"Jose Fontes";351963005761;zefontes@gmail.com;male;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird";1;zefontes@gmail.com;Safira
+2d45226fefc04734972280ff014df732;"Jaime Coelho Lima";351918967644;register@jcl-pro.com;male;;PT;en;out;0;"Investor // Super Early Bird";1
+da25a80668884bdda4e0455551e605b2;"Dmitry Kozlov";351931449605;dmikozlov@gmail.com;male;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird";1;dmikozlov@gmail.com;Elfuturis
+d5bb9b6721c540989c80743fc0573b24;"Diego Brum";351910827086;;male;;PT;en;out;0;"General // Super Early Bird";1
+d7397099fb7048d381445d78dd2426c7;"Flavia Anjos";351911749455;;female;;PT;en;out;0;"General // Super Early Bird";1
+4240d2f31f634331a2c6adfdfe84b252;"Mariana Lopes";351918171121;marianacl@onebest.pt;female;;PT;en;out;0;"Startup Simple Ticket // Super Early Bird | Startup Simple Ticket // Super Early Bird";2;marianacl@onebest.pt;OB
+d6f765853b804ba19aca30eb7c841c1f;"Ana Carolina Ferreira Peixoto";351918242269;geral@axios-care.com;female;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird";1;geral@axios-care.com;"Axios Care"
+06d5d037a34d4186b893c07e25293fce;"João Silva Pinto";351916261442;mail@joaosilvapinto.com;male;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird | Startup Showcase // 2nd Ticket";2;mail@joaosilvapinto.com;"Hive Labs"
+7a6eef3a29904ecd945b2ef974359041;"Zachary Plauche";351911193242;zackplauche@gmail.com;male;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird";1;zackplauche@gmail.com;"Zachary Plauche Unipessoal LDA"
+0770fd3a39644becba7b31b8fcd6f8b6;"Bruno Castilho";351917713427;bruno.castilho@medgical.ai;male;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird";1
+e393f12c750245a2873018683d45be6a;"Jorge Falcão";351925977004;jlbfalcao@gmail.com;male;;PT;en;out;0;"General // Super Early Bird";1;jlbfalcao@gmail.com;"Distinto Pixel"
+6df2cd27cac24c55a435e5ab30f0752f;"Aleksandr Kozlov";351937522325;alrkozlov@gmail.com;male;;PT;en;out;0;"Startup Simple Ticket // Super Early Bird";1;alrkozlov@gmail.com;Elfuturis
+957aacae8a3641d7a0a0e68bd624ca4d;"Oscar Dias";351923371081;odias@omniumai.com;male;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird | Startup Showcase // 2nd Ticket";2;odias@omniumai.com;OmniumAI
+fe9ca3a59925457ab1dc9ddad02add6a;"Afonso Ravasco";351913599316;afonso.ravasco@trash4goods.com;male;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird | Startup Showcase // 2nd Ticket";2;afonso.ravasco@trash4goods.com;Trash4Goods
+635b9af2862241cda091a1a589d97748;"Ricardo Correia";351965065790;Ricardocorreia@untile.pt;male;;PT;en;out;0;"Corporate Ticket // Super Early Bird | Corporate Ticket // Super Early Bird | Corporate Ticket // Standard | Corporate Ticket // Standard";4;Ricardocorreia@untile.pt;"Untile "
+f3f04859e5ce4e20907f8390e73e0c45;"Olha Mokreieva";351962116622;olhamokreieva@groundsos.com;female;;PT;en;out;0;"Startup Simple Ticket";1
+9d0a7b6dad0c4ca4b0157068c0093363;"Luis Maia";351913062317;info@wpl.pt;male;;PT;en;out;0;"Incubator/Accelerator // Super Early Bird | Incubator/Accelerator // Super Early Bird";2
+2cee60ae34e8408b928bf1daf43189eb;"Inês Silva";351912668716;santos.silva.service@gmail.com;female;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird";1
+a47ebbd4dba440aa86ee6d74087dbbf1;"Elio Fernandes";351936032865;mvuembafernandosb28@gmail.com;male;;PT;en;out;0;"Startup Simple Ticket";1;mvuembafernandosb28@gmail.com;"Flix Home"
+f7a0817bdf944ee98966ca804868e6d3;"Tânia Barros";351913828281;tania.barros@glazedsolutions.com;female;;PT;en;out;0;"Corporate Ticket // Super Early Bird";1;tania.barros@glazedsolutions.com;GLAZED
+0c21491e9da24962b416a2f900ceeab5;"Pedro Santos";351918153643;;male;;PT;en;out;0;"Corporate Ticket // Super Early Bird";1
+f1de57fcee82497b9c27d86291cf4c7b;"Paul Arandjelovic";351960396018;pavle.arandjelovic@nexgenbusiness.net;male;;PT;en;out;0;"Corporate Ticket // Super Early Bird";1;pavle.arandjelovic@nexgenbusiness.net;Nexgenbusiness
+c5030033998041bc8c0527f8fc6dbd42;"Luisa Marques";351965717148;luisa.marques@gmail.com;female;;PT;en;out;0;"General // Super Early Bird";1
+9e37fd149d7d49d88bf800ec2d8a11d3;"Miguel Freitas";351966361118;miguelfreitas@amaiscasa.com;male;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird | Startup Showcase // 2nd Ticket";2;miguelfreitas@amaiscasa.com;A+Bizz
+24237f6733cd42b19d5febb60ad3e84b;"João Teixeira Fernandes";351967165940;joao@indie.pt;male;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird | Startup Showcase // 2nd Ticket";2;joao@indie.pt;"Indie Seguros"
+27924286adfb40759e638e8bef5b8607;"João Monteiro";351913457466;;male;;PT;en;out;0;"Investor // Super Early Bird";1
+280b77d8429e443a88227cc9883a7991;"Hadi Jansouz";351912599999;thesevencontinentsco@gmail.com;male;;PT;en;out;0;"Corporate Ticket // Super Early Bird | Corporate Ticket // Super Early Bird";2
+edbd2fe7d4d440c4a48d6ceb28cef5c3;"Solange Fernandes";351910008971;solange.fernandes@srslegal.pt;female;;PT;en;out;0;"Corporate Ticket // Super Early Bird";1;solange.fernandes@srslegal.pt;"SRS Legal"
+c866ac5635764783bd24fec7075f8e25;"Paulo Bandeira";351910008918;paulo.bandeira@srslegal.pt;male;;PT;en;out;0;"Corporate Ticket // Super Early Bird";1
+bad6afd1c383466d9118cc2129e0f91c;"Gonçalo Trovão do Rosário";351913736452;gtr@trovaodorosario.pt;male;;PT;en;out;0;"Corporate Ticket // Super Early Bird";1;gtr@trovaodorosario.pt;"Trovão do Rosário & Associados - Law Firm // Podcast Capital Inteligente"
+a3dfe6a684854f0f954c296f61c06eea;"Jorge Ferreira";351918646839;jferreira@seasoul-tech.pt;male;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird";1
+186be85a10da461d92ecb9f1c51e4ea3;"Juan Carlos Flores";351933408315;jcflores@nextop.pt;male;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird";1
+03e94293484c41ee8a8c36de7f1f4217;"Filipe Fernandes";351916591771;filipe.fernandes@windcredible.com;male;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird | Startup Showcase // 2nd Ticket";2
+594d3b46254b439f9d34b4cf59ced488;"Ana Alago";351915581975;work.aftr@gmail.com;female;;PT;en;out;0;"General // Super Early Bird | General // Super Early Bird";2
+7c6ec7afeba447d7abc0668614567488;"Luís Martinho";351934057240;luis.martinho@vaulthaus.health;male;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird | Startup Showcase // 2nd Ticket";2;luis.martinho@vaulthaus.health;VaultHaus
+f148dd0970114206954ba95a5f302193;"Luis Antonio";351932507572;luis@unblock.capital;male;;PT;en;out;0;"Investor // Super Early Bird";1;luis@unblock.capital;"Unblock Capital "
+779f719ae5f84bc6a42c1fd1c9534c75;"Luís Neves";351914594474;nevesluisff@gmail.com;male;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird | Startup Showcase // 2nd Ticket";2
+9cda51a4d683468db9ca9c4670f225b1;"Filipe Esteves";351962658245;f@teemytech.pt;male;;PT;pt_PT;out;0;"Startup Showcase Ticket // Super Early Bird";1;f@teemytech.pt;"Teemy Tech"
+b27ca603d0e1411e9926eb7454ad976b;"Filipe Costa";351918604661;Filipe_umbelino@proton.me;male;;PT;en;out;0;"General // Super Early Bird";1;Filipe_umbelino@proton.me;-
+0e494b38733b4bed93757e7f085101aa;"Jorge Cabaço";351966533430;jorge@dengun.com;male;;PT;en;out;0;"Investor // Super Early Bird | Investor // Super Early Bird";2
+55fb1137a8e64d0e98de98ce2f77ea83;"Antonio Guerreiro";351932941779;info@algarveevolution.pt;male;;PT;en;out;0;"Corporate Ticket // Super Early Bird";1;info@algarveevolution.pt;"Algarve Evolution"
+87fabedd153f4da79f4163a75c80a41d;"Joaquim Nascimento";351926485615;;male;;PT;en;out;0;"Corporate Ticket // Super Early Bird";1
+0001e55a71c24e9a947efec4fa184268;"Rita Pinhol";351939154243;pinholrita@gmail.com;female;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird | Startup Showcase // 2nd Ticket";2
+b6ec32ad35594635885e0c16a3d5240a;"Philippe Ramos";351961080506;philippe-ramos@bioref-colab.pt;male;;PT;pt_PT;out;0;"Investor // Super Early Bird";1
+bcd8394424d9452b82d1180414d55f8a;"Marta Fonseca";351912006574;martaxfonseca@gmail.com;female;;PT;en;out;0;"General // Super Early Bird";1;martaxfonseca@gmail.com;CSG
+1673734a42c741488c2afc51caf9afc6;"Susana Luís Pires";351962221310;Sluis@irium.pt;female;;PT;en;out;0;"Corporate Ticket // Super Early Bird";1;Sluis@irium.pt;IRIUM
+daf6b81d214f436483ec8c88c30aeb18;"Duha Higginson";351924885265;duha@parleyx.com;female;;PT;en;out;0;"Corporate Ticket // Super Early Bird";1;duha@parleyx.com;ParleyX
+f8b2d0843e3942339534cab31cd90f9b;"Paul Higginson";447709865392;;male;;GB;en;out;0;"Corporate Ticket // Super Early Bird";1
+0a09c440a71749e7bfbac3b54350f03a;"Startup Madeira";351966943254;ines.rodrigues@startupmadeira.eu;male;;PT;en;out;0;"Incubator Showcase Ticket";1;ines.rodrigues@startupmadeira.eu;"Startup Madeira"
+df4c5f69fd734b1b8d493c4cf26eae09;"Diogo Monica";351914448526;diogo@haun.co;male;;PT;en;out;0;"Speaker /";1
+4652820e0273489a8606e321a9dc4677;"Marcelo Lebre";351922251997;marcelo@remote.com;male;;PT;en;out;0;"Speaker /";1
+a84088c86f4a44069af3950e2f528004;"Diogo Monica";14159128500;diogo@haun.co;male;;US;en;out;0;"Speaker /";1
+bd6688cead7945d5b47ec441eeb62308;"Marcelo Lebre";351913226179;marcelo@remote.com;male;;PT;en;out;0;"Speaker /";1
+507edc4e0553454b9638077aba629d34;"Paulo Rosado";351932228477;paulo.rosado@outsystems.com;male;;PT;en;out;0;"Speaker /";1
+5630f6cc54ef4400be909fe8e2a00f34;"Oskar Moore";4540170203;oskarmoore@nordicgroup.eu;male;;DK;en;out;0;"Speaker /";1
+8f38b1782cfb42b780da3db9a195b6ef;"Hugo Gonçalves Pereira";351937942265;hgp@shilling.vc;male;;PT;en;out;0;"Speaker / | Investor /";2
+90fd4c1f27d342ecb77ab52fcbcb45a3;"Fiona Disegni";33781869224;fiona.disegni@gmail.com;female;;FR;en;out;0;"Speaker /";1
+9919a8fb8af74e2c8edfe738ef65f39c;"Behdad Esfahbod";16503523569;behdad@behdad.org;male;;US;en;out;0;"Speaker /";1
+400d6f216f3d46ef8e7afadf0cc2712f;"Gustavo Medina";13055603068;gustavo@xrf.ai;male;;US;en;out;0;"Startup /";1
+23ae983823284987bdd5ce58d954841a;"Pablo Ventura";34669784212;pablo@kfund.vc;male;;ES;en;out;0;"Investor /";1
+69ec72ca3eac45658e5f8d077d885d94;"Mário Teixeira";351964692938;leitaoteixeiram@gmail.com;male;;PT;en;out;0;"Startup Simple Ticket";1;leitaoteixeiram@gmail.com;Tourify
+5d2344767223479994c4a8514a4f19ed;"Sofia Correia de Sousa";351914529965;sofia@happyfact.io;female;;PT;en;out;0;"Corporate Ticket // Super Early Bird | Corporate Ticket // Super Early Bird | Corporate Ticket // Super Early Bird";3
+9292c117ce4c4413aa9941e8c17b9a03;"Gonçalo Rebelo de Andrade";351917999406;goncalora96@gmail.com;male;;PT;en;out;0;"General // Super Early Bird";1;goncalora96@gmail.com;GRA
+e44038d4549a43e39f6314d1e3037e27;"Inês Gonçalves";351916854777;ines.goncalves@gotechantimicrobial.com;female;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird";1;ines.goncalves@gotechantimicrobial.com;"GOTECH Antimicrobial"
+6b3620811da44e4dad85bb864821882c;"Sadaf Alidad";351913455500;Sadaf_alidad@shelfbyte.com;female;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird";1;Sadaf_alidad@shelfbyte.com;Shelfbyte
+6141ce72233b46f98c595542dedbdd0c;"Sk Mehedi Hasan Akash";351919293933;jetboosterslda@gmail.com;male;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird";1;jetboosterslda@gmail.com;"Jetboosters LDA"
+8c3cc8d38baf4acc8251aa41152ed8d3;"Gabriel Fonseca";16284000973;gabriel@frontal.dev;male;;US;en;out;0;"Startup Simple Ticket // Super Early Bird";1;gabriel@frontal.dev;"Frontal Labs- Inc."
+acc99688f95b4f1897a4a3ee67083221;"Nuno Fernandes";351969221593;nuno@dig-in.io;male;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird | Startup Showcase // 2nd Ticket";2
+560466265961495192392d357817f01a;"Kevin Mole";351910432728;kevin.mole@gmail.com;male;;PT;en;out;0;"General // Super Early Bird";1
+9f8a14e45fdc4e36893fb8bcb4feeccb;"David Rufino";351962015451;rufino@photobooking.com;male;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird";1
+d41ed8dae1bd40468a460421737f9973;"Bruno Vieira";351968812351;3cket@maldenstudio.com;male;;PT;en;out;0;"Corporate Ticket // Super Early Bird";1
+2f2070a2c90c46d5b701f927c87b9ae4;"Shushana Jiang";351914165963;shushana.ux@gmail.com;female;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird";1
+2419faa5d07e4ce58203c419b9c6b5a9;"Martim Dinis";351965866867;martimdiniz@live.com.pt;male;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird | Startup Showcase // 2nd Ticket | Startup Simple Ticket | Startup Simple Ticket";4;martimdiniz@live.com.pt;CarePlus
+4d044fbed46b4982934319f817a48f24;"Narciso Antunes";351917283470;narciso@quizzability.com;male;;PT;en;out;0;"Startup Showcase Ticket // Super Early Bird | Startup Showcase // 2nd Ticket";2;narciso@quizzability.com;Quizzability
+a7eb5afad3184441a4ea7bfbcfdf446c;"Fabio Machado";41765637093;Fabio.pmachado99@gmail.com;male;;CH;en;out;0;"Startup Simple Ticket";1;Fabio.pmachado99@gmail.com;Biz-Wave.com
+67b2cdcad2c34db88671a90625d7c42f;"Pedro Santos";351961387146;hello@merge.pt;male;;PT;en;out;0;"Startup Showcase Ticket // Early Bird | Startup Showcase // 2nd Ticket";2
+2931b620530d457eb1dbb8006ff263b4;"David Faria";351913537823;adm@goodcasting.pt;male;;PT;en;out;0;"Startup Showcase Ticket // Early Bird | Startup Showcase // 2nd Ticket";2
+01903c48e5fc41e887437e4b617d5de3;"Luísa Vieira";351934044949;lv@regedor.com;female;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";2
+5215803c5a8a406cb59de0e2970cdaac;"Pedro Roque";351961431296;pedro.roque@papayya.com;male;;PT;en;out;0;"Startup Showcase Ticket // Early Bird | Startup Showcase // 2nd Ticket";2
+4b9882fdf0214ac1a9594eedd633eb95;"Guilherme Cameira";351932905721;guilherme.cameira@vartheo.com;male;;PT;en;out;0;"Startup Showcase Ticket // Early Bird | Startup Simple Ticket | Startup Simple Ticket";3;guilherme.cameira@vartheo.com;VARTHEO
+76794157f3d04edab942c5aa69ca4435;"Filinto Girão Osório";351968311717;fgosorio@q-liri.com;male;;PT;en;out;0;"Startup Showcase Ticket // Early Bird | Startup Showcase // 2nd Ticket";2;fgosorio@q-liri.com;Q-LIRI
+aacf63a39c3a4e65ba8eaa0558c1f1bc;"Prasant Saha";351966168314;Ps@caretechr.com;male;;PT;en;out;0;"Startup Showcase Ticket // Early Bird | Startup Showcase // 2nd Ticket";2;Ps@caretechr.com;"CareTechr Healthcare Lda "
+4e40df4aa1304394b04898f994c68570;"Ricardo Danyalgil Junior";351963280339;ricardo@danyalgil.com;male;;PT;en;out;0;"Startup Showcase Ticket // Early Bird | Startup Showcase // 2nd Ticket";2;ricardo@danyalgil.com;"The Danyalgil Company"
+94c4ea96b4d542d79b6b15bf1e587b74;"Rosane Marques";351914375007;rosane.marques@itrtechgroup.com;female;;PT;en;out;0;"Startup Showcase Ticket // Early Bird | Startup Showcase // 2nd Ticket";2
+09b1d325eddf42ddad9038ff7f9c0649;"Ahmet Acar";351939952072;ahmetveacar@gmail.com;male;;PT;en;out;0;"Corporate Ticket // Early Bird";1
+57d9dfdc957641a8a7b7e70a59755d0d;"Hugo Augusto";351913462700;hugo@semapanext.com;male;;PT;en;out;0;"Speaker /";1
+c1e76000c24e4169a715a5d2d16cd1c7;"José Pedro Figueiredo";351967399984;zepedro@navictus.pt;male;;PT;en;out;0;"Startup Showcase Ticket // Early Bird | Startup Simple Ticket // Early Bird | Startup Showcase // 2nd Ticket";3
+c8ae85a4f21048629540c8694510a118;"Pedro Tavares";351962694115;pedro.tavares@govhorizon.com;male;;PT;en;out;0;"Startup Showcase Ticket // Early Bird | Startup Showcase // 2nd Ticket";2
+0ff88e0b67df44a1ae2138e6e385843f;"Halan Borges";351913691258;halan@cyberme.pt;male;;PT;en;out;0;"Startup Showcase Ticket // Early Bird | Startup Showcase // 2nd Ticket";2
+86e13328cba94ced8b6d6dfacfb53135;"Marina Khanaeva";351927291850;marina@vertaitech.com;female;;PT;en;out;0;"Startup Showcase Ticket // Early Bird";1
+ca96681cca3946cbb3b27f055cb2ea45;"Filipe Avides Moreira";351910213227;;male;;PT;en;out;0;"Investor // Early Bird";1
+4fd1a9e7b0d94aa09975db8a294b9110;"Alexander Ehlert";351927405709;;male;;PT;en;out;0;"Investor // Early Bird";1
+3b787f615b154873933093da5a590857;"Ana Nunes Teixeira";351932440749;;female;;PT;en;out;0;"Investor // Early Bird";1
+5916141892924d078bf484f3538469b2;"Leonor Melo Bento";351913736979;;female;;PT;en;out;0;"Investor // Early Bird";1
+0844cb33db0847e3b60e318961b47506;"Francisca Cardeira";351913568070;comunidade@iris-social.org;female;;PT;pt_PT;out;0;"General // Early Bird | Incubator/Accelerator // Early Bird";2
+ad07861d47f8484da8fd06cec0a98ade;"Fernão Abreu";351962715473;info@wishandcook.com;male;;PT;en;out;0;"Startup Showcase Ticket // Early Bird | Startup Showcase // 2nd Ticket";2
+fa70d747853344a691edc916621385b7;"Paulo Fodor";351966398249;paulo.fodor@insightdigital.pt;male;;PT;en;out;0;"Startup Showcase Ticket // Early Bird | Startup Showcase // 2nd Ticket";2
+cb38ff6746764e6e89bb444055bac8a2;"Gabriel Mondina Ferreira";351910116066;gabriel.mondina@gmail.com;male;;PT;en;out;0;"Startup Showcase Ticket // Early Bird";1
+7898e2bf43b34eaba148e3fb1b30063d;"Luis Ferreira";351962333069;luis.ferreira@luckyway.pt;male;;PT;en;out;0;"Startup Showcase Ticket // Early Bird | Startup Showcase // 2nd Ticket";2
+efd7ad1051804b1db4a41af811b5c8be;"Alexey Grebennikov";421952121838;viktoriia.kornieva@aionys.com;male;;SK;en;out;0;"Corporate Ticket // Early Bird";1
+3de513f3a4e2486987d05fc903e2e981;"Daniel Vargas";351910933004;sailerappinfo@gmail.com;male;;PT;en;out;0;"Startup Showcase Ticket // Early Bird | Startup Showcase Ticket // Early Bird | Startup Showcase // 2nd Ticket";3
+3be336b3019548f5b8b73e7bd22dabe0;"Ana Pires";351919744886;ana.pires@dimera.pt;female;;PT;en;out;0;"Startup Showcase Ticket // Early Bird | Startup Showcase // 2nd Ticket";2;ana.pires@dimera.pt;Dimera
+23746a3b22cf46309aa174b1924eebb1;"Federico Molina";351912096676;federicomolinachavez@gmail.com;male;;PT;en;out;0;"Startup Showcase Ticket // Early Bird";1
+322fa8e554414bc58166f3629931b295;"Veridiano Marques";351917487670;veri@minuteaudits.com;male;;PT;en;out;0;"Startup Showcase Ticket // Early Bird";1
+f873c8006560413ca43adb7af9604482;"Rui Gouveia";351916167841;rui@builduplabs.com;male;;PT;en;out;0;"Incubator/Accelerator // Early Bird | Incubator Showcase Ticket";2
+d003262a9ca84f04a373c6c13f84d073;"Tiago Costa";351912300108;Ricardo@zumer.io;male;;PT;en;out;0;"Startup Showcase Ticket // Early Bird | Startup Showcase // 2nd Ticket";2;Ricardo@zumer.io;Zumer
+95a986f8ecc54687a5e177f4282b8300;"Pedro Silva";351962930076;pedro@o2l.ai;male;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1;pedro@o2l.ai;O2L
+fe55e29d70d844db91c334dee7115c17;"Pedro Oliveira";351912343907;poliveira@mendspace.com;male;;PT;en;out;0;"Startup Showcase Ticket // Early Bird";1;poliveira@mendspace.com;MendSpace
+a5890fa703f147e8a3cf3944faa2a83e;"Edite Ravella";351961480269;edite@safecaring.pt;female;;PT;en;out;0;"Startup Showcase Ticket // Early Bird | Startup Showcase // 2nd Ticket | Startup Showcase // 2nd Ticket | Startup Showcase // 2nd Ticket";4
+b5e9242a81584c90b7c87d4dfc65f80a;"Nsisong Okon";351915899430;etimjava@gmail.com;male;;PT;en;out;0;"Startup Showcase Ticket // Early Bird";1
+08037c1c28d54f9f9059ad3d57504ad9;"Guilherme Fonseca";351963830265;contact@telos.care;male;;PT;en;out;0;"Startup Simple Ticket";1
+be1472ad2c134489b782f9148bd4e628;"Martin Reinfeldt";351926202320;mail@martinreinfeldt.com;male;;PT;en;out;0;"General // Early Bird";1
+1d595c674cdb432d86f45ce274259a73;"Ana Fonseca";351925950708;contact@telos.care;female;;PT;en;out;0;"Startup Simple Ticket";1
+35a8fcf808d8476faaad7c6e92ca7872;"Marco Ferreira";351919102577;marco@xarlie.com;male;;PT;en;out;0;"Startup Showcase Ticket // Early Bird | Startup Showcase // 2nd Ticket";2
+6b6f4aaeed67491cb2c8dd2669f209fd;"Isabel Coelho";351962838764;isabel.coelho@caisdoporto.org;female;;PT;pt_PT;out;0;"Incubator/Accelerator // Early Bird";1;isabel.coelho@caisdoporto.org;"Cais do Porto"
+9cda8e5deea24752858e17a9601140e0;"Katerina Sergatskova";351910873199;ks@maira.one;female;;PT;en;out;0;"Startup Showcase Ticket // Early Bird";1
+64ff6e4ab4974deb9b4b108e49ba2021;"Chris Bayliss";351910181699;chris@growthmesh.ai;male;;PT;en;out;0;"Startup Showcase Ticket // Early Bird";1
+5bfa37d347c84c69bc85ea81f7bf558c;"Tatsiana Mikhalevich";351968120737;tatyanamikhalevich830@gmail.com;female;;PT;en;out;0;"General // Early Bird";1
+3bada5682d9e40d0a21c7a6aba21046a;"Francesca Licata";351912441899;Francesca.licata@outlex.ai;female;;PT;en;out;0;"Startup Showcase Ticket // Early Bird | Startup Showcase // 2nd Ticket";2;Francesca.licata@outlex.ai;"Outlex "
+b7868e3c26e845b3aa5da45b744fe7d6;"Michael Galizki";351939221811;michael@galizki.com;male;;PT;en;out;0;"Startup Showcase Ticket // Early Bird | Startup Showcase // 2nd Ticket";2
+10e277d2820e4f508cf2a9b70dca62a0;"Rodrigo Horta";351918843473;rodrigo@smarttoday.ai;male;;PT;en;out;0;"Startup Showcase Ticket // Early Bird | Startup Showcase // 2nd Ticket";2
+3d1bf7d88535454aaa907f60c8d891ac;"Carlos Ribeiro";351916643969;carlos@coalex.ai;male;;PT;en;out;0;"Startup Showcase Ticket // Early Bird | Startup Showcase // 2nd Ticket";2
+50e0f421741d44ee9f74bd71af051cf3;"Pedro Brito";351914604257;info@omnimetrics.pro;male;;PT;en;out;0;"Startup Simple Ticket";1;info@omnimetrics.pro;OmniMetrics
+e8fef67eb6cb4260acf4c8a14e314e74;"Leonardo Moura";351919155188;leonardo@logicand.com;male;;PT;en;out;0;"Startup Simple Ticket // Early Bird";1
+4665537a1e8a41e4a02a4c96bef3f83b;"Helena Rodrigues";351931849124;helena@yooddle.com;;;PT;en;out;0;"Startup Showcase Ticket // Early Bird";1
+3261839e46d44cf390840f024fcf7abf;"Gregory Jones";351960425966;greg.jones@verbowise.pt;;;PT;en;out;0;"Startup Showcase Ticket // Early Bird | Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";3
+316e1fec8b24423588e61c35473a8349;"Tocha Serra";351929153664;tocha.serra@comudel.com;;;PT;en;out;0;"Startup Showcase Ticket // Early Bird | Startup Showcase // 2nd Ticket";2
+14e8f21c02da4db3a8a8f965c1b3b238;"Christiano Domingues";351966712346;christiano.domingues@vectorassumido.com;male;;PT;en;out;0;"Startup Showcase Ticket // Early Bird";1;christiano.domingues@vectorassumido.com;VECTORASSUMIDO
+fc285157b89a4b55b547a594d96484fe;"Bal Kallar";351933341435;Bal@rootedlogic.ai;;;PT;en;out;0;"Startup Showcase Ticket // Early Bird";1
+336a7d27c5144d8d9292044256f0ce68;"Oksana Kalashnikova";351910340711;oksana@bodybloom.ai;female;;PT;en;out;0;"Startup Showcase Ticket // Early Bird | Startup Simple Ticket // Early Bird | Startup Showcase // 2nd Ticket";3
+2a792e9cdc60413d880d562b7436f897;"Mark Shekter";15142688255;mark@think8.co;male;;CA;en;out;0;"Incubator/Accelerator // Standard | Incubator/Accelerator // Standard | Incubator/Accelerator // Standard | Incubator/Accelerator // Standard";4
+c6e6a43b463d4d8abbeb404ffb5cd4cd;"Goncalo Gil";351962798586;goncalogil@rootkey.ai;male;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Simple Ticket | Startup Simple Ticket";3;goncalogil@rootkey.ai;ROOTKey
+f01714dd41ef41e2a7c36f5342c09a50;"Sara São Miguel";351918525630;sara@paynest.co;female;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";2
+59a05d31d97f4cd8b80a755bf73fddfb;"Rodrigo Figueiredo";351929186734;rodrigodsbfigueiredo@gmail.com;male;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";2;rodrigodsbfigueiredo@gmail.com;UpSpeech
+80add99ba26d4e89807ce0c29626854f;"André Dionisio";351932474712;andre@bythelaw.com;male;;PT;en;out;0;"Startup Showcase Ticket // Standard";1
+aa498c90beef406cab6aba40f0ab6228;"André Eiras dos Santos";351938824881;c.ramalho@swordhealth.com;male;;PT;en;out;0;"Speaker /";1;c.ramalho@swordhealth.com;"Sword Health"
+51a81ba6f2cc44a9b643aa8fd8511450;"Cristina Fonseca";351938912514;cristina@indicocapital.com;female;;PT;en;out;0;"Investor /";1
+339ee9ca783644bd9632522345eabc1a;"Sacha Michaud";34607909297;sacha@glovoapp.com;male;;ES;en;out;0;"Speaker /";1
+32bf5ab65d104f3a889d8b81e30f8d03;"Joao Neves";351918073836;joao.neves@bloop.eu;male;;PT;en;out;0;"Startup Showcase Ticket // Standard";1;joao.neves@bloop.eu;Bloop
+296f79a7ba6141be9ae3c493fdda94d0;"Jaime Santos";351910244189;services@aitecserv.pt;male;;PT;en;out;0;"Startup Showcase Ticket // Standard";1
+5dcfcb50bf8741de9b2e04b3e67af83c;"Miguel Gonçalves";351919683434;Miguel7786@gmail.com;male;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Simple Ticket";2;Miguel7786@gmail.com;AuthenticTeamz
+ee2e5c0623d04014b7b51ac099f52ce1;"Bernardo Seixas";351918660353;bernardo.seixas@granter.ai;male;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";2
+231f9209cce742128ca001e9dd81f093;"Ana Clara Cristóvão";351926797549;ana.cristovao@neurosov.com;female;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";2
+bd16bed1cfb94e638b561a4a32b6827d;"Andrii Mandryk";351933794788;andrii_mandryk@me.com;male;;PT;en;out;0;"Startup Showcase Ticket // Standard";1
+070b5b2df10d4b62999a8207463e45fd;"José Carmelino";351913276519;jose.carmelino@horta34.pt;male;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket | Startup Showcase // 2nd Ticket | Startup Showcase // 2nd Ticket";4
+988d59645a1b410c915b07b3b5aca8bc;"Pooyan Sedarati";351963098969;pooyansedarati@gmail.com;male;;PT;en;out;0;"Startup Simple Ticket";1;pooyansedarati@gmail.com;"Word2talk "
+a4d22a7720fe46a18fd4f7e5db9db25b;"José Tiago Fernandes Moniz";351934642305;josetfm077@gmail.com;male;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";2;josetfm077@gmail.com;BeeWisee
+340ae316f849403d96ddfaeb61278136;"Joana Pinhal";351915483885;jpinhal@eversheds-sutherland.net;female;;PT;en;out;0;"General Invite";1
+caf1a620badb4f0085fd4329b1d34106;"Inês Gonçalves";351938345178;hello@gotechantimicrobial.com;female;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1
+ee72972e53744ac98aa07d829b7593d0;"Carlos Monteiro";351964868350;carlos@yooddle.com;male;;PT;en;out;0;"Startup Showcase // 2nd Ticket | Startup Showcase // 2nd Ticket";2
+cc7932d964c64102a87b153d567f38a2;"Daniel Pereira";351935749933;danielpereira@hestiatechnology.pt;male;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1
+76428b0d0d424fc29dd78ddf38739341;"Francisco Lino";351915494252;;male;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1
+e390810003aa4aa4a9ebf4a62f1f1477;"Juliane Brigueto";351969338733;;female;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1
+a548c5ea7e054cde8ed32bcddf1eb628;"Jose Sousa";351966009752;jose@amenaventures.com;male;;PT;en;out;0;"Investor // Standard";1
+9b968f24e2844376b6279300f9672543;"Luís Costa";351913398418;;male;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1
+b50859395696438aa3d8f18ab6121e79;"Carlos Pontes Lopes";351924042796;carlos.lopes@celtis.pt;male;;PT;en;out;0;"Investor // Standard";1
+4ee5bbf150614f488b427318e6c37a20;"Mark Stephen Gomes";351928117775;mark.gomes@celtis.pt;male;;PT;en;out;0;"/ Investor";1
+7667642279e34c96ba74b5fb31a3a333;"Pedro Marques";351917987719;pedro@isell.pt;male;;PT;en;out;0;"/ Investor";1
+13c9ce9aa42b477bb1671c304c1d1780;"Dinis Esteves";351969276252;;male;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1
+4b93ab684b134223b9758283093129f6;"Carla Lima";351920148976;carla@nextborder.ai;female;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";2
+66c61618589c46d787f0fa8fdb256376;"Miguel Ávila";351924272297;Miguelavila@saberprojeto.pt;male;;PT;en;out;0;"Startup Showcase Ticket // Standard";1;Miguelavila@saberprojeto.pt;"SaberProjeto Lda"
+a152a496358a491b96c9c4ac1d74d6de;"Isabel Fernandes";351965820573;isabelfernandes@Treeflowerssolutions.com;female;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";2;isabelfernandes@Treeflowerssolutions.com;"Tree Flowers Solutions"
+8b92367128ef46309b6c69a5d5e52f47;"Vasco Laranjinha";351915706712;vasco.vieira.ext@startupportugal.com;male;;PT;en;out;0;"General Invite";1;vasco.vieira.ext@startupportugal.com;"Startup Portugal"
+00a12976a89e438eb58a78571b719fcf;"Rodrigo Branco";351928288900;rodrigo.branco@motofast.pt;male;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";2;rodrigo.branco@motofast.pt;"Moto Fast"
+da3eb93e169a4c11b79b2a05c97cda1c;"Luís Fonseca";351918402998;;male;;PT;pt_PT;out;0;"Startup Showcase // 2nd Ticket";1
+287682053bf3417e8df834ba206c1a1b;"Esther Saint Eloi";14155043597;aesainteloi@gmail.com;female;;US;en;out;0;"Startup Simple Ticket // Standard";1;aesainteloi@gmail.com;Rastriq
+473d97f0a9f546e68cfd69aa141a3701;"Diogo Ribeiro";351936369935;diogo@brocode.studio;male;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";3
+87f258c4ce1d489485249aaa7fae4ccf;"Joao araujo";351919225842;joaoaraujo241991@gmail.com;male;;PT;en;out;0;"Startup Showcase Ticket // Standard";1;joaoaraujo241991@gmail.com;"I Made A Bug Game Studio"
+65b99f13364941b9b24b808448ea1bf2;"Tiago Carvalho";351912595110;tiago.carvalho@augmented-labs.com;male;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";2
+e116e4a23d4c4ca1ac66544ea3531243;"Sukhdev Hansra";447493646941;sukhdev@amenaventures.com;male;;GB;en;out;0;"/ Investor";1;sukhdev@amenaventures.com;"Amena Ventures"
+ca8f269a6de346c9ae4c79c82fc6db19;"Hernâni Andres";351964516618;hernani.andres@buildupvalue.com;male;;PT;en;out;0;"/ Investor";1;hernani.andres@buildupvalue.com;BuildUpValue
+29f1134debeb4fe6b3bc4f1e370947ac;"Jaime Santos";351914878415;jaime.santos@aitecserv.pt;male;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1;jaime.santos@aitecserv.pt;AiTecServ
+1d6c85a526104629a0f0e5456131d2a5;"Totas Rodrigues";351933275473;totas@bythelaw.com;male;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1
+a470e367c069422994009c6706c48151;"Anastasiia Gliebova";351914967743;anastasiia.gliebova19@gmail.com;female;;PT;en;out;0;"Startup Showcase Ticket // Standard";1
+9cc0e8ff748c4f2fa94f22f4dbd2cf72;"Artur Nascimento";351915468306;arturnascimento1991@gmail.com;male;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";2
+e626aa62b7e64ebbba4b5df42d5b94f0;"Luis Sobreiro";351912788144;lfsobreiro@i2ms.eu;male;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";2
+533caa6ee5bd4ed185822f8dc58722cb;"Raul Almeida";351937519368;raul.almeida@metabluesolution.com;male;;PT;en;out;0;"Startup Showcase Ticket // Standard";1
+1b006d49c71f47ddb2d5a337f7a551b9;"Joana Caldeira";351914573812;caldeirajoana@hotmail.com;female;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";2
+81ce8d5b4a6a4843ad7e9f8b260ef887;"João Freitas";351967659386;;male;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1
+62564f7551d049d9afd04c5fc917d85e;"India Rodeia";351926939477;india.rodeia@gmail.com;female;;PT;en;out;0;"Startup Showcase Ticket // Standard";1;india.rodeia@gmail.com;"Meat Azores"
+8f338e35ac9e4e959250e56b9a93cbc1;"Margarida Correia";351939650411;amc@33n.vc;female;;PT;en;out;0;"Investor // Standard";1;amc@33n.vc;"33N Ventures"
+c84e6d4eb6744b83b2798dd478ce79e5;"Rafael Sardinha";351916926915;rafael.sardinha@sportsbion.com;male;;PT;en;out;0;"Startup Showcase Ticket // Standard";1;rafael.sardinha@sportsbion.com;"Sports Bion- Lda."
+cac6ddc95f42402e8dab75e9382b1151;"Abel Dantas";351911177666;info@xarp.ai;male;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";2;info@xarp.ai;"Xarp Reality Labs"
+7937f0d317124c2dac65ad4c84714e16;"RILTON CAMPOS";5584994056962;rilton@gestvitta.com.br;male;;BR;en;out;0;"Startup Showcase Ticket // Standard";1
+47da3da97577402f98174d6a1a794142;"Sofia Costa";351911017321;Sofia@phira.ventures;female;;PT;en;out;0;"Incubator/Accelerator // Standard | Incubator/Accelerator // Standard | Incubator/Accelerator // Standard";3;Sofia@phira.ventures;"Phira Ventures"
+0c8bc7fd165648098516f8e554cfa4a6;"Miguel Clemente";351965223125;miguel.clemente@noytrall.pt;male;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";2
+5baa00f92e6749b29af2cda6efdc36d3;"Rafael Medeiros";351931179508;info@llldigital.com;male;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket | Startup Showcase // 2nd Ticket | Startup Showcase // 2nd Ticket | Startup Showcase // 2nd Ticket | Startup Showcase // 2nd Ticket";6;info@llldigital.com;lllDIGITAL
+bcd9a76233164c4e88cd190906dc19c1;"Startup Madeira";351924242679;ines.rodrigues@startupmadeira.eu;male;;PT;en;out;0;"Startup Showcase Ticket // Standard | Incubator/Accelerator // Standard";2;ines.rodrigues@startupmadeira.eu;"Startup Madeira"
+b6e60efd35ce4ed49bacdc7a00f87b11;"Carlos Alberto Silva";351935678009;cas@33n.vc;male;;PT;en;out;0;"Investor /";1;cas@33n.vc;"33N Ventures "
+7762f54076324ae68b05aecaa0e0afcc;"Carlos Moreira da Silva";351939650077;cms@33n.vc;male;;PT;en;out;0;"Investor /";1;cms@33n.vc;"33N Ventures"
+14c2574e8968451bb972ff5ce8db642e;"Gonçalo Borges";351915375337;Ngb@33n.vc;male;;PT;en;out;0;"/ Investor";1;Ngb@33n.vc;"33N Ventures"
+29a68bc95ec14ac6af3433ae6073b670;"Gonçalo Sarmento";351967062727;gms@33n.vc;male;;PT;en;out;0;"/ Investor";1;gms@33n.vc;"33N Ventures"
+8dc8e27576eb429da442ad7001ec8d71;"Loureço Teodoro";351966234449;ldt@33n.vc;male;;PT;en;out;0;"/ Investor";1;ldt@33n.vc;"33N Ventures"
+5cc6c974140149b283fa9ef83eaecb93;"Alina Medentsy";351912900716;alinam@33n.vc;female;;PT;en;out;0;"/ Investor";1;alinam@33n.vc;"33N Ventures"
+fdf4398fb285437abac046d3a96ae866;"Manuel Fernandes";351933229898;manuel@amp-assist.com;male;;PT;en;out;0;"Startup Showcase Ticket // Standard";1
+21941596ac4c40faa48443e671a1e689;"Filipe Páscoa";351913384250;filipe@enlaight.ai;male;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";2
+f8f7820cecfa4ce09600cbca7e4a024a;"Rita Branco";351969833429;rb@3xpglobal.eu;female;;PT;en;out;0;"Investor // Standard";1;rb@3xpglobal.eu;"3XP Global"
+9fa3611cb37d42a8968ffdf99e6a90d8;"Tiago Neves";351918824315;tiago.neves@fibersight.pt;male;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";2
+268f935641e04d3d9610677c5d3c8a7a;"Cristina Fonseca";351961918192;cristina@indicocapital.com;female;;PT;en;out;0;"Investor /";1
+15e6872dbcb64af2bc8fcc25b056f04f;"Bárbara Leão de Carvalho";351966741249;blc@3xpglobal.eu;female;;PT;en;out;0;"Investor /";1;"3XP Global"
+9e3602ba859943da959215a7017ede02;"Inês Petrucci";351916029743;ip@3xpglobal.eu;female;;PT;en;out;0;"/ Investor";1;ip@3xpglobal.eu;"3XP Global"
+36748daa13224b46b4b165267a226a5a;"Mafalda Mourão";351913056676;grow@greeneract.com;female;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";2;grow@greeneract.com;"Greener Act"
+bc9340b2f14d4005a723c96a4dac8c5d;"Ricardo Faria";351927589867;ricardo.faria@smartwe.io;male;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";2;ricardo.faria@smartwe.io;SWE
+4e5065865c9748c18028e2678efc5a4c;"Bernardo Luís";351964132195;bernardo.luis@ealgorithm.net;male;;PT;en;out;0;"Startup Showcase Ticket // Standard";1;bernardo.luis@ealgorithm.net;"Ethical Algorithm- lda"
+46536b56eb2c41c28fde344478d831f8;"Yessica De Freitas";351920019717;yessica.defreitas@xcsirt.pt;female;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";2;yessica.defreitas@xcsirt.pt;"XCSIRT CYBERSECURITY- LDA (ZFM)"
+108a190290244e43887770ca074cfb2b;"Pedro Camacho";351916228539;pedro.camacho@nearsoft.pt;male;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";2;pedro.camacho@nearsoft.pt;Nearsoft
+d0461270e2c2423ca816de1128385e2e;"David Olim";351965323959;do@footar.co;male;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";2
+55fa7cd92a1a49b6b9a4c5cae7bcd8a9;"JULIA VASCONCELOS FURTADO";351913558595;julia@wisecare.com.pt;female;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";2;julia@wisecare.com.pt;"Wisecare Technology Europe"
+ba681957bdab40c5b4e1f6b1fda4d040;"Hugo R. Caires";351961495347;hugo.caires@live.com.pt;male;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";2;hugo.caires@live.com.pt;MYCancer
+c4b2dea37e054336a17c4f5aeee52497;"Francisco Mendes";351919976747;contact@make-it.tech;male;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";2;contact@make-it.tech;"MAKE IT product R&D"
+6618efe4cad342fdad0a6ff129e5c4b0;"MARTIN SALDIAS";351964108817;martin.saldias@gambeta.org;male;;PT;en;out;0;"Startup Showcase Ticket // Standard";1;martin.saldias@gambeta.org;Gambeta
+c3bfb9ca10fe4c6d9686cb3fac5c77c6;"Duarte Monteiro";351931106759;duartemsm26@gmail.com;male;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1
+b69b7dfde6ae42b4b30f12ec7e7c3aa4;"Rúben Oliveira";351914824469;rubenoliveira@metatissue.com;male;;PT;en;out;0;"Startup Showcase Ticket // Standard";1;rubenoliveira@metatissue.com;Metatissue
+e40629eab214428a83dd4b346c91599f;"Taoufiq Bellamine";351916390774;taobellamine@amagoaudio.com;male;;PT;en;out;0;"Startup Showcase Ticket // Standard";1;taobellamine@amagoaudio.com;"Amago Audio"
+60c77791fcab4969b6844b193b8c88fe;"Sofia Andreia Domingues Viana";351919186258;sofia.viana@ff.uc.pt;female;;PT;en;out;0;"Startup Showcase Ticket // Standard";1;sofia.viana@ff.uc.pt;RDefine
+3a0a584f63444b79aabfebbd56e21ed9;"David Magboulé";351916835894;david@labtomarket.eu;male;;PT;en;out;0;"Speaker /";1
+93874e43aea5426ea316313e2f6b6711;"Marta Santos";351916232930;marta.santos@timeuphealth.com;female;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";2;marta.santos@timeuphealth.com;"TIMEUP- Lda."
+5b2cc4b2c3e942949dd11e2b3401a348;"Eugeniu Litvinenco";351967281015;Eugeniu.litvinenco@vartheo.com;male;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1;Eugeniu.litvinenco@vartheo.com;VARTHEO
+d20dd84e0dfd413fa067fcdc1691d694;"Francisco Rodrigues";351916544206;Francisco.rodrigues@bloop.eu;male;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1;Francisco.rodrigues@bloop.eu;Bloop
+95c1775bc4d346bfbf00e6cbc7b5e3f2;"Marisa Morgado";351927984513;;female;;PT;pt_PT;out;0;"Startup Showcase // 2nd Ticket";1
+fb23d7fb3a04482f8c1c4b383d678688;"Pedro Cota";351966302211;;male;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1
+439a43ff4a9e4deca8c5dd85fe4caf50;"Fábio Santos";351918722458;fabio.santos@terinovazores.pt;male;;PT;en;out;0;"Startup Showcase // 2nd Ticket | Incubator Showcase Ticket";2;fabio.santos@terinovazores.pt;"TERINOV - SCIENCE AND TECHNOLOGY PARK"
+a78d9a0279a742e6b9a456799aa60071;"André Cardeira";351939471249;ancardeira@gmail.com;male;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1;ancardeira@gmail.com;"I Made a Bug"
+2a15e8dbd95c4254a846d7904b8ffb52;"Patricia Dinis";351938290435;Contabilidade@treeflowerssolutions.com;female;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1;Contabilidade@treeflowerssolutions.com;"Tree Flowers Solutions SA"
+f777796db8124d658fc5855ee079785b;"Emma Rodrigues";351939090164;;female;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1
+4412163055464661a8740b83f81ebcca;"Diana da Costa";351938182389;;female;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1
+ff7d51261e1748469be1eae08d6b7610;"João Gonçalves";351914333309;;male;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1
+6bfadb3957704228a1133d6ba101fe9f;"Hanine Hached";351930638206;;female;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1
+851acac83f7841d3bd3d4562441842ca;"Marcal Santos";351915104926;Marcal@secureleap.tech;male;;PT;en;out;0;"Investor // Standard";1;Marcal@secureleap.tech;"Secureleap lda "
+a696b03718864435a2116efd5b976986;"Cristina Zabalaga";351967398500;;female;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1
+18e77e2dc53e4e1fa99ce9b08f5c32d9;"Cellularis Biomodels";351912928896;orders@cellularisbiomodels.com;;;PT;en;out;0;"Startup Showcase Ticket // Standard";1;orders@cellularisbiomodels.com;"Cellularis Biomodels"
+270229e5bac84379b0c7fd64f27111d1;"Catarina Custódio";351917767000;;female;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1
+96a835a424a14fae8afb21180a33f3d8;"Diogo Antunes";351912794030;;male;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1
+4f8b792f893343d4aa87bdfd083ac377;"Miguel Lemos";351965644150;lml@3xpglobal.eu;male;;PT;en;out;0;"/ Investor";1;lml@3xpglobal.eu;"3XP Global"
+6c98c7d3f9054a62be164a9946c713e6;"Juan Eduardo Da Rocha Szymczuk";351926659226;j.darocha@traibox.com;male;;PT;en;out;0;"Startup Showcase Ticket // Standard";1
+102f2e833c5d499cac91dbf9b28510bc;"Filipe Simões";351966578430;filipe.simoes@evoworkforce.com;male;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";2;filipe.simoes@evoworkforce.com;EvoWorkforce
+4cdfa72c556d42cbbd5cf9bc02c2d0f1;"Rui Adriano";351910223406;ruivaladao@gmail.com;male;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1;ruivaladao@gmail.com;Saberprojeto
+ad6ccda52eb9466883040a37e93fb9c5;"Ana Sousa";351962479672;filipasousa_13@hotmail.com;female;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1;filipasousa_13@hotmail.com;"SaberProjeto- Lda"
+16d2cdf6921e4a1098a993dfe8ec77c8;"Daniela Toledo";351962474290;toledo.daniela98@hotmail.com;female;;PT;pt_PT;out;0;"Startup Showcase // 2nd Ticket";1;toledo.daniela98@hotmail.com;SaberProjeto-lda
+c473d46548d545228b150e7107d1b81c;"Maura Brum";351963789792;m.saberprojeto@gmail.com;female;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1;m.saberprojeto@gmail.com;SaberProjeto
+fce769dbc3c04e0984cf3a593633b218;"Ramiro Santos";351963974374;;male;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1
+25d9825639d645ee89abc6d9966ae7b3;"Marta Escriche";351927020962;martakukwaescriche@gmail.com;female;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1;martakukwaescriche@gmail.com;"SaberProjeto- Lda"
+5259aa38834c44f99150a755c6509f02;"Maria Bernardo";351969401719;mariacarolinaborba@hotmail.com;female;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1;mariacarolinaborba@hotmail.com;"SaberProjeto- Lda"
+49bd5d17fab0440da7807720b9318d39;"João Barcelos";351964766128;joao.barcelos@debruma.com;male;;PT;en;out;0;"Startup Showcase // 2nd Ticket | Startup Showcase // 2nd Ticket";2
+52c5a668fc7b4dacb8775c53df1de3d7;"Gonçalo Duarte";351919137871;goncalo.duarte@buildity.pt;male;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1
+1a71173ec9b04b82828fe7474d9440fd;"Maria Monteiro";351916678565;m.monteiro@cellularisbiomodels.com;female;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1;m.monteiro@cellularisbiomodels.com;"Cellularis Biomodels"
+576ac8fe6ca944ec9784b8c61f4bb9dc;"Eliano Marques";351926058657;Eliano.marques@datamentors.pt;male;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";2;Eliano.marques@datamentors.pt;Datamentors
+a593ad3ffcca4f78b85bf0a55286fada;"afonso cunha";351966507533;afonso.cunha@zoomguide.app;male;;PT;en;out;0;"Startup Showcase Ticket // Standard | Incubator/Accelerator // Standard | Incubator/Accelerator // Standard | Incubator/Accelerator // Standard | Incubator Showcase Ticket";5
+bc3d74add82344548c5102600e268c0d;"Fernando Ferreira";351962042878;fernando@ventures.eu;male;;PT;en;out;0;"Investor // Standard";1
+ae0192d910f14806a61bbb4a711dbaec;"Thijs Povel";41787185188;tpovel@ventures.eu;male;;CH;en;out;0;"Investor /";1;tpovel@ventures.eu;Ventures.eu
+63829552f6c8459ba244f9cc5ff7a019;"Vittorio Sambuy";393349431179;vittorio@dealflow.eu;male;;IT;en;out;0;"/ Investor";1;vittorio@dealflow.eu;Ventures.eu
+3497e1727efe4ce891f1e8aee4364701;"Fernando Augspurg";351916588327;f.augspurg@ventures.eu;male;;PT;en;out;0;"/ Investor";1;f.augspurg@ventures.eu;Ventures.eu
+0827d01fd6154831a47bd34f98d5c659;"André Sarmento";351910521355;andre@ventures.eu;male;;PT;en;out;0;"/ Investor";1;andre@ventures.eu;Ventures.eu
+b9010ad3f329448eb05bb792b1531c78;"Luis Calandria";34628182206;luis@ventures.eu;male;;ES;en;out;0;"/ Investor";1;Ventures.eu
+dcd297533cd24126bc9f8582ec53d227;"Eric Buechli";351911541187;eric@ventures.eu;male;;PT;en;out;0;"Investor /";1;Ventures.eu
+6c8b34c1b3db4148802e710beeb588a8;"Merel Kraaijenbrink";31610360458;merel@ventures.eu;female;;NL;en;out;0;"/ Investor";1;Ventures.eu
+c22c86b16dc14818983d82a70580440c;"Gabriela de Orleans e Bragança";32472598405;mgabriela@ventures.eu;female;;BE;en;out;0;"/ Investor";1;Ventures.eu
+910725b5221c4112b7827d64d02636c2;"Sílvia Soreto";351966352340;silvia.soreto@ua.pt;female;;PT;en;out;0;"Startup Showcase Ticket // Standard";1
+21fa75647cb6464caadabba421c9eab8;"Bruno Silva";351936298519;bruno.silva@biz-wave.com;male;;PT;en;out;0;"Startup Simple Ticket // Standard";1;bruno.silva@biz-wave.com;"Biz Wave"
+f0b2c10c995a4317976b6ca2e7700f4d;"Fahima Farahi";351938765673;fahima@wiseworld.ai;female;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";2
+5e8d69c4e106488e8d2837f181b1d7c8;"Mira Buss";4915730038869;Buss@vventures.co;female;;DE;en;out;0;"/ Partner";1;Buss@vventures.co;"Visionary Ventures"
+5811e97ba9394c30a61257c6c63979dd;"Bruna Filipa Oliveira Bento";351919686134;brunabento@infinitefoundry.com;female;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";2;brunabento@infinitefoundry.com;brunabento@infinitefoundry.com;"Infinite Foundry";"Infinite Foundry"
+cf2c2430a1b24552952320691f7c6d26;"Alberto Noronha";352671522932;alberto@nium.bio;male;;LU;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";2;alberto@nium.bio;NIUM
+179fa72e7357401faca06366db3815a0;"Paulo Almeida";351917462752;paulo@o2l.ai;male;;PT;en;out;0;"Startup Showcase Ticket // Early Bird";1;paulo@o2l.ai;O2L
+9f6581de57a646af89d5cc864d279e07;"Guilherme Pinheiro";351938400164;guilherme@o2l.ai;male;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1;guilherme@o2l.ai;O2L
+624f2def79454c24a607e14db0068a7a;"Gustavo Queiroz";351919785782;gqueiroz@gmail.com;male;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1;gqueiroz@gmail.com;O2L
+a844f7dfdd644a76b39caf2a9e4dd0f7;"Afonso Cunha";351928112113;afonso.cunha@zoomguide.app;male;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1
+73b71da652da49a8abb0dd7f6d5bffc4;"Anne-Charlotte Joubert";46724426243;anncharlotte.joubert@gmail.com;female;;SE;en;out;0;"/ Partner";1
+610fcfc13e2b4a0f940b7fde861ba40c;"Elena Davidson";447920460376;edavidson@libertycomms.com;female;;GB;en;out;0;"Speaker /";1;edavidson@libertycomms.com;"Liberty Comms"
+8b64032fa3914c6483bfeb4602ebba5c;"Filipa Rebelo";351926628696;filipa@labtomarket.eu;female;;PT;en;out;0;"Speaker /";1
+ba1d18c45f3c4507ac479a282aae43fa;"Inês Almeida";351910090312;ines.almeida@beta-i.com;female;;PT;en;out;0;"Speaker /";1
+7f746418706e4f53a5e443ac90412c32;"Jussi Hätönen";358401582591;j.hatonen@eib.org;male;;FI;en;out;0;"Speaker /";1
+7548fab8e1c54ce69b068c9a5391b75c;"Maria Groechel";19172392985;Rmariagroeschel@gmail.com;female;;US;en;out;0;"Speaker /";1;Rmariagroeschel@gmail.com;"BC Global Management Ventures"
+3d9e333de32e40499b7abf78e4e647a7;"Robert Mollen";447968556904;Robert.Mollen@mollen.uk;male;;GB;en;out;0;"/ Investor";1
+d6d97cff33b54b79a1e06ff4c7674f3e;"Victor Gustaf Gao";13107959908;victor.gao@carlyle.com;male;;US;en;out;0;"/ Investor";1
+c8b17c6dc77744dcbe4ddf64a26bb20f;"Vijay Nadadur";918050482501;VJKANT.N@GMAIL.COM;male;;IN;en;out;0;"Speaker /";1;VJKANT.N@GMAIL.COM;"KnowledgeVerse AI"
+e531a7e742994b2e958da525b85da9f5;"Miguel Rangel";351916798841;pmendes@invisiblecloud.pt;male;;PT;en;out;0;"Startup Showcase Ticket // Standard | Startup Showcase // 2nd Ticket";2;pmendes@invisiblecloud.pt;"Invisible Cloud"
+8fa4e468cafa496bb2fe7d63457c7869;"Elaine Salvador";447935634884;elaine@veranaventures.com;female;;GB;en;out;0;"Investor /";1;elaine@veranaventures.com;"Verana Ventures"
+0d19ec944f224c49ab471d85102ac099;"Miguel Fernandes";351912377926;miguel@dengun.com;male;;PT;en;out;0;"Investor /";1;Dengun
+31f128f25e284d7ea0f0dcac3143b500;"Adelino Venturinha";351916971633;adelino@dengun.com;male;;PT;en;out;0;"/ Investor";1;adelino@dengun.com;Dengun
+678588519f5644eda7647bbde68bc24d;"Inês Cardona Gomes";351913117910;ines.gomes@jeportugal.pt;female;;PT;en;out;0;"Partner / | Partner / | Partner /";3
+23dfa5280b314d159f01d53a5cfd5e70;"Margarida Teixeira";351966910865;mt@explorerinvestments.com;female;;PT;en;out;0;"Investor // Standard";1
+4161eeede12d4fc4aa399182bb7252db;"Simão Rocha";351961344208;meatazores@gmail.com;male;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1;meatazores@gmail.com;"Meat Azores"
+95aa946646414044a580e2dac43e01c9;"Patrícia Lindeza";351967730254;patricia.lindeza@rdefine.com;female;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1;patricia.lindeza@rdefine.com;RDefine
+4b00f1e336f24719bf9d927e4a755eb6;"Rui Pereira";351935605920;rui.cpe@gmail.com;male;;PT;en;out;0;"General // Standard";1
+363dcafa551940d8907556927fb30a2e;"Gastão Maya";351932936938;gastao@judas.rocks;male;;PT;en;out;0;"Investor // Standard";1;gastao@judas.rocks;Judas
+8c9bda15ebc64b0cb3cec5514ddbc70a;"Joao Pereira";351937895216;joao@builduplabs.com;male;;PT;en;out;0;"Incubator Showcase Ticket";1;joao@builduplabs.com;"Build Up Labs"
+2a3365909b354e6a9065cd2f067e4ed1;"Duarte Pimentel";351962312490;duarte.pimentel@terinovazores.pt;male;;PT;en;out;0;"Incubator Showcase Ticket";1;"duarte.pimentel@terinovazores.pt ";"Terinov "
+f5066a05fe054024bf82de1d234237d7;"Ines Serrao";351963810591;ines.serrao@unicornfactorylisboa.com;female;;PT;en;out;0;"Incubator Showcase Ticket";1;ines.serrao@unicornfactorylisboa.com;"Unicorn Factory Lisboa"
+9ee4e18e05c1492dac972573daf6ba72;"Rafaela Sheen";351962771712;rafaela.sheen@unicornfactorylisboa.com;female;;PT;en;out;0;"Incubator Showcase Ticket";1;rafaela.sheen@unicornfactorylisboa.com;"Unicorn Factory Lisboa"
+c1ed351f7b8c4935847885dce5cbc64b;"Marcos Teixeira";351963196232;mteixeira@ipca.pt;male;;PT;en;out;0;"Incubator Showcase Ticket";1;mteixeira@ipca.pt;Start@IPCA
+0b4fe5297568411bb03cc18cd6e8e813;"Julio Lourenco";351914803196;jlourenco@ipca.pt;male;;PT;en;out;0;"Incubator Showcase Ticket";1;jlourenco@ipca.pt;Start@IPCA
+6c270fcfaf74494b8baaece74863a4e7;"Maria Belo";351927759824;mbelofuzetti.adv@outlook.pt;female;;PT;en;out;0;"Incubator Showcase Ticket";1;mbelofuzetti.adv@outlook.pt;Incubou
+46a525013ed943a5a78078f804294048;"Mariah Nascimento";;mentor@incubou.com;female;;;en;out;0;"Incubator Showcase Ticket";1;mentor@incubou.com;Incubou
+b1b2f2f5e67846e4bf189e904f1e2461;"José Maria Abecasis Soares";351918215694;jas@oceancapital.tech;male;;PT;en;out;0;"Investor // Standard";1;jas@oceancapital.tech;OCEAN.capital
+5f57f25bafda450eb0f7b39b2e9388b4;"Maksim Menshikov";351910589854;maxim.menshikov@interpretica.io;male;;PT;en;out;0;"Startup Showcase Ticket // Standard";1
+76ae35f3b6a9478f8cbc06a3c4bbdf19;"Nathaniel Petre";351933839599;nate@chainreactor.bio;male;;PT;en;out;0;"Startup Showcase Ticket // Standard";1
+83959b2e2f394a979d4630c1a5d132bd;"Olena Strohova";351931492808;strogova.elena.i@gmail.com;female;;PT;en;out;0;"General // Standard";1;strogova.elena.i@gmail.com;"Levezapetecivel Lda "
+70bcb33fd88c4bd3990ff771cbafff26;"Iryna Chelpanova";351910617899;;female;;PT;en;out;0;"General // Standard";1
+8cb92badd8fb4cbfaf84c28aae3af0ff;"Valentine Lobachov";351934612390;lobachevvk90@gmail.com;female;;PT;en;out;0;"General // Standard";1;lobachevvk90@gmail.com;Levezapetecivel
+71ad4121cdac4354a82d7a0c6e2fb6c4;"Nuno Oliveira";351910209465;nuno.oliveira@xpim3d.com;male;;PT;en;out;0;"Startup Showcase Ticket // Standard";1
+955b9a9018f64d38bffc7796832c1e05;"Pedro Coutinho";351914514153;pedro@thv.vc;male;;PT;en;out;0;"Investor // Standard";1
+7ff6d3d264ee4e38b062e05141cfe980;"Filipe Barbosa";351910512593;filipe@usefrond.com;male;;PT;en;out;0;"Startup Showcase Ticket // Standard";1;filipe@usefrond.com;"Frond Signals"
+f531751e5d0b44818dc05708dd86a937;"Augusto Görgen";351910319414;suporte@neardoctor.pt;male;;PT;en;out;0;"Startup Simple Ticket // Standard | Startup Simple Ticket // Standard";2;suporte@neardoctor.pt;"Near Doctor"
+a0e49b5d3a53437cbe282a8bf4ca832a;"Roger Junior";351915708522;roger@hay.chat;male;;PT;en;out;0;"Startup Showcase Ticket // Standard";1;roger@hay.chat;"Hay Chat"
+50ec3c49f150440f809a652e83184dfe;"Mariana Falcão";351915148983;marianafalcao@portugalfintech.org;female;;PT;en;out;0;"Incubator/Accelerator // Standard | Incubator/Accelerator // Standard";2
+d0e3c46556c9419aa10ea0f882503d07;"Alexandre Almeida";351916882427;almeida@ipn.pt;male;;PT;pt_PT;out;0;"Incubator Showcase Ticket";1;almeida@ipn.pt;IPN
+1621809d6e4e49a0bb4218ce0f54ef38;"Carlos Nunes";351913695725;cnunes@ipn.pt;male;;PT;en;out;0;"Incubator Showcase Ticket";1;cnunes@ipn.pt;IPN
+e6381939b13b4be3aaaaf6ae7ee95a9a;"Liliana Barbosa Pimenta";351962332579;liliana.pimenta@startupmadeira.eu;female;;PT;en;out;0;"Incubator Showcase Ticket";1;liliana.pimenta@startupmadeira.eu;"Startup Madeira"
+1ea781a9a3344028a37944640cab439a;"Higor Ferro Esteves";351919494335;higor.esteves@gmail.com;male;;PT;en;out;0;"Incubator Showcase Ticket";1;"Sheree - The Startup Place"
+57cf735a25864acaa0b6732cf7b97526;"Pedro Ranheta";351933265880;pedro.ranheta@ipportalegre.pt;male;;PT;en;out;0;"Incubator Showcase Ticket";1;BioBIP
+e4140956cae94e0f821f981f08ce023d;"Tiago Santos";351966610657;tiago.santos@sinestecnopolo.org;male;;PT;en;out;0;"Incubator Showcase Ticket";1;"Sines Tecnopolo"
+9de9a0b94b424ff08e8f327c0c73e02c;"Jorge Mota";351917891551;jorge.mota@cesae.pt;male;;PT;en;out;0;"Incubator Showcase Ticket";1;jorge.mota@cesae.pt;"Cesae Digital"
+50726a1b533d43f0aa3e9c0ab1c8634a;"Jessica Costa";351932821316;direcaoexecutiva@algarvestp.pt;female;;PT;en;out;0;"Incubator Showcase Ticket";1;direcaoexecutiva@algarvestp.pt;"Algarve STP"
+8067285458964eff92057d5679b207cf;"Marta Miraldes";351966533365;Marta.miraldes@sbi-consulting.com.pt;female;;PT;en;out;0;"Incubator Showcase Ticket";1;"Business Factory"
+69aba28d068d441eb616e636d7c0f3a6;"Miguel Albuquerque";351913404968;miguel@founders-founders.com;male;;PT;en;out;0;"Incubator Showcase Ticket";1;miguel@founders-founders.com;"Founders Founders"
+92dc2fb83f784f59950d2b959295ff1e;"Sandra Ferreira";351962617248;slferreira@reitoria.ulisboa.pt;female;;PT;en;out;0;"Incubator Showcase Ticket";1;slferreira@reitoria.ulisboa.pt;"TTC @ULisboa"
+7bdc72745f224e24aca3bbe077aecdbd;"Joana Barbosa";351962879289;joana.barbosa@cm-esposende.pt;female;;PT;en;out;0;"Incubator Showcase Ticket";1;joana.barbosa@cm-esposende.pt;"Start Esposende"
+e2a3f243f57348e5852d01c5b4f5a7c1;"Luís Santos";351917522898;luis.santos@inovagaia.pt;male;;PT;en;out;0;"Incubator Showcase Ticket";1;luis.santos@inovagaia.pt;Inovagaia
+7320b4c3ab224ed3b7a641cfdf4389b0;"Luís Almeida";351917403024;debora.melo@nonagon.pt;male;;PT;en;out;0;"Incubator Showcase Ticket";1;debora.melo@nonagon.pt;Nonagon
+7f651aa12f024c75862f1140aeb3cf2c;"Liliana Garcia";351925204267;lilianagarcia@cm-tvedras.pt;female;;PT;en;out;0;"Incubator Showcase Ticket";1;lilianagarcia@cm-tvedras.pt;"Torres Inov-e"
+0b125fe4afa64705b0c0a3f39506837f;"Marcela Valença";351925678492;marcela.valenca@caisdoporto.org;female;;PT;en;out;0;"Incubator Showcase Ticket";1;marcela.valenca@caisdoporto.org;"Cais do Porto"
+74f57080d9e64eadb9b29f5ade508d0b;"Rui Pinheiro";351937185929;rui.pinheiro@cm-guimaraes.pt;male;;PT;en;out;0;"Incubator Showcase Ticket";1;rui.pinheiro@cm-guimaraes.pt;"Set.Up Guimarães"
+f7a0bffb9cd54950ade7b381a18f6638;"Eduardo Costa";351914628583;ecosta@drivenvb.pt;male;;PT;en;out;0;"Incubator Showcase Ticket";1;ecosta@drivenvb.pt;"Driven Venture Builders"
+11a925d7a83949c4892cf01617f6a520;"Maria Eugénia Mascarenhas";351912730629;eugenia.mascarenhas@novasbe.pt;female;;PT;en;out;0;"Incubator Showcase Ticket";1;eugenia.mascarenhas@novasbe.pt;"Haddad Entrepreneurship Institute"
+38255b250e4c42319e01aa310b3a2b05;"Paula Santos";351966029663;ps@abs.pt;female;;PT;en;out;0;"Incubator Showcase Ticket";1;ps@abs.pt
+3f7bed581ccf44f2a5bc6b052315c454;"Andreia Fonseca";351912174399;Andreia.fonseca@cm-sever.pt;female;;PT;en;out;0;"Incubator Showcase Ticket";1;Andreia.fonseca@cm-sever.pt;Vougapark
+4e974080c713422bad4d28a9d19e8f18;"Marco Lamas";351917222937;marco.lamas@islagaia.pt;male;;PT;en;out;0;"Incubator Showcase Ticket";1;marco.lamas@islagaia.pt
+0ef5a4ffbd134996b46fb2c3dbded37d;"Diogo Reis";351938855688;diogo.reis@iberiscapital.com;male;;PT;en;out;0;"Investor // Standard";1
+22b91d6a01ee46e085b31fe31ce56fa7;"Bruno Maia";351937459844;bruno.maia@duma.pt;male;;PT;en;out;0;"Startup Showcase Ticket // Standard";1
+8ef2d362ece0451da2e83b8985035ea0;"Luís Quaresma";351937222440;Luis.quaresma@iberiscapital.com;male;;PT;en;out;0;"Investor /";1;Luis.quaresma@iberiscapital.com;"Iberis Capital"
+4085f313cb124e01898c71dc59047b93;"Ana Seguro";351911990773;aseguro@ipn.pt;female;;PT;en;out;0;"Incubator/Accelerator // Late Release | Incubator/Accelerator // Late Release";2
+951b5b1a1dec46ad9747026501f86990;"Johana Coneo";573222377381;johana@acceleratorapp.co;female;;CO;en;out;0;"Startup Simple Ticket // Late Release";1
+4c8d1791a4bd459fba91a085387bd3cc;"Margherita Cielo";393930175515;margherita.cielo@oceancapital.tech;female;;IT;en;out;0;"/ Investor";1;margherita.cielo@oceancapital.tech;"Ocean Capital"
+8922ac7fb3934b738fdcf1c3a919ec8f;"Martin Wronna";351914103052;martin.wronna@advantageaustria.org;male;;PT;en;out;0;"General // Late Release";1
+66f28c632f3f4bd6a0d076e5880f635f;"Guilherme Lourenço";351914606260;guilhermelourenco@trycaptain.app;male;;PT;en;out;0;"Startup Simple Ticket";1;guilhermelourenco@trycaptain.app;CAPTAIN
+e9a758602d3f43c2ad454d012c285175;"Zeev Fisher";447565421695;;male;;GB;en;out;0;"Investor // Standard";1
+08081b9120af4b8c99258675b65d22d3;"Vincent Tan";491741982112;;male;;DE;en;out;0;"Investor // Standard";1
+367f2ec644da4128805256aad7d96ec2;"Rui Pedro Costa";351964821582;rui.costa@innoysepartners.com;male;;PT;en;out;0;"General Invite";1;rui.costa@innoysepartners.com;"Innoyse Partners"
+7482500b96c643f6bab526d1f6837ac2;"Filipe Lacerda";351915925354;Filipe.lacerda@innoysepartners.com;male;;PT;en;out;0;"General Invite";1;Filipe.lacerda@innoysepartners.com;"Innoyse Partners"
+8371f3e041534677a09ab0c48f82261f;"Filipe Cordeiro";351914484649;filipe.cordeiro@pci.pt;male;;PT;en;out;0;"Incubator Showcase Ticket";1;filipe.cordeiro@pci.pt;"UA Incubator"
+d59776559d33494fb473ffbb4bbab094;"Inês Soares";351912091019;ines.soares@startupbraga.com;female;;PT;en;out;0;"Incubator Showcase Ticket";1;ines.soares@startupbraga.com;"Startup Braga"
+4a00454e18f34bf39c989f38427533ed;"Bruna Sousa";351917204393;bruna.sousa@startupbraga.com;female;;PT;en;out;0;"Incubator Showcase Ticket";1;bruna.sousa@startupbraga.com;"Startup Braga"
+60397d3047ec483a9e62a638978d7254;"Tatiana Matos";351962364332;tatiana.matos@tagusvalley.pt;female;;PT;en;out;0;"Incubator Showcase Ticket";1;tatiana.matos@tagusvalley.pt;"TAGUSVALLEY "
+64d11648ef354f8c9f413f46b25c6b1d;"Daniel Schor";351913744114;daniel@oceancapital.tech;male;;PT;en;out;0;"/ Investor";1;daniel@oceancapital.tech;OCEAN.capital
+33693f6496a94885a1d86494c97b4e32;"Monica Blatyta";351912726217;monica@eqwow.ventures;female;;PT;en;out;0;"Investor // Late Release";1
+1fd5ab8594784f9d80586baef8ac3ad4;"Sofía Vidal Karimova";351929057276;sofia.vidal@comercio.mineco.es;female;;PT;en;out;0;"General // Late Release";1
+3448d0755aa549e4b8fc87c6fd2ebd77;"Gonzalo Cabrera Zubizarreta";351912325520;gcabrera@comercio.mineco.es;male;;PT;en;out;0;"General // Late Release";1;gcabrera@comercio.mineco.es;"Embassy of Spain"
+2053618d6f2e46feb64b2cef240d3106;"Luciana Trajano Rodrigues";351918592457;Lucianatrajanorodrigues@gmail.com;female;;PT;en;out;0;"/ Investor";1
+a44377d9a59b4d929e44a2e4d6a18e73;"João Paulo Oliveira";351969805849;jpo@sobreirocapital.pt;male;;PT;en;out;0;"/ Investor";1;jpo@sobreirocapital.pt;"Sobreiro Capital"
+192748bb3bd74f4ab0b807840e0a5668;"Baptiste Gendron";351936072792;baptiste@yelhow.com;male;;PT;en;out;0;"Startup Showcase Ticket // Late Release";1;baptiste@yelhow.com;Yelhow
+a41ed5be918a4c28bc8850f95026e6a1;"Silvana Isabel Miranda Silva";351914987323;silvanasilva@cm-tvedras.pt;female;;PT;en;out;0;"Incubator/Accelerator // Late Release";1
+d2f3e0cac672401aabf31d1e27e278cd;"Diogo Vieira da Silva";351914901384;dvsilva@pbs.up.pt;male;;PT;en;out;0;"/ Partner";1;dvsilva@pbs.up.pt;"Porto Business School"
+6614328615f9478eba8fe0d73fb88de1;"Eva Andrade";351962903979;eva.andrade@ua.pt;female;;PT;en;out;0;"/ Partner";1
+02c5cac73d87435796af911b1fac38c7;"Joana Xará";351918940687;joanaxara@ua.pt;female;;PT;en;out;0;"/ Partner";1
+e33ae982323247d4b3c47962ecc1911a;"Gonçalo Chaves";351926911053;goncalo2000nuno@gmail.com;male;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1;goncalo2000nuno@gmail.com;"Ethical Algorithm"
+a8e50934199244c6aae046bf2731a2fe;"Hugo Lopes";351917728083;hl@whiteflow.ai;male;;PT;en;out;0;"Startup Showcase Ticket // Late Release";1;hl@whiteflow.ai;"White Intelligence Solutions"
+c213f5fa82394959a715c4b2ad1915d2;"Gonçalo Melo";351929312120;hi@planta.design;male;;PT;en;out;0;"Startup Showcase // 2nd Ticket | Startup Showcase Ticket // Late Release";2
+f7ca0615052544ae90ffdbef0625021d;"Vicente Garção";351918586288;vgarcao@lampsyhealth.com;male;;PT;en;out;0;"Startup Showcase // 2nd Ticket | Startup Showcase Ticket // Late Release";2
+796d068d682946b8b26c6d47e41051c0;"Fabiano Cruz";351932649669;fabiano.cruz@aenvo.ai;male;;PT;pt_PT;out;0;"Startup Showcase // 2nd Ticket | Startup Showcase Ticket // Late Release";2;fabiano.cruz@aenvo.ai;"AENVO Natural Interaction Lda"
+8106ccd9a95042e4ba838c526f046862;"Ricardo Luz";351932533711;rjfluz@gmail.com;male;;PT;en;out;0;"General Invite";1;rjfluz@gmail.com;"EBAN - European Business Angel Network"
+605139f9dd834692ad55e2a6dd3ec15a;"Pedro Montes Pinheiro";351917607916;Ppinheiro@pt.oaklins.com;male;;PT;en;out;0;"General Invite";1
+91c0e224f3b049d2b574b2c728dce53e;"Rita Joana Silva";351965319664;ritajsilva@tecnico.ulisboa.pt;female;;PT;en;out;0;"/ Partner";1
+b236c71349754613a5339c73b2e8a9e3;"Elsa Pereira";351917178124;elsa.pereira@ipq.pt;female;;PT;en;out;0;"Incubator Showcase Ticket";1;elsa.pereira@ipq.pt;"INOVA Quality Hub"
+aa086524c6a745d99e55995c6b3801df;"Maria Oliveira";351966457291;mariaoliveira@uptec.up.pt;female;;PT;en;out;0;"Incubator Showcase Ticket";1;mariaoliveira@uptec.up.pt;UPTEC
+4617137756fa40e0b6468a60096499fc;"Pedro Pinto";351937260586;ppinto@uptec.up.pt;male;;PT;en;out;0;"Incubator Showcase Ticket";1;ppinto@uptec.up.pt;UPTEC
+968334549c254ced968abe07a5b433ad;"Manuel Joao Braga Padrao";351912475527;manobp7@gmail.com;male;;PT;en;out;0;"Startup Showcase Ticket // Late Release";1;manobp7@gmail.com;Cozecare
+1b0890e587a044f980ca5abc292e2cde;"Miguel Sousa";351914174647;msousa@fep.up.pt;male;;PT;en;out;0;"General Invite";1;msousa@fep.up.pt;"Universidade do Porto"
+06237840b9de489196e5408c0ce99eb9;"Lesley Farrah";351920845915;lesley.farrah@femtechpt.com;female;;PT;en;out;0;"/ Partner";1
+bc63a46844dd4b909fde0b07b1aab9fa;"Patrícia Patrício";351912318566;ppatricio@healthportugal.com;female;;PT;en;out;0;"/ Partner";1
+70730466dadc4ac3872af2b2ec5db119;"Blessed Uyo";351912627560;blessed@technorealtyconnect.com;male;;PT;en;out;0;"Investor // Late Release";1;blessed@technorealtyconnect.com;"TechnoRealty LLC"
+d6413bb6431b4e19ac91cea0299e01ba;"Marco Pincho";351912581933;marco.pincho@sprintcv.com;male;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1
+2a3553ec462f4e968fac09287727cbf7;"Baptiste Gendron";33679294890;baptiste@yelhow.com;male;;FR;en;out;0;"Startup Showcase // 2nd Ticket";1
+2816f39f7a29409a948da79d30d1e001;"Mimi Cibic";38640355228;mima.cibic@gmail.com;female;;SI;en;out;0;"General Invite";1
+a8fa7a1859144a2985213ec6f9ab94bc;"Kamran Thomas Alimagham";351931499366;Kamran.alimagham@gmail.com;male;;PT;en;out;0;"General Invite";1;Kamran.alimagham@gmail.com;Closure.
+3e47afa453764f5db5ec370d562ec59b;"Sophie Dermaux";447768629258;sophiebcdermaux@gmail.com;female;;GB;en;out;0;"General Invite";1
+a2d083ae4e0c428d9fcc7173add70c3b;"Victoria Robinson";351932561476;victoria.ilesha@gmail.com;female;;PT;en;out;0;"General Invite";1
+0a5b0ba56df842149c59c3464584fb31;"Jorge Oliveira";351919374643;jorgeanoliveira21@gmail.com;male;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1;jorgeanoliveira21@gmail.com;"Scientific Junior Value"
+0837fe153ff04305913db6013e6c6f41;"Beatriz Madeira";351965864427;biamadeira25@gmail.com;female;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1;biamadeira25@gmail.com;"Scientific Junior Value "
+3e024344c45c47ce8a625d02a92c36ec;"Rita Trindade";351969042040;ritast14@gmail.com;female;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1
+b0969a12fe1a4a068925489c0f10e6f3;"Juliana Coutinho";351939693203;juliana.martins.coutinho@gmail.com;female;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1;juliana.martins.coutinho@gmail.com;"Scientific Junior Value"
+63c8d0ee284e4236b71ff62e97ed55ce;"Damien Mulhall";351913344367;damien@hay.chat;male;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1;damien@hay.chat;Hay
+55261d329f6b4e318f74afc1e2b39c23;"Fátima Rodrigues";351936045601;mfc_rodrigues@outlook.com;female;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1;mfc_rodrigues@outlook.com;estudante
+cd604355304b426e8762c2ee545a0152;"João Pereira";351937036692;joaohrpereira@gmail.com;male;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1
+0ffeaeef6256467e832307c2d8964125;"José Diogo Seabra Moreira";351961422554;josediogomoreira@gmail.com;male;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1
+b057d6e9faf64dd98cc7f13792bcbe27;"Henrique Rodrigues";351916404296;hvr922@hotmail.com;male;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1;hvr922@hotmail.com;Finerge
+fc50bcf82cbe49c082c3157fc1c4d1f4;"SORAIA SANTOS";351931809007;a20242661@pbs.up.pt;female;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1;a20242661@pbs.up.pt;PBS
+7af7d24c95774ba5966b0571fa78fc61;"Mauro Trindade";351910336000;vaztrindade@gmail.com;male;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1;vaztrindade@gmail.com;PBS
+78e0903b086d448f9f6ae694c29bd537;"Tiago Borges";351910218059;tiago.borges@live.com.pt;male;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1;tiago.borges@live.com.pt;PBS
+f263587c882e4ac48fb96abb1c392ad1;"Isabel Cristina Coimbra Jesus";351934479530;ISABEL.CRISTINA.JESUS@GALP.COM;female;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1;ISABEL.CRISTINA.JESUS@GALP.COM;pbs
+1d8ee86cc36f462f9304b1f5bed0b757;"Ines Vieira";351915601198;Ynes.vieira@gmail.com;female;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1;Ynes.vieira@gmail.com;"Mano a Mano Club"
+e5d1eaa111014cd698f066803c3756e8;"Joana Neves";351912498037;joananevesfisio@hotmail.com;female;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1;joananevesfisio@hotmail.com;"Porto Business School"
+887fdf7795f24f1d9645005ed53f186d;"Tatiane Kanegae";351910312753;tatianemkanegae@gmail.com;female;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1;tatianemkanegae@gmail.com;"Porto Business School"
+0a17ea8c50f14115adf7dfd949a2dfbf;"Rafael Pedrosa";351914573580;rafael.pedrosa@sc.ipp.pt;male;;PT;en;out;0;"/ Partner | / Partner | / Partner";3
+ddafb6fa0ffd4867ba02b999ac513553;"Maximilian Brozio";4915756370772;maximilianbrozio@gmail.com;male;;DE;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1
+e12cce41bbf74d739e88e712fd06deb1;"Filipa Azevedo";351914765644;Filipa.g.azevedo@gmail.com;female;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1
+bebcfe9c295446348c33a912a76aa906;"Ricardo Carvalho";351919223349;ricardo@lockem.tech;male;;PT;en;out;0;"Startup Showcase // 2nd Ticket | Startup Showcase Ticket // Late Release";2
+83360dfcaecc4d0484a0ca022785efa1;"João Costa";351915851702;joao_edunx15@hotmail.com;male;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1;joao_edunx15@hotmail.com;"PBS "
+f7673146cb7f45d9baa810586113365d;"Ana Rita Peixoto";351913865602;Ritacnutrition@gmail.com;female;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1;Ritacnutrition@gmail.com;"EMBA PBS"
+b4972187f3614b0ab9caea2eb278ad55;"Nuno Leitao";351913477110;armandonuno@gmail.com;male;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1;armandonuno@gmail.com;EliteNL
+18d6f603a6a948468dff7ee5a963b552;"Tiago Constante";351961580021;tiagojconstante@gmail.com;male;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1
+2298a57e7dc54620b074bcc16d047bf5;"Gonçalo Rocha Neves";351919362454;gncl.contabilidade@gmail.com;male;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1
+7199157df9ac47f79cf06af5ac744239;"Ana Rita Alvito";351937124006;rita.alvito@gmail.com;female;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1
+185dfb7e0d534a9f84c49cdfb149b812;"Liliana Fernandes";351914606532;Lpbfernandes@hotmail.com;female;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1;Lpbfernandes@hotmail.com;"Porto Business School "
+7da366427a154ca7b425d335889c3fe0;"João Matos";351916463435;joao.matos.ext@startupportugal.com;male;;PT;en;in;0;"General Invite";1;joao.matos.ext@startupportugal.com;SUP
+9e7237dc925048b5a1277d13b55308c9;"Simao Ferreira";351910670500;simao.rcf@gmail.com;male;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1;simao.rcf@gmail.com;"Curval Metalworks"
+c18b7abb446f403c96184c4880172ca8;"Ivo Pereira";351917488861;Ivo.pereira@outlex.ai;male;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1;Ivo.pereira@outlex.ai;Outlex
+e4e225a5f7b0465cad7f8a0bbe93087b;"Tiago Marques";351960339821;tiagojoaomarques@gmail.com;male;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1;tiagojoaomarques@gmail.com;"Executive MBA Sudent@PBS"
+dd25fec13aad47a3bcfd45dab5d73d0e;"Marianne van Groeningen";351911096413;connect@executivecareercoaching.io;female;;PT;en;out;0;"Startup Showcase // 2nd Ticket | Startup Showcase Ticket // Late Release";2;connect@executivecareercoaching.io;"Executive Career Coaching"
+db74c5dd659b40829b2f8844de7fde1e;"Francisco Martins";351960280663;;male;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1
+5743341ab4e04db0927de2579ab07445;"Liliana Azevedo";351938880177;lilianasaazevedo@gmail.com;female;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠ | Student //  ⚠ Needs valid Student Card ⚠";2
+879f51c55c004d37847c7e84c5b43b96;"Gisela Roldão";351932939922;gisela.roldao@outlook.com;female;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1
+31224fec1cb248f8b392601c73eaca3a;"Fabiano Ferreira";351935367882;Fabiano.ff.ferreira@gmail.com;male;;PT;en;out;0;"Investor // Late Release";1;Fabiano.ff.ferreira@gmail.com;"Ferreira Partners "
+f35b0f908d2f4917b1d8eecdb1888dd4;"Aline Marie Fernandes";351922249137;aline.fernandes@organostemtech.com;female;;PT;en;out;0;"Startup Showcase Ticket // Late Release";1;aline.fernandes@organostemtech.com;OrganoStemTech
+dabd5c8749a9483d8924127de95af28a;"Nuno Oliveira";351935072060;Nuno.oliveira@feel-group.com;male;;PT;en;out;0;"/ Partner";1;Nuno.oliveira@feel-group.com;FeelGroup
+ff2ff55660ec41c5810808caa6d9dd9e;"Tomas Pimenta da Silva";351918222102;tomas.dressme@gmail.com;male;;PT;en;out;0;"Startup Showcase Ticket // Late Release";1
+16c58c7a184b4ab596aa76bdb1e34aae;"Ana Oliveira";351927962726;ana.freitas.oliveira@gmail.com;female;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1;ana.freitas.oliveira@gmail.com;Mindera
+60f85a73686e45c9acee48d774be7ff4;"Filipe Silva";351916574296;flpctsilva@gmail.com;male;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1;flpctsilva@gmail.com;Arthrex
+57c868a75a9a47779d04397ca9733bd1;"Luis Rocha";351914519885;luis.rocha@portilame.com;male;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1;luis.rocha@portilame.com;"PORTILAME SA"
+0e8e5f29cfb349f7a8224bc933a545a4;"Stuart Cerne";351969247101;Stuart@meetball.fun;male;;PT;en;out;0;"Startup Showcase Ticket // Late Release";1;Stuart@meetball.fun;Meetball
+4b1acaf6e64040a7844d48e3ff6926aa;"Ana Neto";351918357527;ana@oneshothiring.com;female;;PT;en;out;0;"Startup Showcase Ticket // Late Release";1;ana@oneshothiring.com;OneShot
+735eaecc3635438b9e7e16fd3ba9efbe;"Samantha Isola";447739365499;samantha.isola@femtechpt.com;female;;GB;en;out;0;"/ Partner";1
+c8b7ac30129741afaa9a7b59612a6860;"Diogo Pereira";351968955006;pereiradiogo01@gmail.com;male;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1
+c80929290b0e4b54a00f5a4ac046e664;"Sérgio Duarte";351931109981;sergio_duarte@outlook.pt;male;;PT;en;out;0;"Investor // Late Release";1
+3ec0d13c2ecd40eb90e6242729d30182;"Rui Lé Costa";351917708077;rui.lecosta@feel-group.com;male;;PT;en;out;0;"/ Partner";1;rui.lecosta@feel-group.com;"Feel Group"
+eb7c6680f97e4809ac98db336474583c;"Tiago Tavares";351915964560;tiago.atavares@outlook.com;male;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1
+5719b2914e5f4c9a82f887ef032293f1;"Gustavo Meireles";351916566408;Gustavo.meireles@verticalcoworking.com;male;;PT;en;out;0;"/ Partner";1;Gustavo.meireles@verticalcoworking.com;"Vertical Coworking"
+c6e36dbb3fb140fba25eb39459a5fde2;"Nuno Delgado";351919525944;nunodelgado20@gmail.com;male;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1
+734ba724b43b45c6a4c226c4a05565d0;"Sonia Araujo";351913967382;sonia97.araujo@gmail.com;female;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1
+e9619e9550924e83b9647bd6d07bc9e4;"Fábio Teles Soares";351917478636;fabiotelessoares@gmail.com;male;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1
+d26095508d1c45f1b454b0c1ce236153;"Lisa Koivunen";351911770703;lisa.koivunen@gmail.com;female;;PT;en;out;0;"General Invite";1;lisa.koivunen@gmail.com;"Founders Running Club"
+a22b80a7a2b1432d8526dcf3db3ec403;"Armando Leite";447983708562;al@serona.app;male;;GB;en;out;0;"Startup Simple Ticket // Late Release";1
+13335bcf32f941408ea750b3ddf4012c;"Ivan Starodub";351925625928;ivan.starodub@gmail.com;male;;PT;en;out;0;"General Invite";1
+7d369d3b30544527ad4f615d3240b8ec;"Maurizio Calcopietro";351916549116;mcalcopietro@coreangels.com;male;;PT;en;out;0;"Investor // Late Release";1;mcalcopietro@coreangels.com;COREangels
+1546d614ce27469a94405ec49ca7c388;"Carlos Resende";351965512333;carlos.resende@startupdigestmail.com;male;;PT;en;out;0;"/ Partner";1
+f1b8f183030c4fceb5cecfff4ef05809;"Pedro Cunha";351914511789;pedro.cunha@portilame.com;male;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1;pedro.cunha@portilame.com;PORTILAME
+37a133e53c5340aabb5fc4637a0aecf0;"Guilherme Borja";351912171116;help@im-vestor.com;male;;PT;en;out;0;"General // Late Release";1;help@im-vestor.com;Im-vestor.com
+fc1024cbc7e44387983d469820beef8d;"João Bonito";351936483401;joao.bonito@topicschat.com;male;;PT;en;out;0;"Startup Showcase Ticket // Late Release";1
+0a480eaa14bd4583bb84977768789636;"Ana Meneses";351913596071;ana.mprm@gmail.com;female;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1;ana.mprm@gmail.com;DareData
+2e2f387b3d7a4660878c38f23d38f08c;"André Lopes";351963129528;andremimoso@gmail.com;male;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1;andremimoso@gmail.com;senseable
+a5c06de64a9e491181a1d9aab2367016;"Bruno Nunes";351960225341;a20240419@pbs.up.pt;male;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1
+cf9fb06a1043476c93fe9e685a38e15d;"Manuel Pina";351910948779;manuel@mytally.io;male;;PT;en;out;0;"Startup Showcase Ticket // Late Release";1;manuel@mytally.io;Tally
+8e7f2707036a4c4aab3fe353df7a74fd;"Nuno Osório";351915274335;nuno.osorio20@gmail.com;male;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1
+0dca438b439e4b9f9ef16ac08388d535;"SRS Legal";351911180185;marlene.reis@srslegal.pt;male;;PT;en;out;0;"Corporate TEAM Ticket // Late Release (5px)";1
+2371c27e1a434411bc3329eb71c7bf26;"Pedro Vaz Carvalho";351914585664;pvcarvalho@prismore.com;male;;PT;en;out;0;"General // Late Release";1
+1585f38c6d964966a1f170f52533a207;"Renato Chainho";351918963331;renato.chainho@hostwise.pt;male;;PT;en;out;0;"Corporate Ticket // Late Release";1;renato.chainho@hostwise.pt;"Host Wise"
+5092c1c31dd64fd6a75725813749bffa;"Diogo Santos";351914048327;diogo.santos@sportsbion.com;male;;PT;en;out;0;"Startup Showcase // 2nd Ticket";1;diogo.santos@sportsbion.com;"Sports Bion"
+9f5a42c004a14409bc1b9df809764a1a;"Ignacio Garcia";34690775044;ignacio.garciap@comercio.mineco.es;male;;ES;en;out;0;"General // Late Release";1;ignacio.garciap@comercio.mineco.es;"Embassy of Spain in Lisbon"
+e6e721c8167d4027a2c26084596406e5;"Marcus Batista";351912408423;marcus.batista@itnext.com.br;male;;PT;en;out;0;"Startup Showcase Ticket // Late Release";1;marcus.batista@itnext.com.br;ITnext
+68e5e2a4bb8e44fa88de0592e43b8b8d;"Stonesy Lda.";351924952024;info@stonesy.de;;;PT;en;out;0;"Startup Showcase Ticket // Late Release";1;info@stonesy.de;"Stonesy Lda."
+989b6482b10949d0abe01eaf965b26e0;"Deolinda Silva";351913990237;deolinda.silva@portugalfoods.org;female;;PT;en;out;0;"/ Partner";1
+f619f72ee9524d34bc437ca5a3ae6cf5;"Teresa Carvalho";351917037465;teresa.carvalho@portugalfoods.org;female;;PT;en;out;0;"/ Partner";1;teresa.carvalho@portugalfoods.org;PortugalFoods
+9cc64a17082047c8866ef0f3c96bd8dc;"Américo Dias";351938675407;americo.dias@gmail.com;male;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1;americo.dias@gmail.com;none
+1f473a8c358c48a0887679b5ac4ca669;"Pedro Saraiva";351914909819;pedro.saraiva@tagusvalley.pt;male;;PT;en;out;0;"Incubator/Accelerator // Late Release";1;pedro.saraiva@tagusvalley.pt;"TAGUSVALLEY "
+a30cb4d8316a43a0992423dfa608ffce;"Mateus Bonifácio";351914170036;Mateus.bonifacio@junitec.pt;male;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠ | Student //  ⚠ Needs valid Student Card ⚠ | Student //  ⚠ Needs valid Student Card ⚠ | Student //  ⚠ Needs valid Student Card ⚠";4;Mateus.bonifacio@junitec.pt;Tamiini
+82cbeb972cd94c179e58125b91a97eed;"Helder Vilela";351964412580;hello@heldervilela.com;male;;PT;en;out;0;"Startup Simple Ticket";1;hello@heldervilela.com;"Vilela AI"
+0b4c01a3426644388c44cd84e0c1ff5d;"Mariana Oliveira";351913557015;mboliveira@ua.pt;female;;PT;en;out;0;"/ Partner";1
+15fc1bbf6ccd406f82d471427ec22625;"Marlene Correia";351937437923;marlene24@ua.pt;female;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1;marlene24@ua.pt;"Universidade de Aveiro"
+20e1420602944828b1a72364116abe2e;"Rachel Sestini";447714099246;Rachel@canopy.community;female;;GB;en;out;0;"Investor // Late Release";1;Rachel@canopy.community;"Canopy Capital Ltd"
+586b74d0b1c74949a577d9c277d73d47;"Matilde Ribeiro e Sousa";351961070961;matilde.sousa@junitec.pt;female;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠ | Student //  ⚠ Needs valid Student Card ⚠ | Student //  ⚠ Needs valid Student Card ⚠ | Student //  ⚠ Needs valid Student Card ⚠";4
+b0eb5e620fd0400fbddff2fe27d2fbb0;"Vitor Silva";351916492977;A045956@umaia.pt;male;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1;A045956@umaia.pt;MaintPlusPro
+dbff997acab342b9a03627366440ac4d;"Samuel Anjos";351934538708;samuelanjos2000@gmail.com;male;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1
+8d9b74a0f6684e7eab0566feaa3fc6f6;"Hugo Reis";351916039099;hugoreis95@hotmail.com;male;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1;hugoreis95@hotmail.com;HANSA-FLEX
+bd96e2f2245f43d8b0ff5f8335ce615b;"Pedro Guimaraes";351934095588;;male;;PT;en;out;0;"Incubator/Accelerator // Late Release";1
+ff3aede6932e4041a6aae76edb472bd4;"Manuel Guimaraes";351928426899;Mg.orlando@hotmail.com;male;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1;Mg.orlando@hotmail.com;". "
+9cb63703d61242779395e75ab877e77c;"Cristiana Pereira";351918144903;cristianapereira136@gmail.com;female;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1;cristianapereira136@gmail.com;UMAIA
+d36bed38fbc9474a951dec89e03179c6;"Manuel Vieira";351910101090;manuel.vieira@ub-consulting.pt;male;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠ | Student //  ⚠ Needs valid Student Card ⚠";2
+966055f372f44eaab52ee10078139535;"Pedro Sa";351919563330;pedrobsa10@gmail.com;male;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1
+07bb9da6cb4a4a768a81bdb00c8502f7;"Gabriel Moreira";351932589204;Gmoreira@maieutica.pt;male;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1;Gmoreira@maieutica.pt;UMAIA
+779566d91bff4f50afee23221e45f251;"Pedro Almeida";351918457130;pedro.daniel.alm@gmail.com;male;;PT;pt_PT;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1
+74536d6f82484cd2b81fddf1a16b902f;"Matilde Alvarado";351969533505;matildeguimaraeslopes@gmail.com;female;;PT;en;out;0;"Startup Simple Ticket // Late Release";1
+4d3a44a6749a48478a6b09d88551ea40;"Mobinov Scaira";351911089214;geral@mobinov.pt;;;PT;en;out;0;"Corporate TEAM Ticket // Late Release (5px)";1
+781a3a2cfba145208bb99c00904b928b;"João Almeida";351965127667;jmalmeida@umaia.pt;male;;PT;en;out;0;"/ Partner";1
+41b095b1060743a1a7e427fb13511c49;"Nadiely Gonçalves";351911715843;nadielygoncalves@gmail.com;female;;PT;en;out;0;"/ Partner";1;nadielygoncalves@gmail.com;synthesi.ai
+223137aca4344e17abf76540e04fed8a;"Marilia Rocha";351931861996;mariliarochadeandrade@gmail.com;female;;PT;en;out;0;"/ Partner";1;mariliarochadeandrade@gmail.com;"Grupo Lactogal"
+0511087b1a8542ca83716710d054136f;"Caroline Assunção";351911588876;carolineassuncao2019@gmail.com;female;;PT;en;out;0;"/ Partner";1;carolineassuncao2019@gmail.com;"Socialis "
+4125f985e9e74db0a4a1590f04e718c3;"José Oliveira";351916518107;joseoliveira332004@gmail.com;male;;PT;en;out;0;"Student //  ⚠ Needs valid Student Card ⚠";1;joseoliveira332004@gmail.com;"Zuna Systems"
+223948305f9244dbb55ad4933289bc09;"José Miguel Figueiredo";351961277443;jose.figueiredo@nexscaletech.com;male;;PT;en;out;0;"Corporate Ticket // Late Release";1
