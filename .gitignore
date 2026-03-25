@@ -6,3 +6,4 @@ build/
 SIMsync.exe
 CLAUDE.md
 .claude/
+data/
