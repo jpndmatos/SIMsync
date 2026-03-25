@@ -43,10 +43,10 @@ FONT_MONO = ("Consolas", 9)
 FONT_TITLE = ("Poppins", 14, "bold")
 FONT_SECTION = ("Poppins", 9, "bold")
 
-CARD_PAD_X = 24
-CARD_PAD_INNER = 12
-CARD_PAD_Y_TOP = 10
-CARD_PAD_Y_BOT = 12
+CARD_PAD_X = 8
+CARD_PAD_INNER = 10
+CARD_PAD_Y_TOP = 8
+CARD_PAD_Y_BOT = 8
 
 # Sidebar width
 SIDEBAR_W = 210
@@ -206,7 +206,7 @@ class SetupTab:
         scroller = ScrollableFrame(self.frame)
         inner_frame = scroller.frame
 
-        tk.Frame(inner_frame, bg=BG, height=GAP * 2).pack(fill="x")
+        tk.Frame(inner_frame, bg=BG, height=GAP).pack(fill="x")
 
         # Brella card
         card = make_card(inner_frame)
@@ -460,7 +460,7 @@ class SyncTab:
         inner_frame = tk.Frame(self.frame, bg=BG)
         inner_frame.pack(fill="x", side="top")
 
-        tk.Frame(inner_frame, bg=BG, height=GAP * 2).pack(fill="x")
+        tk.Frame(inner_frame, bg=BG, height=GAP).pack(fill="x")
 
         # CSV picker
         csv_card = make_card(inner_frame)
@@ -522,13 +522,13 @@ class SyncTab:
         self.card_removed, _, self.list_removed = self._make_unified_box(
             detail_container, "REMOVED", "0", DANGER, row=1, col=0)
         self.card_missing, _, self.list_missing = self._make_unified_box(
-            detail_container, "MISSING INFO", "0", WARN, row=1, col=1)
+            detail_container, "MISSING INFO", "0", WARN, row=1, col=1, copyable=True)
 
         if not enabled:
             self.browse_btn.config(state="disabled")
             self.path_entry.config(state="disabled")
 
-    def _make_unified_box(self, parent, title, value, color, row=0, col=0):
+    def _make_unified_box(self, parent, title, value, color, row=0, col=0, copyable=False):
         """Create a unified card: colored accent bar on top, header with title+count, list below."""
         outer = tk.Frame(parent, bg=SURFACE, highlightbackground=SURFACE_RAISED,
                          highlightthickness=1)
@@ -550,9 +550,22 @@ class SyncTab:
                                fg=color, bg=SURFACE, anchor="w")
         count_label.pack(anchor="w", padx=12, pady=(10, 0))
 
-        title_label = tk.Label(header, text=title, font=("Poppins", 8, "bold"),
+        title_row = tk.Frame(header, bg=SURFACE)
+        title_row.pack(fill="x", padx=13, pady=(0, 8))
+
+        title_label = tk.Label(title_row, text=title, font=("Poppins", 8, "bold"),
                                fg=TEXT_TER, bg=SURFACE, anchor="w")
-        title_label.pack(anchor="w", padx=13, pady=(0, 8))
+        title_label.pack(side="left")
+
+        if copyable:
+            copy_btn = tk.Button(title_row, text="Copy", font=("Poppins", 7),
+                                 bg=SURFACE, fg=TEXT_TER,
+                                 activebackground=SURFACE_RAISED, activeforeground=TEXT,
+                                 relief="flat", cursor="hand2", bd=0,
+                                 command=lambda: self._copy_listbox(lb))
+            copy_btn.pack(side="right")
+            copy_btn.bind("<Enter>", lambda e: copy_btn.config(fg=TEXT_SEC))
+            copy_btn.bind("<Leave>", lambda e: copy_btn.config(fg=TEXT_TER))
 
         # Row 2: Separator
         sep = tk.Frame(outer, bg=SURFACE_RAISED, height=1)
@@ -572,6 +585,13 @@ class SyncTab:
         lb.grid(row=0, column=0, sticky="nsew", padx=6, pady=(6, 6))
 
         return count_label, title_label, lb
+
+    def _copy_listbox(self, lb):
+        items = lb.get(0, "end")
+        if items:
+            text = "\n".join(items)
+            self.frame.clipboard_clear()
+            self.frame.clipboard_append(text)
 
     def update_summary(self, added=0, updated=0, removed=0, missing=0):
         def _update():
@@ -766,7 +786,7 @@ class App:
             w = right.winfo_width()
             if w > 100:
                 # Log gets a fixed 680px; content fills the rest
-                right.sash_place(0, max(300, int(w * 0.67)), 0)
+                right.sash_place(0, max(300, int(w * 0.57)), 0)
         self.root.after(300, set_sash)
 
         # Log header — status dot + label (replaces "Activity Log" title)

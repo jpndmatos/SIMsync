@@ -91,61 +91,156 @@ def _admin_headers():
     }
 
 
-def _upload_speaker_photo(speaker_id, photo_url, log_callback=None):
-    """Download photo from URL and upload to Brella via admin panel API (base64 data URI)."""
-    import base64
+MAX_PHOTO_BYTES = 2 * 1024 * 1024  # 2MB — compress if larger
+
+
+def _compress_image(image_data, mime, max_bytes=MAX_PHOTO_BYTES, log_callback=None):
+    """Compress image to fit within max_bytes using stdlib subprocess + PowerShell."""
+    if len(image_data) <= max_bytes:
+        return image_data, mime
+
+    import subprocess
+    import tempfile
+
+    # Write original to temp file
+    ext = ".jpg" if "jpeg" in mime or "jpg" in mime else ".png"
+    with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as src:
+        src.write(image_data)
+        src_path = src.name
+    out_path = src_path + "_resized.jpg"
+
+    try:
+        # Use PowerShell + .NET System.Drawing to resize
+        ps_script = f"""
+Add-Type -AssemblyName System.Drawing
+$img = [System.Drawing.Image]::FromFile('{src_path}')
+$ratio = [Math]::Min(1200.0 / $img.Width, 1200.0 / $img.Height)
+if ($ratio -ge 1) {{ $ratio = 0.5 }}
+$w = [int]($img.Width * $ratio)
+$h = [int]($img.Height * $ratio)
+$bmp = New-Object System.Drawing.Bitmap($w, $h)
+$g = [System.Drawing.Graphics]::FromImage($bmp)
+$g.InterpolationMode = 'HighQualityBicubic'
+$g.DrawImage($img, 0, 0, $w, $h)
+$g.Dispose()
+$img.Dispose()
+$enc = [System.Drawing.Imaging.ImageCodecInfo]::GetImageEncoders() | Where-Object {{ $_.MimeType -eq 'image/jpeg' }}
+$params = New-Object System.Drawing.Imaging.EncoderParameters(1)
+$params.Param[0] = New-Object System.Drawing.Imaging.EncoderParameter([System.Drawing.Imaging.Encoder]::Quality, 80L)
+$bmp.Save('{out_path}', $enc, $params)
+$bmp.Dispose()
+"""
+        subprocess.run(
+            ["powershell", "-NoProfile", "-Command", ps_script],
+            capture_output=True, timeout=15,
+        )
+        if os.path.exists(out_path):
+            with open(out_path, "rb") as f:
+                compressed = f.read()
+            emit(f"[INFO] Photo compressed: {len(image_data)//1024}KB → {len(compressed)//1024}KB",
+                 log_callback=log_callback)
+            return compressed, "image/jpeg"
+    except Exception as e:
+        emit(f"[WARN] Photo compression failed: {e}", log_callback=log_callback)
+    finally:
+        for p in (src_path, out_path):
+            try:
+                os.remove(p)
+            except OSError:
+                pass
+
+    return image_data, mime  # return original if compression failed
+
+
+def _download_photo(photo_url, log_callback=None):
+    """Download photo from URL, return (image_data, mime) or (None, None)."""
     from urllib.parse import quote
-
-    admin_hdrs = _admin_headers()
-    if not admin_hdrs:
-        emit("[WARN] Photo upload skipped — admin tokens not set", log_callback=log_callback)
-        return None
-
-    # Download the image
     try:
         encoded_url = quote(photo_url, safe=':/?#[]@!$&\'()*+,;=-_.~')
         req = url_request.Request(encoded_url)
         resp = url_request.urlopen(req, timeout=15)
         image_data = resp.read()
         content_type = resp.headers.get("Content-Type", "image/jpeg")
-        # Normalize content type
         if "jpeg" in content_type or "jpg" in content_type:
             mime = "image/jpeg"
         elif "png" in content_type:
             mime = "image/png"
         else:
             mime = content_type.split(";")[0].strip()
+        return image_data, mime
     except Exception as e:
         emit(f"[WARN] Photo download failed: {e}", log_callback=log_callback)
-        return None
+        return None, None
 
-    # Convert to base64 data URI
+
+def _upload_photo_base64(url, admin_hdrs, image_data, mime, log_callback=None):
+    """Upload photo as base64 data URI in JSON payload."""
+    import base64
     b64 = base64.b64encode(image_data).decode("ascii")
     data_uri = f"data:{mime};base64,{b64}"
-
-    # PATCH via admin panel API with base64 photo
-    event = os.environ.get("BRELLA_EVENT_ID", "10672")
-    url = f"https://api.brella.io/api/admin_panel/events/{event}/speakers/{speaker_id}"
-    admin_hdrs["Content-Type"] = "application/json"
+    hdrs = dict(admin_hdrs)
+    hdrs["Content-Type"] = "application/json"
     payload = json.dumps({"speaker": {"photo": data_uri}}).encode()
-
-    req = url_request.Request(url, data=payload, headers=admin_hdrs, method="PATCH")
+    req = url_request.Request(url, data=payload, headers=hdrs, method="PATCH")
     try:
         resp = url_request.urlopen(req)
         return resp.status
     except url_error.HTTPError as e:
         err_body = e.read().decode()[:300]
-        emit(f"[WARN] Photo upload (base64): {e.code} {err_body}", log_callback=log_callback)
-        # Fallback: try field name "photo_url" with data URI
-        try:
-            payload2 = json.dumps({"speaker": {"photo_url": data_uri}}).encode()
-            req2 = url_request.Request(url, data=payload2, headers=admin_hdrs, method="PATCH")
-            resp2 = url_request.urlopen(req2)
-            return resp2.status
-        except url_error.HTTPError as e2:
-            emit(f"[WARN] Photo upload (photo_url): {e2.code} {e2.read().decode()[:200]}",
-                 log_callback=log_callback)
-            return e2.code
+        emit(f"[WARN] Photo base64 failed ({len(image_data)//1024}KB): {e.code} {err_body}",
+             log_callback=log_callback)
+        return e.code
+
+
+def _upload_photo_multipart(url, admin_hdrs, image_data, mime, filename, log_callback=None):
+    """Upload photo as multipart/form-data."""
+    import uuid
+    boundary = uuid.uuid4().hex
+    body = (
+        f"--{boundary}\r\n"
+        f'Content-Disposition: form-data; name="speaker[photo]"; filename="{filename}"\r\n'
+        f"Content-Type: {mime}\r\n\r\n"
+    ).encode() + image_data + f"\r\n--{boundary}--\r\n".encode()
+    hdrs = dict(admin_hdrs)
+    hdrs["Content-Type"] = f"multipart/form-data; boundary={boundary}"
+    req = url_request.Request(url, data=body, headers=hdrs, method="PATCH")
+    try:
+        resp = url_request.urlopen(req)
+        return resp.status
+    except url_error.HTTPError as e:
+        emit(f"[WARN] Photo multipart failed ({len(image_data)//1024}KB): {e.code}",
+             log_callback=log_callback)
+        return e.code
+
+
+def _upload_speaker_photo(speaker_id, photo_url, log_callback=None):
+    """Download photo from URL and upload to Brella via admin panel API."""
+    from urllib.parse import urlparse
+
+    admin_hdrs = _admin_headers()
+    if not admin_hdrs:
+        emit("[WARN] Photo upload skipped — admin tokens not set", log_callback=log_callback)
+        return None
+
+    image_data, mime = _download_photo(photo_url, log_callback=log_callback)
+    if not image_data:
+        return None
+
+    # Compress oversized images
+    image_data, mime = _compress_image(image_data, mime, log_callback=log_callback)
+
+    event = os.environ.get("BRELLA_EVENT_ID", "10672")
+    url = f"https://api.brella.io/api/admin_panel/events/{event}/speakers/{speaker_id}"
+    filename = urlparse(photo_url).path.split("/")[-1] or "photo.jpg"
+
+    # Try base64 first (works for most), fall back to multipart for large images
+    sc = _upload_photo_base64(url, admin_hdrs, image_data, mime, log_callback=log_callback)
+    if sc in (200, 201, 204):
+        return sc
+
+    # Fallback: multipart upload
+    sc = _upload_photo_multipart(url, admin_hdrs, image_data, mime, filename, log_callback=log_callback)
+    return sc
 
 
 def list_speakers(headers):
