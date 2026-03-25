@@ -292,6 +292,10 @@ def parse_speakers_csv(csv_path, log_callback=None):
 
         first_name = row[COL_FIRST_NAME].strip()
         last_name = row[COL_LAST_NAME].strip()
+        if first_name == first_name.upper() and len(first_name) > 1:
+            first_name = first_name.title()
+        if last_name == last_name.upper() and len(last_name) > 1:
+            last_name = last_name.title()
         email = row[COL_SPEAKER_EMAIL].strip() if len(row) > COL_SPEAKER_EMAIL else ""
         company = row[COL_COMPANY].strip()
         job_title = row[COL_JOB_TITLE].strip()

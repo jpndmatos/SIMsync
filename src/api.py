@@ -459,6 +459,10 @@ def build_payload(row):
         raise ValueError("Missing attendee email")
 
     first_name, last_name = split_name(full_name)
+    if first_name == first_name.upper() and len(first_name) > 1:
+        first_name = first_name.title()
+    if last_name == last_name.upper() and len(last_name) > 1:
+        last_name = last_name.title()
 
     payload = {
         "event_invite": {
