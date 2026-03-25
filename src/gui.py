@@ -447,7 +447,7 @@ class SyncTab:
         self._app = app
         self.csv_path = tk.StringVar()
         self.dry_run = tk.BooleanVar(value=False)
-        self.prune = tk.BooleanVar(value=True)
+        self.prune = tk.BooleanVar(value=False)
         self.has_prune = has_prune
         self.has_cookie = has_cookie
         self.download_from_3cket = tk.BooleanVar(value=False)
@@ -786,7 +786,7 @@ class App:
             w = right.winfo_width()
             if w > 100:
                 # Log gets a fixed 680px; content fills the rest
-                right.sash_place(0, max(300, int(w * 0.57)), 0)
+                right.sash_place(0, max(300, int(w * 0.50)), 0)
         self.root.after(300, set_sash)
 
         # Log header — status dot + label (replaces "Activity Log" title)
