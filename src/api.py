@@ -168,7 +168,7 @@ TICKET_TYPE_TO_GROUP_ID = {
     "/speaker": BRELLA_ATTENDEE_GROUP_IDS["speakers"],
     "startup/": BRELLA_ATTENDEE_GROUP_IDS["startup_simple"],
     "startup showcase 2nd ticket": BRELLA_ATTENDEE_GROUP_IDS["startup_showcase"],
-    "startup showcase//2nd ticket": BRELLA_ATTENDEE_GROUP_IDS["startup_simple"],
+    "startup showcase//2nd ticket": BRELLA_ATTENDEE_GROUP_IDS["startup_showcase"],
     "startup showcase ticket//1st wave": BRELLA_ATTENDEE_GROUP_IDS["startup_showcase"],
     "startup showcase ticket//2nd wave": BRELLA_ATTENDEE_GROUP_IDS["startup_showcase"],
     "startup showcase ticket//early bird": BRELLA_ATTENDEE_GROUP_IDS["startup_showcase"],
@@ -183,7 +183,7 @@ TICKET_TYPE_TO_GROUP_ID = {
     "startup simple ticket//standard": BRELLA_ATTENDEE_GROUP_IDS["startup_simple"],
     "startup simple ticket//late release": BRELLA_ATTENDEE_GROUP_IDS["startup_simple"],
     "student": BRELLA_ATTENDEE_GROUP_IDS["student"],
-    "student//standard": BRELLA_ATTENDEE_GROUP_IDS["general"],
+    "student//standard": BRELLA_ATTENDEE_GROUP_IDS["student"],
 }
 
 
