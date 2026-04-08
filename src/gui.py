@@ -43,58 +43,42 @@ FONT_MONO = ("Consolas", 9)
 FONT_TITLE = ("Poppins", 14, "bold")
 FONT_SECTION = ("Poppins", 9, "bold")
 
-CARD_PAD_X = 10
-CARD_PAD_INNER = 10
-CARD_PAD_Y_TOP = 8
-CARD_PAD_Y_BOT = 8
+CARD_PAD_X = 8
+CARD_PAD_INNER = 8
+CARD_PAD_Y_TOP = 5
+CARD_PAD_Y_BOT = 5
 
-# Sidebar width
-SIDEBAR_W = 210
-
-# Nav icon mapping (unicode glyphs)
-NAV_ICONS = {
-    "Setup": "\u2699",        # gear
-    "Participants": "\u2630",  # trigram / list
-    "Speakers": "\u266A",     # music note (mic-like)
-    "Sponsors": "\u2302",     # house / building
-    "Schedule": "\u2637",     # trigram / calendar-like
-}
+SIDEBAR_W = 250
 
 APP_VERSION = "v1.0"
 
 # --- Animation constants ---
-ANIM_INTERVAL = 16       # ~60fps
-NAV_ANIM_STEPS = 10      # steps for nav hover/active transitions
-BUTTON_FLASH_MS = 120    # button press flash duration
-PULSE_INTERVAL = 40      # status dot pulse tick interval
-PULSE_STEPS = 30         # steps per half-cycle of pulse
-LOG_FADE_STEPS = 8       # steps for log line fade-in
-LOG_FADE_INTERVAL = 30   # ms between log fade steps
-INDICATOR_ANIM_STEPS = 8 # steps for accent bar height animation
+ANIM_INTERVAL = 16
+NAV_ANIM_STEPS = 10
+BUTTON_FLASH_MS = 120
+PULSE_INTERVAL = 40
+PULSE_STEPS = 30
+LOG_FADE_STEPS = 8
+LOG_FADE_INTERVAL = 30
+INDICATOR_ANIM_STEPS = 8
+GAP = 6
 
 
 # --- Color interpolation helpers ---
 
 def _hex_to_rgb(hex_color):
-    """Convert '#rrggbb' to (r, g, b) tuple."""
     h = hex_color.lstrip("#")
     return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
 
-
 def _rgb_to_hex(r, g, b):
-    """Convert (r, g, b) to '#rrggbb'."""
     return f"#{int(r):02x}{int(g):02x}{int(b):02x}"
 
-
 def _lerp_color(color_a, color_b, t):
-    """Linearly interpolate between two hex colors. t in [0, 1]."""
     t = max(0.0, min(1.0, t))
     ra, ga, ba = _hex_to_rgb(color_a)
     rb, gb, bb = _hex_to_rgb(color_b)
     return _rgb_to_hex(
-        ra + (rb - ra) * t,
-        ga + (gb - ga) * t,
-        ba + (bb - ba) * t,
+        ra + (rb - ra) * t, ga + (gb - ga) * t, ba + (bb - ba) * t,
     )
 
 
@@ -110,7 +94,6 @@ def load_env_value(key, default=""):
             if k.strip() == key:
                 return v.strip().strip('"').strip("'")
     return os.environ.get(key, default)
-
 
 def save_env_values(updates):
     lines = []
@@ -131,21 +114,34 @@ def save_env_values(updates):
     ENV_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-# --- Card helpers ---
+# --- Scrollable list helper ---
 
-GAP = 8  # universal gap between elements
+def _make_scroll_list(parent, bg=None):
+    """Create a vertically scrollable frame inside parent. Returns (canvas, frame)."""
+    if bg is None:
+        bg = SURFACE
+    canvas = tk.Canvas(parent, bg=bg, highlightthickness=0, borderwidth=0)
+    frame = tk.Frame(canvas, bg=bg)
+    frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+    win = canvas.create_window((0, 0), window=frame, anchor="nw")
+    canvas.bind("<Configure>", lambda e: canvas.itemconfig(win, width=e.width))
+    canvas.pack(fill="both", expand=True)
+    frame.bind("<Enter>", lambda e: canvas.bind_all("<MouseWheel>",
+        lambda ev: canvas.yview_scroll(int(-1 * (ev.delta / 120)), "units")))
+    frame.bind("<Leave>", lambda e: canvas.unbind_all("<MouseWheel>"))
+    return canvas, frame
+
+
+# --- Card helpers ---
 
 def make_card(parent):
     card = tk.Frame(parent, bg=SURFACE, highlightbackground=SURFACE_RAISED, highlightthickness=1)
     card.pack(fill="x", padx=CARD_PAD_X, pady=(0, GAP))
-
     return card
-
 
 def card_title(card, text):
     tk.Label(card, text=text, font=FONT_SECTION, fg=ACCENT, bg=SURFACE,
              anchor="w").pack(fill="x", padx=CARD_PAD_INNER, pady=(CARD_PAD_Y_TOP, 4))
-
 
 def make_field(parent, label, var, show=None, placeholder=""):
     tk.Label(parent, text=label, font=FONT_SMALL, fg=TEXT_SEC, bg=SURFACE,
@@ -156,239 +152,38 @@ def make_field(parent, label, var, show=None, placeholder=""):
     if show:
         kw["show"] = show
     entry = tk.Entry(parent, **kw)
-    entry.pack(fill="x", ipady=5, pady=(2, 8))
+    entry.pack(fill="x", ipady=4, pady=(1, 5))
     return entry
 
 
 # --- Scrollable frame wrapper ---
 
 class ScrollableFrame:
-    """A frame inside a canvas that supports vertical scrolling via mousewheel."""
-
     def __init__(self, parent):
         self.canvas = tk.Canvas(parent, bg=BG, highlightthickness=0, borderwidth=0)
         self.frame = tk.Frame(self.canvas, bg=BG)
-
         self.frame.bind("<Configure>", self._on_frame_configure)
         self.canvas.bind("<Configure>", self._on_canvas_configure)
-
         self.canvas_window = self.canvas.create_window((0, 0), window=self.frame, anchor="nw")
-
         self.canvas.pack(side="left", fill="both", expand=True)
-
-        # Bind mousewheel on all platforms
         self.frame.bind("<Enter>", self._bind_mousewheel)
         self.frame.bind("<Leave>", self._unbind_mousewheel)
 
     def _on_frame_configure(self, event):
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
-
     def _on_canvas_configure(self, event):
         self.canvas.itemconfig(self.canvas_window, width=event.width)
-
     def _bind_mousewheel(self, event):
         self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
-
     def _unbind_mousewheel(self, event):
         self.canvas.unbind_all("<MouseWheel>")
-
     def _on_mousewheel(self, event):
         self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
-
-
-# --- Setup Tab ---
-
-class SetupTab:
-    def __init__(self, parent, log_callback=None):
-        self.log_callback = log_callback
-        self.frame = tk.Frame(parent, bg=BG)
-
-        # Scrollable wrapper
-        scroller = ScrollableFrame(self.frame)
-        inner_frame = scroller.frame
-
-        tk.Frame(inner_frame, bg=BG, height=CARD_PAD_X).pack(fill="x")
-
-        # Brella card
-        card = make_card(inner_frame)
-        card_title(card, "BRELLA API")
-        inner = tk.Frame(card, bg=SURFACE)
-        inner.pack(fill="x", padx=CARD_PAD_INNER, pady=(0, CARD_PAD_Y_BOT))
-
-        self.api_key = tk.StringVar(value=load_env_value("BRELLA_API_KEY"))
-        self.org_id = tk.StringVar(value=load_env_value("BRELLA_ORG_ID"))
-        self.event_id = tk.StringVar(value=load_env_value("BRELLA_EVENT_ID"))
-
-        # API status pill
-        api_status_row = tk.Frame(inner, bg=SURFACE)
-        api_status_row.pack(fill="x", pady=(0, 8))
-        api_loaded = bool(self.api_key.get())
-        self._api_status_dot = tk.Frame(api_status_row, bg=SUCCESS if api_loaded else DANGER,
-                                        width=7, height=7)
-        self._api_status_dot.pack(side="left", padx=(0, 6), pady=3)
-        self._api_status_dot.pack_propagate(False)
-        self._api_status_lbl = tk.Label(api_status_row,
-                                        text="API key loaded from .env" if api_loaded else "API key not set",
-                                        font=FONT_SMALL, fg=SUCCESS if api_loaded else DANGER, bg=SURFACE)
-        self._api_status_lbl.pack(side="left")
-
-        make_field(inner, "API Key", self.api_key, show="*")
-        row = tk.Frame(inner, bg=SURFACE)
-        row.pack(fill="x")
-        left = tk.Frame(row, bg=SURFACE)
-        left.pack(side="left", fill="x", expand=True, padx=(0, 4))
-        right = tk.Frame(row, bg=SURFACE)
-        right.pack(side="right", fill="x", expand=True, padx=(4, 0))
-        make_field(left, "Org ID", self.org_id)
-        make_field(right, "Event ID", self.event_id)
-
-        # Admin credentials card
-        admin_card = make_card(inner_frame)
-        card_title(admin_card, "BRELLA ADMIN SESSION")
-        admin_inner = tk.Frame(admin_card, bg=SURFACE)
-        admin_inner.pack(fill="x", padx=CARD_PAD_INNER, pady=(0, CARD_PAD_Y_BOT))
-
-        # How-to instructions — one label per step so wrapping never breaks indentation
-        tk.Label(admin_inner,
-                 text="Needed to load your event's tags. Expire in ~2 weeks — refresh when tags stop loading.",
-                 font=FONT_SMALL, fg=TEXT_TER, bg=SURFACE, justify="left", anchor="w"
-                 ).pack(fill="x", pady=(0, 6))
-
-        steps_frame = tk.Frame(admin_inner, bg=SURFACE)
-        steps_frame.pack(fill="x", pady=(0, 10))
-        for step in [
-            "1.  Open manager.brella.io → Schedule → Tags",
-            "2.  DevTools (F12) → Network tab → reload the page",
-            "3.  Click the request to api.brella.io/api/admin_panel/…/tags",
-            "4.  Copy access-token, client and uid from Request Headers",
-        ]:
-            tk.Label(steps_frame, text=step, font=FONT_SMALL, fg=TEXT_TER, bg=SURFACE,
-                     anchor="w").pack(fill="x", pady=1)
-
-        self.admin_token = tk.StringVar(value=load_env_value("BRELLA_ADMIN_ACCESS_TOKEN"))
-        self.admin_client = tk.StringVar(value=load_env_value("BRELLA_ADMIN_CLIENT"))
-        self.admin_uid = tk.StringVar(value=load_env_value("BRELLA_ADMIN_UID"))
-
-        # Status pill: shows whether tokens are currently loaded from .env
-        token_status_row = tk.Frame(admin_inner, bg=SURFACE)
-        token_status_row.pack(fill="x", pady=(0, 8))
-        all_set = all([self.admin_token.get(), self.admin_client.get(), self.admin_uid.get()])
-        dot_color = SUCCESS if all_set else TEXT_TER
-        status_text = "Tokens loaded from .env" if all_set else "Tokens not set"
-        status_fg = SUCCESS if all_set else TEXT_TER
-        self._admin_status_dot = tk.Frame(token_status_row, bg=dot_color, width=7, height=7)
-        self._admin_status_dot.pack(side="left", padx=(0, 6), pady=3)
-        self._admin_status_dot.pack_propagate(False)
-        self._admin_status_lbl = tk.Label(token_status_row, text=status_text,
-                                          font=FONT_SMALL, fg=status_fg, bg=SURFACE)
-        self._admin_status_lbl.pack(side="left")
-
-        make_field(admin_inner, "access-token", self.admin_token, show="*")
-        make_field(admin_inner, "client", self.admin_client, show="*")
-        make_field(admin_inner, "uid  (your login email)", self.admin_uid)
-
-
-    def _save(self):
-        save_env_values({
-            "BRELLA_API_KEY": self.api_key.get().strip(),
-            "BRELLA_ORG_ID": self.org_id.get().strip(),
-            "BRELLA_EVENT_ID": self.event_id.get().strip(),
-            "BRELLA_ADMIN_ACCESS_TOKEN": self.admin_token.get().strip(),
-            "BRELLA_ADMIN_CLIENT": self.admin_client.get().strip(),
-            "BRELLA_ADMIN_UID": self.admin_uid.get().strip(),
-        })
-        # Also update os.environ so it's picked up without restart
-        os.environ["BRELLA_API_KEY"] = self.api_key.get().strip()
-        os.environ["BRELLA_ORG_ID"] = self.org_id.get().strip()
-        os.environ["BRELLA_EVENT_ID"] = self.event_id.get().strip()
-        os.environ["BRELLA_ADMIN_ACCESS_TOKEN"] = self.admin_token.get().strip()
-        os.environ["BRELLA_ADMIN_CLIENT"] = self.admin_client.get().strip()
-        os.environ["BRELLA_ADMIN_UID"] = self.admin_uid.get().strip()
-
-
-        # Update API status pill
-        api_ok = bool(self.api_key.get().strip())
-        self._api_status_dot.config(bg=SUCCESS if api_ok else DANGER)
-        self._api_status_lbl.config(
-            text="API key loaded from .env" if api_ok else "API key not set",
-            fg=SUCCESS if api_ok else DANGER,
-        )
-
-        # Update admin token status pill
-        all_set = all([self.admin_token.get().strip(), self.admin_client.get().strip(),
-                       self.admin_uid.get().strip()])
-        self._admin_status_dot.config(bg=SUCCESS if all_set else TEXT_TER)
-        self._admin_status_lbl.config(
-            text="Tokens loaded from .env" if all_set else "Tokens not set",
-            fg=SUCCESS if all_set else TEXT_TER,
-        )
-
-        if self.log_callback:
-            self.log_callback("Setup saved to .env")
-
-    def _test_connection(self):
-        """Test both the integration API and admin panel API connections."""
-        import threading
-
-        def _test():
-            from urllib import request as url_req, error as url_err
-            import json
-
-            log = self.log_callback or (lambda m: None)
-            org = os.environ.get("BRELLA_ORG_ID", "")
-            event = os.environ.get("BRELLA_EVENT_ID", "")
-            api_key = os.environ.get("BRELLA_API_KEY", "")
-
-            # Test integration API
-            if api_key and org and event:
-                url = f"https://api.brella.io/api/integration/organizations/{org}/events/{event}"
-                headers = {
-                    os.environ.get("BRELLA_AUTH_HEADER_NAME", "Brella-API-Access-Token"): api_key,
-                    "User-Agent": os.environ.get("BRELLA_HTTP_USER_AGENT", "SIMsync"),
-                }
-                try:
-                    req = url_req.Request(url, headers=headers)
-                    resp = url_req.urlopen(req, timeout=10)
-                    log(f"[OK] Integration API: {resp.status} — connected to event {event}")
-                except url_err.HTTPError as e:
-                    log(f"[ERROR] Integration API: {e.code}")
-                except Exception as e:
-                    log(f"[ERROR] Integration API: {e}")
-            else:
-                log("[WARN] Integration API: missing API key, org, or event ID")
-
-            # Test admin panel API
-            token = os.environ.get("BRELLA_ADMIN_ACCESS_TOKEN", "")
-            client = os.environ.get("BRELLA_ADMIN_CLIENT", "")
-            uid = os.environ.get("BRELLA_ADMIN_UID", "")
-            if token and client and uid and event:
-                url = f"https://api.brella.io/api/admin_panel/events/{event}/tags"
-                headers = {
-                    "access-token": token, "client": client, "uid": uid,
-                    "token-type": "Bearer",
-                    "Accept": "application/vnd.brella.v4+json",
-                    "User-Agent": "Mozilla/5.0",
-                }
-                try:
-                    req = url_req.Request(url, headers=headers)
-                    resp = url_req.urlopen(req, timeout=10)
-                    body = json.loads(resp.read().decode())
-                    count = len(body) if isinstance(body, list) else len(body.get("data", body.get("tags", [])))
-                    log(f"[OK] Admin API: {resp.status} — {count} tags found")
-                except url_err.HTTPError as e:
-                    log(f"[ERROR] Admin API: {e.code} — tokens may be expired")
-                except Exception as e:
-                    log(f"[ERROR] Admin API: {e}")
-            else:
-                log("[WARN] Admin API: missing admin tokens")
-
-        threading.Thread(target=_test, daemon=True).start()
 
 
 # --- Button press flash helper ---
 
 def _bind_button_flash(btn, rest_color, flash_color):
-    """Bind a brief color flash on button press for tactile feedback."""
     def on_press(e):
         btn.config(bg=flash_color)
         btn.after(BUTTON_FLASH_MS, lambda: btn.config(bg=rest_color))
@@ -398,8 +193,6 @@ def _bind_button_flash(btn, rest_color, flash_color):
 # --- Status dot pulse animation ---
 
 class StatusPulse:
-    """Animates a status dot between two colors in a loop while active."""
-
     def __init__(self, widget):
         self.widget = widget
         self._running = False
@@ -410,7 +203,6 @@ class StatusPulse:
         self._after_id = None
 
     def start(self, color_a=ACCENT_LIGHT, color_b=None):
-        """Begin pulsing between color_a and a dimmed version."""
         if self._running:
             return
         self._color_a = color_a
@@ -421,7 +213,6 @@ class StatusPulse:
         self._tick()
 
     def stop(self, final_color=None):
-        """Stop pulsing and set a final color."""
         self._running = False
         if self._after_id is not None:
             try:
@@ -445,7 +236,6 @@ class StatusPulse:
         except Exception:
             self._running = False
             return
-
         if self._forward:
             self._step += 1
             if self._step >= PULSE_STEPS:
@@ -454,8 +244,391 @@ class StatusPulse:
             self._step -= 1
             if self._step <= 0:
                 self._forward = True
-
         self._after_id = self.widget.after(PULSE_INTERVAL, self._tick)
+
+
+# --- Setup Tab (merged: API config + Values) ---
+
+class SetupTab:
+    def __init__(self, parent, log_callback=None):
+        self.log_callback = log_callback
+        self.frame = tk.Frame(parent, bg=BG)
+
+        P = 4  # grid gap
+
+        # 3-column grid: API+Priority | Groups | Tickets
+        self.frame.columnconfigure(0, weight=2)
+        self.frame.columnconfigure(1, weight=1)
+        self.frame.columnconfigure(2, weight=2)
+        self.frame.rowconfigure(0, weight=1)
+
+        # === Column 0: API config + Group Priority + Save ===
+        col0 = tk.Frame(self.frame, bg=BG)
+        col0.grid(row=0, column=0, sticky="nsew", padx=(P, P), pady=P)
+
+        # -- Brella API card --
+        api_card = tk.Frame(col0, bg=SURFACE, highlightbackground=SURFACE_RAISED,
+                            highlightthickness=1)
+        api_card.pack(fill="x", pady=(0, GAP))
+        card_title(api_card, "BRELLA API")
+        api_inner = tk.Frame(api_card, bg=SURFACE)
+        api_inner.pack(fill="x", padx=CARD_PAD_INNER, pady=(0, CARD_PAD_Y_BOT))
+
+        self.api_key = tk.StringVar(value=load_env_value("BRELLA_API_KEY"))
+        self.org_id = tk.StringVar(value=load_env_value("BRELLA_ORG_ID"))
+        self.event_id = tk.StringVar(value=load_env_value("BRELLA_EVENT_ID"))
+
+        # Status pill
+        api_status_row = tk.Frame(api_inner, bg=SURFACE)
+        api_status_row.pack(fill="x", pady=(0, 2))
+        api_loaded = bool(self.api_key.get())
+        self._api_status_dot = tk.Frame(api_status_row,
+                                        bg=SUCCESS if api_loaded else DANGER, width=7, height=7)
+        self._api_status_dot.pack(side="left", padx=(0, 6), pady=3)
+        self._api_status_dot.pack_propagate(False)
+        self._api_status_lbl = tk.Label(api_status_row,
+                                        text="API key loaded" if api_loaded else "API key not set",
+                                        font=FONT_SMALL,
+                                        fg=SUCCESS if api_loaded else DANGER, bg=SURFACE)
+        self._api_status_lbl.pack(side="left")
+
+        make_field(api_inner, "API Key", self.api_key, show="*")
+        ids_row = tk.Frame(api_inner, bg=SURFACE)
+        ids_row.pack(fill="x")
+        ids_left = tk.Frame(ids_row, bg=SURFACE)
+        ids_left.pack(side="left", fill="x", expand=True, padx=(0, 4))
+        ids_right = tk.Frame(ids_row, bg=SURFACE)
+        ids_right.pack(side="right", fill="x", expand=True, padx=(4, 0))
+        make_field(ids_left, "Org ID", self.org_id)
+        make_field(ids_right, "Event ID", self.event_id)
+
+        # Admin panel credentials
+        tk.Frame(api_inner, bg=SURFACE_RAISED, height=1).pack(fill="x", pady=(2, 4))
+        admin_hdr = tk.Frame(api_inner, bg=SURFACE)
+        admin_hdr.pack(fill="x")
+        tk.Label(admin_hdr, text="ADMIN PANEL", font=FONT_SECTION, fg=ACCENT,
+                 bg=SURFACE, anchor="w").pack(side="left")
+        tk.Label(admin_hdr, text="(stage sync)", font=FONT_SMALL, fg=TEXT_TER,
+                 bg=SURFACE, anchor="w").pack(side="left", padx=(6, 0))
+
+        self.admin_token = tk.StringVar(value=load_env_value("BRELLA_ADMIN_ACCESS_TOKEN"))
+        self.admin_client = tk.StringVar(value=load_env_value("BRELLA_ADMIN_CLIENT"))
+        self.admin_uid = tk.StringVar(value=load_env_value("BRELLA_ADMIN_UID"))
+
+        make_field(api_inner, "Access Token", self.admin_token, show="*")
+        admin_row = tk.Frame(api_inner, bg=SURFACE)
+        admin_row.pack(fill="x")
+        al = tk.Frame(admin_row, bg=SURFACE)
+        al.pack(side="left", fill="x", expand=True, padx=(0, 4))
+        ar = tk.Frame(admin_row, bg=SURFACE)
+        ar.pack(side="right", fill="x", expand=True, padx=(4, 0))
+        make_field(al, "Client", self.admin_client)
+        make_field(ar, "UID", self.admin_uid)
+
+        # API buttons
+        api_btns = tk.Frame(api_inner, bg=SURFACE)
+        api_btns.pack(fill="x", pady=(0, 2))
+        test_btn = tk.Button(api_btns, text="Test Connection", font=FONT_SMALL,
+                             bg=SURFACE_RAISED, fg=TEXT_SEC,
+                             activebackground="#2e2e38", activeforeground=TEXT,
+                             relief="flat", cursor="hand2", pady=4,
+                             command=self._test_connection)
+        test_btn.pack(side="left", fill="x", expand=True, padx=(0, 3))
+        save_api_btn = tk.Button(api_btns, text="Save", font=FONT_SMALL,
+                                  bg=ACCENT, fg="white",
+                                  activebackground=ACCENT_LIGHT, activeforeground="white",
+                                  relief="flat", cursor="hand2", pady=4,
+                                  command=self._save_api)
+        save_api_btn.pack(side="left", fill="x", expand=True, padx=(3, 0))
+        _bind_button_flash(test_btn, SURFACE_RAISED, "#2e2e38")
+        _bind_button_flash(save_api_btn, ACCENT, ACCENT_LIGHT)
+
+        self._api_status_var = tk.StringVar()
+        self._api_status_result = tk.Label(api_inner, textvariable=self._api_status_var,
+                                            font=FONT_SMALL, fg=TEXT_SEC, bg=SURFACE, anchor="w")
+
+        # -- Group Priority card (fills remaining height) --
+        priority_card = tk.Frame(col0, bg=SURFACE, highlightbackground=SURFACE_RAISED,
+                                 highlightthickness=1)
+        priority_card.pack(fill="both", expand=True, pady=(0, GAP))
+        card_title(priority_card, "GROUP PRIORITY")
+        priority_inner = tk.Frame(priority_card, bg=SURFACE)
+        priority_inner.pack(fill="both", expand=True, padx=CARD_PAD_INNER,
+                            pady=(0, CARD_PAD_Y_BOT))
+
+        tk.Label(priority_inner, text="Top = highest priority.",
+                 font=FONT_SMALL, fg=TEXT_TER, bg=SURFACE, anchor="w").pack(fill="x", pady=(0, 2))
+
+        _, prio_scroll = _make_scroll_list(priority_inner)
+        self._priority_frame = prio_scroll
+        self._priority_rows = []
+
+        import api
+        for gid in api.GROUP_PRIORITY:
+            self._add_priority_row(gid)
+
+        tk.Button(priority_inner, text="+ Add", font=FONT_SMALL,
+                  bg=SURFACE_RAISED, fg=TEXT_SEC,
+                  activebackground=ACCENT, activeforeground="white",
+                  relief="flat", cursor="hand2", pady=2,
+                  command=lambda: self._add_priority_row("")).pack(anchor="w", pady=(2, 0))
+
+        # Save Values button
+        save_vals_btn = tk.Button(col0, text="Save Values", font=FONT_BOLD,
+                                   bg=ACCENT, fg="white",
+                                   activebackground=ACCENT_LIGHT, activeforeground="white",
+                                   relief="flat", cursor="hand2", pady=6,
+                                   command=self._save_values)
+        save_vals_btn.pack(fill="x")
+        _bind_button_flash(save_vals_btn, ACCENT, ACCENT_LIGHT)
+
+        # === Column 1: Attendee Groups ===
+        groups_card = tk.Frame(self.frame, bg=SURFACE, highlightbackground=SURFACE_RAISED,
+                               highlightthickness=1)
+        groups_card.grid(row=0, column=1, sticky="nsew", padx=(0, P), pady=P)
+        card_title(groups_card, "ATTENDEE GROUPS")
+        groups_inner = tk.Frame(groups_card, bg=SURFACE)
+        groups_inner.pack(fill="both", expand=True, padx=CARD_PAD_INNER,
+                          pady=(0, CARD_PAD_Y_BOT))
+
+        hdr = tk.Frame(groups_inner, bg=SURFACE)
+        hdr.pack(fill="x")
+        tk.Label(hdr, text="Name", font=FONT_SECTION, fg=TEXT_SEC, bg=SURFACE,
+                 width=12, anchor="w").pack(side="left")
+        tk.Label(hdr, text="ID", font=FONT_SECTION, fg=TEXT_SEC, bg=SURFACE,
+                 anchor="w").pack(side="left", fill="x", expand=True)
+
+        _, groups_scroll = _make_scroll_list(groups_inner)
+        self._groups_frame = groups_scroll
+        self._group_rows = []
+
+        for name, gid in api.BRELLA_ATTENDEE_GROUP_IDS.items():
+            self._add_group_row(name, gid)
+
+        tk.Button(groups_inner, text="+ Add", font=FONT_SMALL,
+                  bg=SURFACE_RAISED, fg=TEXT_SEC,
+                  activebackground=ACCENT, activeforeground="white",
+                  relief="flat", cursor="hand2", pady=2,
+                  command=lambda: self._add_group_row("", "")).pack(anchor="w", pady=(2, 0))
+
+        # === Column 2: Ticket Type Mappings ===
+        tickets_card = tk.Frame(self.frame, bg=SURFACE, highlightbackground=SURFACE_RAISED,
+                                highlightthickness=1)
+        tickets_card.grid(row=0, column=2, sticky="nsew", padx=(0, P), pady=P)
+        card_title(tickets_card, "TICKET TYPE MAPPINGS")
+        tickets_inner = tk.Frame(tickets_card, bg=SURFACE)
+        tickets_inner.pack(fill="both", expand=True, padx=CARD_PAD_INNER,
+                           pady=(0, CARD_PAD_Y_BOT))
+
+        hdr2 = tk.Frame(tickets_inner, bg=SURFACE)
+        hdr2.pack(fill="x")
+        tk.Label(hdr2, text="Ticket Type", font=FONT_SECTION, fg=TEXT_SEC, bg=SURFACE,
+                 width=22, anchor="w").pack(side="left")
+        tk.Label(hdr2, text="Group ID", font=FONT_SECTION, fg=TEXT_SEC, bg=SURFACE,
+                 anchor="w").pack(side="left", fill="x", expand=True)
+
+        _, tickets_scroll = _make_scroll_list(tickets_inner)
+        self._tickets_frame = tickets_scroll
+        self._ticket_rows = []
+
+        for ttype, gid in api.TICKET_TYPE_TO_GROUP_ID.items():
+            self._add_ticket_row(ttype, gid)
+
+        tk.Button(tickets_inner, text="+ Add", font=FONT_SMALL,
+                  bg=SURFACE_RAISED, fg=TEXT_SEC,
+                  activebackground=ACCENT, activeforeground="white",
+                  relief="flat", cursor="hand2", pady=2,
+                  command=lambda: self._add_ticket_row("", "")).pack(anchor="w", pady=(2, 0))
+
+    # --- Value row helpers ---
+
+    def _make_entry(self, parent, value="", width=20):
+        var = tk.StringVar(value=value)
+        entry = tk.Entry(parent, textvariable=var, font=FONT_MONO, bg=BG, fg=TEXT,
+                         insertbackground=TEXT, relief="flat", width=width,
+                         highlightthickness=1, highlightbackground=SURFACE_RAISED,
+                         highlightcolor=ACCENT)
+        return entry, var
+
+    def _make_del_btn(self, parent, command):
+        btn = tk.Button(parent, text="\u2715", font=("Poppins", 8), bg=SURFACE, fg=TEXT_TER,
+                        activebackground=DANGER, activeforeground="white",
+                        relief="flat", cursor="hand2", bd=0, command=command)
+        btn.bind("<Enter>", lambda e: btn.config(fg=DANGER))
+        btn.bind("<Leave>", lambda e: btn.config(fg=TEXT_TER))
+        return btn
+
+    def _add_group_row(self, name, gid):
+        row = tk.Frame(self._groups_frame, bg=SURFACE)
+        row.pack(fill="x", pady=0)
+        name_entry, name_var = self._make_entry(row, name, width=16)
+        name_entry.pack(side="left", padx=(0, 4), ipady=1)
+        id_entry, id_var = self._make_entry(row, gid, width=8)
+        id_entry.pack(side="left", fill="x", expand=True, ipady=1)
+        def remove():
+            row.destroy()
+            self._group_rows = [(r, n, i) for r, n, i in self._group_rows if r.winfo_exists()]
+        self._make_del_btn(row, remove).pack(side="right", padx=(4, 0))
+        self._group_rows.append((row, name_var, id_var))
+
+    def _add_ticket_row(self, ttype, gid):
+        row = tk.Frame(self._tickets_frame, bg=SURFACE)
+        row.pack(fill="x", pady=0)
+        type_entry, type_var = self._make_entry(row, ttype, width=30)
+        type_entry.pack(side="left", padx=(0, 4), ipady=1)
+        id_entry, id_var = self._make_entry(row, gid, width=8)
+        id_entry.pack(side="left", fill="x", expand=True, ipady=1)
+        def remove():
+            row.destroy()
+            self._ticket_rows = [(r, t, i) for r, t, i in self._ticket_rows if r.winfo_exists()]
+        self._make_del_btn(row, remove).pack(side="right", padx=(4, 0))
+        self._ticket_rows.append((row, type_var, id_var))
+
+    def _add_priority_row(self, gid):
+        row = tk.Frame(self._priority_frame, bg=SURFACE)
+        row.pack(fill="x", pady=0)
+        pos_label = tk.Label(row, text=str(len(self._priority_rows) + 1), font=FONT_SMALL,
+                             fg=TEXT_TER, bg=SURFACE, width=3)
+        pos_label.pack(side="left")
+        entry, var = self._make_entry(row, gid, width=10)
+        entry.pack(side="left", fill="x", expand=True, ipady=1)
+        def remove():
+            row.destroy()
+            self._priority_rows = [(r, v) for r, v in self._priority_rows if r.winfo_exists()]
+            self._renumber_priority()
+        self._make_del_btn(row, remove).pack(side="right", padx=(4, 0))
+        def move_up():
+            idx = next((i for i, (r, v) in enumerate(self._priority_rows) if r == row), None)
+            if idx and idx > 0:
+                self._priority_rows[idx], self._priority_rows[idx - 1] = \
+                    self._priority_rows[idx - 1], self._priority_rows[idx]
+                self._repack_priority()
+        def move_down():
+            idx = next((i for i, (r, v) in enumerate(self._priority_rows) if r == row), None)
+            if idx is not None and idx < len(self._priority_rows) - 1:
+                self._priority_rows[idx], self._priority_rows[idx + 1] = \
+                    self._priority_rows[idx + 1], self._priority_rows[idx]
+                self._repack_priority()
+        down_btn = tk.Button(row, text="\u25BC", font=("Poppins", 7), bg=SURFACE, fg=TEXT_TER,
+                             activebackground=SURFACE_RAISED, activeforeground=TEXT,
+                             relief="flat", cursor="hand2", bd=0, command=move_down)
+        down_btn.pack(side="right", padx=1)
+        up_btn = tk.Button(row, text="\u25B2", font=("Poppins", 7), bg=SURFACE, fg=TEXT_TER,
+                           activebackground=SURFACE_RAISED, activeforeground=TEXT,
+                           relief="flat", cursor="hand2", bd=0, command=move_up)
+        up_btn.pack(side="right", padx=1)
+        self._priority_rows.append((row, var))
+
+    def _renumber_priority(self):
+        for i, (row, var) in enumerate(self._priority_rows):
+            if row.winfo_exists():
+                for child in row.winfo_children():
+                    if isinstance(child, tk.Label):
+                        child.config(text=str(i + 1))
+                        break
+
+    def _repack_priority(self):
+        for row, var in self._priority_rows:
+            row.pack_forget()
+        for row, var in self._priority_rows:
+            row.pack(fill="x", pady=0)
+        self._renumber_priority()
+
+    # --- Save / Test ---
+
+    def _save_api(self):
+        save_env_values({
+            "BRELLA_API_KEY": self.api_key.get().strip(),
+            "BRELLA_ORG_ID": self.org_id.get().strip(),
+            "BRELLA_EVENT_ID": self.event_id.get().strip(),
+            "BRELLA_ADMIN_ACCESS_TOKEN": self.admin_token.get().strip(),
+            "BRELLA_ADMIN_CLIENT": self.admin_client.get().strip(),
+            "BRELLA_ADMIN_UID": self.admin_uid.get().strip(),
+        })
+        for k, var in [("BRELLA_API_KEY", self.api_key), ("BRELLA_ORG_ID", self.org_id),
+                       ("BRELLA_EVENT_ID", self.event_id),
+                       ("BRELLA_ADMIN_ACCESS_TOKEN", self.admin_token),
+                       ("BRELLA_ADMIN_CLIENT", self.admin_client),
+                       ("BRELLA_ADMIN_UID", self.admin_uid)]:
+            os.environ[k] = var.get().strip()
+
+        api_ok = bool(self.api_key.get().strip())
+        self._api_status_dot.config(bg=SUCCESS if api_ok else DANGER)
+        self._api_status_lbl.config(
+            text="API key loaded" if api_ok else "API key not set",
+            fg=SUCCESS if api_ok else DANGER,
+        )
+        self._show_api_status("Saved to .env", SUCCESS)
+
+    def _test_connection(self):
+        import threading
+        def _test():
+            from urllib import request as url_req, error as url_err
+            org = os.environ.get("BRELLA_ORG_ID", "")
+            event = os.environ.get("BRELLA_EVENT_ID", "")
+            api_key = os.environ.get("BRELLA_API_KEY", "")
+            if api_key and org and event:
+                url = f"https://api.brella.io/api/integration/organizations/{org}/events/{event}"
+                headers = {
+                    os.environ.get("BRELLA_AUTH_HEADER_NAME", "Brella-API-Access-Token"): api_key,
+                    "User-Agent": os.environ.get("BRELLA_HTTP_USER_AGENT", "SIMsync"),
+                }
+                try:
+                    req = url_req.Request(url, headers=headers)
+                    resp = url_req.urlopen(req, timeout=10)
+                    self.frame.after(0, lambda: self._show_api_status(
+                        f"Connected — event {event} (HTTP {resp.status})", SUCCESS))
+                except url_err.HTTPError as e:
+                    self.frame.after(0, lambda: self._show_api_status(
+                        f"API error: HTTP {e.code}", DANGER))
+                except Exception as e:
+                    self.frame.after(0, lambda: self._show_api_status(
+                        f"Connection failed: {e}", DANGER))
+            else:
+                self.frame.after(0, lambda: self._show_api_status(
+                    "Missing API key, org, or event ID", WARN))
+        threading.Thread(target=_test, daemon=True).start()
+
+    def _show_api_status(self, text, color):
+        self._api_status_var.set(text)
+        self._api_status_result.config(fg=color)
+        self._api_status_result.pack(fill="x", pady=(4, 0))
+
+    def _save_values(self):
+        import api
+        groups = {}
+        for row, name_var, id_var in self._group_rows:
+            if not row.winfo_exists():
+                continue
+            name = name_var.get().strip()
+            gid = id_var.get().strip()
+            if name and gid:
+                groups[name] = gid
+        tickets = {}
+        for row, type_var, id_var in self._ticket_rows:
+            if not row.winfo_exists():
+                continue
+            ttype = type_var.get().strip()
+            gid = id_var.get().strip()
+            if ttype and gid:
+                tickets[ttype] = gid
+        priority = []
+        for row, var in self._priority_rows:
+            if not row.winfo_exists():
+                continue
+            gid = var.get().strip()
+            if gid:
+                priority.append(gid)
+        api.save_config(
+            attendee_groups=groups,
+            group_priority=priority,
+            ticket_type_to_group=tickets,
+        )
+        if self.log_callback:
+            self.log_callback(
+                f"Values saved — {len(groups)} groups, "
+                f"{len(tickets)} ticket mappings, {len(priority)} priority entries"
+            )
 
 
 # --- Sync Tab ---
@@ -478,11 +651,10 @@ class SyncTab:
 
         self.frame = tk.Frame(parent, bg=BG)
 
-        # Top form section — plain frame (no scroll; fits fine on maximized window)
         inner_frame = tk.Frame(self.frame, bg=BG)
         inner_frame.pack(fill="x", side="top")
 
-        tk.Frame(inner_frame, bg=BG, height=CARD_PAD_X).pack(fill="x")
+        tk.Frame(inner_frame, bg=BG, height=4).pack(fill="x")
 
         # CSV picker
         csv_card = make_card(inner_frame)
@@ -493,8 +665,7 @@ class SyncTab:
         self.path_entry = tk.Entry(csv_row, textvariable=self.csv_path, font=FONT_MONO,
                                    bg=BG, fg=TEXT, insertbackground=TEXT,
                                    relief="flat", highlightthickness=1,
-                                   highlightbackground=SURFACE_RAISED,
-                                   highlightcolor=ACCENT)
+                                   highlightbackground=SURFACE_RAISED, highlightcolor=ACCENT)
         self.path_entry.pack(side="left", fill="x", expand=True, ipady=5)
 
         self.browse_btn = tk.Button(csv_row, text="Browse", font=FONT_SMALL, bg=SURFACE_RAISED,
@@ -509,7 +680,6 @@ class SyncTab:
             card_title(opts, "OPTIONS")
             opts_inner = tk.Frame(opts, bg=SURFACE)
             opts_inner.pack(fill="x", padx=CARD_PAD_INNER, pady=(0, CARD_PAD_Y_BOT))
-
             if has_prune:
                 self.prune_cb = tk.Checkbutton(opts_inner,
                                                text="Prune missing (remove from Brella if not in CSV)",
@@ -518,7 +688,6 @@ class SyncTab:
                                                activebackground=SURFACE, activeforeground=TEXT,
                                                anchor="w")
                 self.prune_cb.pack(fill="x")
-
             if has_cookie:
                 self.dl_cb = tk.Checkbutton(opts_inner,
                                             text="Download CSV from 3cket instead of local file",
@@ -529,7 +698,25 @@ class SyncTab:
                 self.dl_cb.pack(fill="x", pady=(4, 0))
                 self.cookie_entry = make_field(opts_inner, "Session Cookie", self.cookie, show="*")
 
-        # --- Detail boxes: 2x2 grid packed directly in self.frame ---
+        # Action buttons
+        btn_row = tk.Frame(inner_frame, bg=BG)
+        btn_row.pack(fill="x", padx=CARD_PAD_X, pady=(0, GAP))
+        self.preview_btn = tk.Button(btn_row, text="Preview", font=FONT_BOLD,
+                                      bg=SURFACE_RAISED, fg=TEXT_SEC,
+                                      activebackground="#2e2e38", activeforeground=TEXT,
+                                      relief="flat", cursor="hand2", pady=7,
+                                      command=lambda: self._run(dry_run=True))
+        self.preview_btn.pack(side="left", fill="x", expand=True, padx=(0, 3))
+        self.import_btn = tk.Button(btn_row, text="Import", font=FONT_BOLD,
+                                     bg=ACCENT, fg="white",
+                                     activebackground=ACCENT_LIGHT, activeforeground="white",
+                                     relief="flat", cursor="hand2", pady=7,
+                                     command=lambda: self._run(dry_run=False))
+        self.import_btn.pack(side="left", fill="x", expand=True, padx=(3, 0))
+        _bind_button_flash(self.preview_btn, SURFACE_RAISED, "#2e2e38")
+        _bind_button_flash(self.import_btn, ACCENT, ACCENT_LIGHT)
+
+        # Detail boxes: 2x2 grid
         detail_container = tk.Frame(self.frame, bg=BG)
         detail_container.pack(fill="both", expand=True, padx=CARD_PAD_X, pady=(0, CARD_PAD_X))
         detail_container.columnconfigure(0, weight=1)
@@ -549,9 +736,10 @@ class SyncTab:
         if not enabled:
             self.browse_btn.config(state="disabled")
             self.path_entry.config(state="disabled")
+            self.preview_btn.config(state="disabled")
+            self.import_btn.config(state="disabled")
 
     def _make_unified_box(self, parent, title, value, color, row=0, col=0, copyable=False):
-        """Create a unified card: colored accent bar on top, header with title+count, list below."""
         outer = tk.Frame(parent, bg=SURFACE, highlightbackground=SURFACE_RAISED,
                          highlightthickness=1)
         padx = (0 if col == 0 else GAP, 0 if col == 1 else GAP)
@@ -559,20 +747,18 @@ class SyncTab:
         outer.grid(row=row, column=col, sticky="nsew", padx=padx, pady=pady)
         outer.columnconfigure(0, weight=1)
 
-        # Row 0: Thin colored accent bar at very top
         accent_line = tk.Frame(outer, bg=color, height=3)
         accent_line.grid(row=0, column=0, sticky="ew")
 
-        # Row 1: Header — count (large, left) and title label (small, below count)
         header = tk.Frame(outer, bg=SURFACE)
         header.grid(row=1, column=0, sticky="ew")
 
-        count_label = tk.Label(header, text=value, font=("Poppins", 28, "bold"),
+        count_label = tk.Label(header, text=value, font=("Poppins", 18, "bold"),
                                fg=color, bg=SURFACE, anchor="w")
-        count_label.pack(anchor="w", padx=12, pady=(10, 0))
+        count_label.pack(anchor="w", padx=8, pady=(4, 0))
 
         title_row = tk.Frame(header, bg=SURFACE)
-        title_row.pack(fill="x", padx=13, pady=(0, 8))
+        title_row.pack(fill="x", padx=9, pady=(0, 4))
 
         title_label = tk.Label(title_row, text=title, font=("Poppins", 8, "bold"),
                                fg=TEXT_TER, bg=SURFACE, anchor="w")
@@ -588,11 +774,9 @@ class SyncTab:
             copy_btn.bind("<Enter>", lambda e: copy_btn.config(fg=TEXT_SEC))
             copy_btn.bind("<Leave>", lambda e: copy_btn.config(fg=TEXT_TER))
 
-        # Row 2: Separator
         sep = tk.Frame(outer, bg=SURFACE_RAISED, height=1)
         sep.grid(row=2, column=0, sticky="ew")
 
-        # Row 3: List — fills remaining space; items in neutral TEXT_SEC, not the accent color
         list_frame = tk.Frame(outer, bg=SURFACE)
         list_frame.grid(row=3, column=0, sticky="nsew")
         outer.rowconfigure(3, weight=1)
@@ -610,9 +794,8 @@ class SyncTab:
     def _copy_listbox(self, lb):
         items = lb.get(0, "end")
         if items:
-            text = "\n".join(items)
             self.frame.clipboard_clear()
-            self.frame.clipboard_append(text)
+            self.frame.clipboard_append("\n".join(items))
 
     def update_summary(self, added=0, updated=0, removed=0, missing=0):
         def _update():
@@ -640,7 +823,6 @@ class SyncTab:
         self.frame.after(0, _update)
 
     def _toggle_source(self):
-        """Enable/disable CSV picker based on download toggle."""
         if self.download_from_3cket.get():
             self.path_entry.config(state="disabled")
             self.browse_btn.config(state="disabled")
@@ -666,12 +848,9 @@ class SyncTab:
         if not downloading and not Path(self.csv_path.get()).exists():
             self._set_status("File not found.", DANGER)
             return
-
-        # Save cookie to env if provided
         if self.has_cookie and self.cookie.get().strip():
             os.environ["THREECKET_COOKIE"] = self.cookie.get().strip()
             save_env_values({"THREECKET_COOKIE": self.cookie.get().strip()})
-
         self.dry_run.set(dry_run)
         self.running = True
         self._set_busy(True)
@@ -679,9 +858,7 @@ class SyncTab:
         self._set_status(f"Running {mode}...", ACCENT_LIGHT)
         if self._app:
             self._app._log_status_pulse.start(ACCENT_LIGHT)
-
-        thread = threading.Thread(target=self._run_thread, daemon=True)
-        thread.start()
+        threading.Thread(target=self._run_thread, daemon=True).start()
 
     def _run_thread(self):
         try:
@@ -702,9 +879,8 @@ class SyncTab:
 
     def _set_busy(self, busy):
         state = "disabled" if busy else "normal"
-        if self._app:
-            self._app._global_preview_btn.config(state=state)
-            self._app._global_import_btn.config(state=state)
+        self.preview_btn.config(state=state)
+        self.import_btn.config(state=state)
         if not (self.has_cookie and self.download_from_3cket.get()):
             self.browse_btn.config(state=state)
 
@@ -728,7 +904,6 @@ class SyncTab:
 # --- App ---
 
 def _apply_dark_title_bar(root):
-    """Enable dark title bar on Windows 10/11 via DWM API."""
     try:
         root.update()
         hwnd = ctypes.windll.user32.GetParent(root.winfo_id())
@@ -748,18 +923,14 @@ class App:
         self.root.title("SIMconference2Brella")
         self.root.configure(bg=BG)
         self.root.minsize(750, 520)
-        self.root.state("zoomed")  # start maximized
+        self.root.state("zoomed")
         _apply_dark_title_bar(self.root)
 
-
-        # Track pending nav animations to cancel on rapid switching
         self._nav_anim_ids = {}
-        # Track pending indicator animations
         self._ind_anim_ids = {}
-        # Log fade-in animation counter (for unique tag names)
         self._log_fade_counter = 0
 
-        # Main layout: sidebar left, right side split content/log
+        # Main layout: sidebar left, right side = content top + log bottom
         outer = tk.Frame(self.root, bg=BG)
         outer.pack(fill="both", expand=True)
 
@@ -768,15 +939,7 @@ class App:
         sidebar.pack(side="left", fill="y")
         sidebar.pack_propagate(False)
 
-        # Brand area with logo
-        brand = tk.Frame(sidebar, bg=SURFACE)
-        brand.pack(fill="x", padx=16, pady=(18, 8))
-
-        tk.Label(brand, text="SIM", font=("Poppins", 22, "bold"),
-                 fg=ACCENT, bg=SURFACE).pack(anchor="w")
-
-        sep = tk.Frame(sidebar, bg=SURFACE_RAISED, height=1)
-        sep.pack(fill="x", padx=16, pady=(12, 12))
+        tk.Frame(sidebar, bg=SURFACE, height=10).pack(fill="x")
 
         # Nav
         self.nav_buttons = []
@@ -784,47 +947,32 @@ class App:
         self.panels = {}
         self._sync_tabs = {}
         self.active_panel = None
-        # Track current bg color per nav button for smooth interpolation
         self._nav_current_bg = {}
         self._nav_current_fg = {}
         self._nav_hovered = {}
 
-        # Right side: content (left) + log (right)
-        right = tk.PanedWindow(outer, orient="horizontal", bg=SURFACE_RAISED,
-                               sashwidth=2, sashrelief="flat")
-        right.pack(side="left", fill="both", expand=True)
+        # Content area (fills remaining space after sidebar)
+        self.content = tk.Frame(outer, bg=BG)
+        self.content.pack(side="left", fill="both", expand=True)
 
-        # Content area
-        self.content = tk.Frame(right, bg=BG)
-        right.add(self.content, stretch="always", sticky="nsew")
+        # Log panel (inside sidebar — packed after nav items below)
+        self._log_frame = tk.Frame(sidebar, bg=SURFACE)
 
-        # Log panel
-        log_frame = tk.Frame(right, bg=SURFACE)
-        right.add(log_frame, stretch="always", sticky="nsew")
-
-        # Set initial sash position after window renders
-        def set_sash():
-            w = right.winfo_width()
-            if w > 100:
-                # Log gets a fixed 680px; content fills the rest
-                right.sash_place(0, max(300, int(w * 0.50)), 0)
-        self.root.after(300, set_sash)
-
-        # Log header — status dot + label
-        log_header = tk.Frame(log_frame, bg=SURFACE)
+        # Log header
+        log_header = tk.Frame(self._log_frame, bg=SURFACE)
         log_header.pack(fill="x")
 
         log_title_row = tk.Frame(log_header, bg=SURFACE)
-        log_title_row.pack(fill="x", padx=CARD_PAD_X, pady=(CARD_PAD_X, 0))
+        log_title_row.pack(fill="x", padx=CARD_PAD_X, pady=(6, 0))
 
-        self._log_status_dot = tk.Frame(log_title_row, bg=TEXT_TER, width=8, height=8)
-        self._log_status_dot.pack(side="left", padx=(0, 8), pady=1)
+        self._log_status_dot = tk.Frame(log_title_row, bg=TEXT_TER, width=7, height=7)
+        self._log_status_dot.pack(side="left", padx=(0, 6), pady=1)
         self._log_status_dot.pack_propagate(False)
         self._log_status_pulse = StatusPulse(self._log_status_dot)
 
         self._log_status_var = tk.StringVar(value="Ready")
         self._log_status_label = tk.Label(log_title_row, textvariable=self._log_status_var,
-                                           font=("Poppins", 10, "bold"), fg=TEXT_SEC, bg=SURFACE)
+                                           font=("Poppins", 9, "bold"), fg=TEXT_SEC, bg=SURFACE)
         self._log_status_label.pack(side="left")
 
         clear_btn = tk.Button(log_title_row, text="Clear", font=("Poppins", 8),
@@ -833,53 +981,19 @@ class App:
                               relief="flat", cursor="hand2", bd=0,
                               command=self._clear_log)
         clear_btn.pack(side="right")
-
         clear_btn.bind("<Enter>", lambda e: clear_btn.config(fg=TEXT_SEC))
         clear_btn.bind("<Leave>", lambda e: clear_btn.config(fg=TEXT_TER))
 
         log_sep = tk.Frame(log_header, bg=SURFACE_RAISED, height=1)
         log_sep.pack(fill="x", padx=CARD_PAD_X, pady=(GAP, 0))
 
-        # Log text widget with color tags
-        self.log_text = tk.Text(log_frame, font=FONT_MONO, bg="#0c0c12", fg=TEXT_SEC,
+        # Log text
+        self.log_text = tk.Text(self._log_frame, font=("Consolas", 8), bg="#0c0c12", fg=TEXT_SEC,
                                 relief="flat", wrap="word", insertbackground=ACCENT_LIGHT,
-                                state="disabled", padx=12, pady=8)
-        self.log_text.pack(fill="both", expand=True, padx=CARD_PAD_X, pady=(GAP, 0))
+                                state="disabled", padx=6, pady=6)
+        self.log_text.pack(fill="both", expand=True, padx=4, pady=(GAP, 4))
 
-        # Action buttons below the log
-        action_bar = tk.Frame(log_frame, bg=SURFACE)
-        action_bar.pack(fill="x", padx=CARD_PAD_X, pady=(GAP, CARD_PAD_X))
-
-        self._global_preview_btn = tk.Button(action_bar, text="Preview", font=FONT_BOLD,
-                                              bg=SURFACE_RAISED, fg=TEXT_SEC,
-                                              activebackground="#2e2e38", activeforeground=TEXT,
-                                              relief="flat", cursor="hand2", pady=7,
-                                              command=lambda: self._run_active_tab(dry_run=True))
-        self._global_preview_btn.pack(side="left", fill="x", expand=True, padx=(0, 3))
-
-        self._global_import_btn = tk.Button(action_bar, text="Import", font=FONT_BOLD,
-                                             bg=ACCENT, fg="white",
-                                             activebackground=ACCENT_LIGHT, activeforeground="white",
-                                             relief="flat", cursor="hand2", pady=7,
-                                             command=lambda: self._run_active_tab(dry_run=False))
-        self._global_import_btn.pack(side="left", fill="x", expand=True, padx=(3, 0))
-
-        _bind_button_flash(self._global_preview_btn, SURFACE_RAISED, "#2e2e38")
-        _bind_button_flash(self._global_import_btn, ACCENT, ACCENT_LIGHT)
-
-        # Setup-specific buttons (Test Connection + Save) — same bar, shown on Setup tab
-        self._global_test_btn = tk.Button(action_bar, text="Test Connection", font=FONT_BOLD,
-                                           bg=SURFACE_RAISED, fg=TEXT_SEC,
-                                           activebackground="#2e2e38", activeforeground=TEXT,
-                                           relief="flat", cursor="hand2", pady=7)
-        self._global_save_btn = tk.Button(action_bar, text="Save", font=FONT_BOLD,
-                                           bg=ACCENT, fg="white",
-                                           activebackground=ACCENT_LIGHT, activeforeground="white",
-                                           relief="flat", cursor="hand2", pady=7)
-        _bind_button_flash(self._global_test_btn, SURFACE_RAISED, "#2e2e38")
-        _bind_button_flash(self._global_save_btn, ACCENT, ACCENT_LIGHT)
-
-        # Configure text tags for log colorization
+        # Configure log text tags
         self.log_text.tag_configure("timestamp", foreground=TEXT_TER)
         self.log_text.tag_configure("msg_default", foreground=TEXT_SEC)
         self.log_text.tag_configure("msg_ok", foreground=SUCCESS)
@@ -888,22 +1002,18 @@ class App:
         self.log_text.tag_configure("msg_preview", foreground=ACCENT)
         self.log_text.tag_configure("msg_info", foreground=TEXT_SEC)
 
-        # --- Setup nav + tab ---
+        # --- Setup tab ---
         self._add_nav(sidebar, "Setup")
         setup = SetupTab(self.content, log_callback=self.log)
         self._setup_tab = setup
-        # Wire global buttons to setup actions
-        self._global_test_btn.config(command=setup._test_connection)
-        self._global_save_btn.config(command=setup._save)
         self.panels["Setup"] = setup.frame
 
         nav_sep = tk.Frame(sidebar, bg=SURFACE_RAISED, height=1)
-        nav_sep.pack(fill="x", padx=16, pady=(8, 8))
-        tk.Label(sidebar, text="SYNC MODULES", font=("Poppins", 7, "bold"),
-                 fg=TEXT_TER, bg=SURFACE).pack(fill="x", padx=18, pady=(0, 6))
+        nav_sep.pack(fill="x", padx=16, pady=(6, 6))
+        tk.Label(sidebar, text="SYNC", font=("Poppins", 7, "bold"),
+                 fg=TEXT_TER, bg=SURFACE).pack(fill="x", padx=18, pady=(0, 4))
 
         # --- Sync tabs ---
-        # Default CSV paths per sync tab
         _default_csvs = {
             "Participants": BASE_DIR / "data" / "participants.csv",
             "Speakers": BASE_DIR / "data" / "speakers.csv",
@@ -923,33 +1033,34 @@ class App:
             tab = SyncTab(self.content, name, desc, has_prune=prune, has_cookie=cookie,
                           run_func=func, enabled=en, app=self)
             tab._log_callback = self.log
-            # Preload default CSV path if file exists
             default_csv = _default_csvs.get(name)
             if default_csv and default_csv.exists():
                 tab.csv_path.set(str(default_csv))
             self.panels[name] = tab.frame
             self._sync_tabs[name] = tab
 
+        # Pack log into sidebar below nav
+        log_nav_sep = tk.Frame(sidebar, bg=SURFACE_RAISED, height=1)
+        log_nav_sep.pack(fill="x", padx=10, pady=(8, 0))
+        self._log_frame.pack(fill="both", expand=True, pady=(0, 0))
+
         self._switch_panel("Setup")
         self._apply_env()
-        self.root.after(600, self._prefetch_tags)
 
     def _add_nav(self, sidebar, name):
         row = tk.Frame(sidebar, bg=SURFACE)
-        row.pack(fill="x", padx=0, pady=1)
+        row.pack(fill="x", padx=0, pady=0)
 
-        # Left accent indicator
         indicator = tk.Frame(row, bg=SURFACE, width=3)
         indicator.pack(side="left", fill="y")
         indicator.pack_propagate(False)
 
-        btn = tk.Button(row, text=name, font=FONT, fg=TEXT_SEC, bg=SURFACE,
+        btn = tk.Button(row, text=name, font=FONT_SMALL, fg=TEXT_SEC, bg=SURFACE,
                         activebackground=SURFACE_RAISED, activeforeground=TEXT,
-                        relief="flat", anchor="w", padx=14, pady=9, cursor="hand2",
+                        relief="flat", anchor="w", padx=14, pady=5, cursor="hand2",
                         command=lambda n=name: self._switch_panel(n))
         btn.pack(side="left", fill="x", expand=True)
 
-        # Initialize tracking state
         self._nav_current_bg[name] = SURFACE
         self._nav_current_fg[name] = TEXT_SEC
         self._nav_hovered[name] = False
@@ -975,19 +1086,14 @@ class App:
         self.nav_indicators.append((name, indicator))
 
     def _animate_nav(self, name, target_bg, target_fg):
-        """Smoothly interpolate a nav button's bg and fg color."""
-        # Cancel any pending animation for this nav item
         if name in self._nav_anim_ids and self._nav_anim_ids[name] is not None:
             try:
                 self.root.after_cancel(self._nav_anim_ids[name])
             except Exception:
                 pass
             self._nav_anim_ids[name] = None
-
         start_bg = self._nav_current_bg.get(name, SURFACE)
         start_fg = self._nav_current_fg.get(name, TEXT_SEC)
-
-        # Find the btn and row for this name
         btn = row = None
         for n, b, r in self.nav_buttons:
             if n == name:
@@ -995,13 +1101,10 @@ class App:
                 break
         if btn is None:
             return
-
         step = [0]
-
         def tick():
             step[0] += 1
             t = min(step[0] / NAV_ANIM_STEPS, 1.0)
-            # Ease-out quad
             t_ease = 1.0 - (1.0 - t) ** 2
             bg = _lerp_color(start_bg, target_bg, t_ease)
             fg = _lerp_color(start_fg, target_fg, t_ease)
@@ -1016,14 +1119,9 @@ class App:
                 self._nav_anim_ids[name] = self.root.after(ANIM_INTERVAL, tick)
             else:
                 self._nav_anim_ids[name] = None
-
         tick()
 
-    def _animate_indicator_height(self, name, color):
-        pass  # indicator is a plain Frame; color set directly in _switch_panel
-
     def _switch_panel(self, name):
-        prev = self.active_panel
         self.active_panel = name
         for panel_name, frame in self.panels.items():
             if panel_name == name:
@@ -1031,43 +1129,20 @@ class App:
             else:
                 frame.pack_forget()
 
-        # Animate nav buttons
         for btn_name, btn, row in self.nav_buttons:
             if btn_name == name:
                 self._animate_nav(btn_name, target_bg=SURFACE_RAISED, target_fg=ACCENT_LIGHT)
             else:
-                # Only animate back to rest if not hovered
                 if not self._nav_hovered.get(btn_name, False):
                     self._animate_nav(btn_name, target_bg=SURFACE, target_fg=TEXT_SEC)
                 else:
                     self._animate_nav(btn_name, target_bg=SURFACE_RAISED, target_fg=TEXT)
 
-        # Update indicators
         for ind_name, indicator in self.nav_indicators:
             indicator.config(bg=ACCENT if ind_name == name else SURFACE)
 
-        # Show/hide action buttons based on active panel
-        self._global_preview_btn.pack_forget()
-        self._global_import_btn.pack_forget()
-        self._global_test_btn.pack_forget()
-        self._global_save_btn.pack_forget()
-
-        if name in self._sync_tabs:
-            self._global_preview_btn.pack(side="left", fill="x", expand=True, padx=(0, 3))
-            self._global_import_btn.pack(side="left", fill="x", expand=True, padx=(3, 0))
-        elif name == "Setup":
-            self._global_test_btn.pack(side="left", fill="x", expand=True, padx=(0, 3))
-            self._global_save_btn.pack(side="left", fill="x", expand=True, padx=(3, 0))
-
-    def _run_active_tab(self, dry_run=False):
-        tab = self._sync_tabs.get(self.active_panel)
-        if tab:
-            tab._run(dry_run=dry_run)
-
     def log(self, msg):
         ts = datetime.datetime.now().strftime("%H:%M:%S")
-
-        # Determine message color tag based on content
         msg_upper = msg.upper()
         if "[OK]" in msg_upper or "complete" in msg.lower() or "success" in msg.lower():
             msg_tag = "msg_ok"
@@ -1082,21 +1157,17 @@ class App:
         else:
             msg_tag = "msg_default"
 
-        # Get the target color for this tag to use as fade destination
         tag_info = self.log_text.tag_cget(msg_tag, "foreground")
         target_color = tag_info if tag_info else TEXT_SEC
 
-        # Create unique fade tags for this log entry
         self._log_fade_counter += 1
         fade_ts_tag = f"_fade_ts_{self._log_fade_counter}"
         fade_msg_tag = f"_fade_msg_{self._log_fade_counter}"
 
-        # Bright start colors for fade-in
         ts_target = TEXT_TER
         ts_bright = _lerp_color(ts_target, TEXT, 0.7)
         msg_bright = _lerp_color(target_color, TEXT, 0.5)
 
-        # Configure initial bright tags
         self.log_text.tag_configure(fade_ts_tag, foreground=ts_bright)
         self.log_text.tag_configure(fade_msg_tag, foreground=msg_bright)
 
@@ -1106,9 +1177,7 @@ class App:
         self.log_text.see("end")
         self.log_text.config(state="disabled")
 
-        # Animate fade: bright -> target color
         step = [0]
-
         def fade_tick():
             step[0] += 1
             t = min(step[0] / LOG_FADE_STEPS, 1.0)
@@ -1122,9 +1191,7 @@ class App:
             if step[0] < LOG_FADE_STEPS:
                 self.root.after(LOG_FADE_INTERVAL, fade_tick)
             else:
-                # Replace fade tags with permanent tags to avoid tag buildup
                 try:
-                    # Get ranges for the fade tags
                     ts_ranges = self.log_text.tag_ranges(fade_ts_tag)
                     msg_ranges = self.log_text.tag_ranges(fade_msg_tag)
                     if ts_ranges:
@@ -1135,7 +1202,6 @@ class App:
                     self.log_text.tag_delete(fade_msg_tag)
                 except Exception:
                     pass
-
         self.root.after(LOG_FADE_INTERVAL, fade_tick)
 
     def _clear_log(self):
@@ -1144,7 +1210,6 @@ class App:
         self.log_text.config(state="disabled")
 
     def _apply_env(self):
-        """Force-load all .env values into os.environ and log active config."""
         if ENV_PATH.exists():
             for line in ENV_PATH.read_text(encoding="utf-8").splitlines():
                 line = line.strip()
@@ -1153,63 +1218,38 @@ class App:
                 k, v = line.split("=", 1)
                 os.environ[k.strip()] = v.strip().strip('"').strip("'")
 
-        event_id = os.environ.get("BRELLA_EVENT_ID", "—")
-        org_id = os.environ.get("BRELLA_ORG_ID", "—")
-        api_set = bool(os.environ.get("BRELLA_API_KEY"))
-        admin_set = bool(os.environ.get("BRELLA_ADMIN_ACCESS_TOKEN"))
-        self.log(f"SIMconference2Brella ready — event {event_id} / org {org_id}")
-        self.log(f"[INFO] API key: {'set' if api_set else 'NOT SET'}  |  Admin tokens: {'set' if admin_set else 'NOT SET'}")
-
-    def _prefetch_tags(self):
-        if not os.environ.get("BRELLA_API_KEY"):
-            return  # Not configured yet — skip silently
-        threading.Thread(target=self._prefetch_tags_thread, daemon=True).start()
-
-    def _prefetch_tags_thread(self):
-        try:
-            from schedule_sync import prefetch_tags
-            prefetch_tags(log_callback=self.log)
-        except Exception as exc:
-            self.log(f"[WARN] Tags prefetch failed: {exc}")
-
     def _run_participants(self, tab):
-        # Reload api.py module-level vars from current env
         import api
         api.API_KEY = os.environ.get("BRELLA_API_KEY", "")
         api.ORG_ID = os.environ.get("BRELLA_ORG_ID", "1218")
         api.EVENT_ID = os.environ.get("BRELLA_EVENT_ID", "10672")
-
         downloading = tab.download_from_3cket.get()
         if downloading:
             csv_path = BASE_DIR / "data" / "participants.csv"
         else:
             csv_path = Path(tab.csv_path.get())
-
         api.prepare_csv(csv_path, download_csv=downloading, log_callback=self.log)
         result = api.run_sync_v4(
-            csv_path,
-            dry_run=tab.dry_run.get(),
-            prune_missing=tab.prune.get(),
-            log_callback=self.log,
+            csv_path, dry_run=tab.dry_run.get(),
+            prune_missing=tab.prune.get(), log_callback=self.log,
         )
-
         if result:
             added_list = result.get("added_participants", [])
             updated_list = result.get("updated_participants", [])
             removed_list = result.get("removed_participants", [])
             missing_list = result.get("missing_email_participants", [])
             added = result.get("processed", 0) if tab.dry_run.get() else len(added_list)
-            tab.update_summary(added=added, updated=len(updated_list), removed=len(removed_list), missing=len(missing_list))
-            tab.update_details(added=added_list, updated=updated_list, removed=removed_list, missing=missing_list)
+            tab.update_summary(added=added, updated=len(updated_list),
+                               removed=len(removed_list), missing=len(missing_list))
+            tab.update_details(added=added_list, updated=updated_list,
+                               removed=removed_list, missing=missing_list)
 
     def _run_speakers(self, tab):
         from speakers import run_speakers_sync
         csv_path = Path(tab.csv_path.get())
         result = run_speakers_sync(
-            csv_path,
-            dry_run=tab.dry_run.get(),
-            prune_missing=tab.prune.get(),
-            log_callback=self.log,
+            csv_path, dry_run=tab.dry_run.get(),
+            prune_missing=tab.prune.get(), log_callback=self.log,
         )
         if result:
             added_list = result.get("added_participants", [])
@@ -1217,17 +1257,17 @@ class App:
             removed_list = result.get("removed_participants", [])
             missing_list = result.get("missing_email_participants", [])
             added = result.get("processed", 0) if tab.dry_run.get() else len(added_list)
-            tab.update_summary(added=added, updated=len(updated_list), removed=len(removed_list), missing=len(missing_list))
-            tab.update_details(added=added_list, updated=updated_list, removed=removed_list, missing=missing_list)
+            tab.update_summary(added=added, updated=len(updated_list),
+                               removed=len(removed_list), missing=len(missing_list))
+            tab.update_details(added=added_list, updated=updated_list,
+                               removed=removed_list, missing=missing_list)
 
     def _run_schedule(self, tab):
         from schedule_sync import run_schedule_sync
         csv_path = Path(tab.csv_path.get())
         result = run_schedule_sync(
-            csv_path,
-            dry_run=tab.dry_run.get(),
-            prune_missing=tab.prune.get(),
-            log_callback=self.log,
+            csv_path, dry_run=tab.dry_run.get(),
+            prune_missing=tab.prune.get(), log_callback=self.log,
         )
         if result:
             added_list = result.get("added_participants", [])
@@ -1235,15 +1275,16 @@ class App:
             removed_list = result.get("removed_participants", [])
             missing_list = result.get("unmatched_speakers", [])
             added = result.get("processed", 0) if tab.dry_run.get() else len(added_list)
-            tab.update_summary(added=added, updated=len(updated_list), removed=len(removed_list), missing=len(missing_list))
-            tab.update_details(added=added_list, updated=updated_list, removed=removed_list, missing=missing_list)
+            tab.update_summary(added=added, updated=len(updated_list),
+                               removed=len(removed_list), missing=len(missing_list))
+            tab.update_details(added=added_list, updated=updated_list,
+                               removed=removed_list, missing=missing_list)
 
     def run(self):
         self.root.mainloop()
 
 
 if __name__ == "__main__":
-    # Tell Windows this process is per-monitor DPI-aware so tkinter renders crisp on 4K displays
     try:
         ctypes.windll.shcore.SetProcessDpiAwareness(2)
     except Exception:

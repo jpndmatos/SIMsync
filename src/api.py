@@ -186,6 +186,53 @@ TICKET_TYPE_TO_GROUP_ID = {
     "student//standard": BRELLA_ATTENDEE_GROUP_IDS["student"],
 }
 
+# --- Persistent config (config.json) ---
+# Overrides the hardcoded defaults above when present.
+
+CONFIG_FILE = RUNTIME_DIR / "config.json"
+
+
+def _load_config():
+    """Load overrides from config.json if it exists."""
+    global BRELLA_ATTENDEE_GROUP_IDS, GROUP_PRIORITY, TICKET_TYPE_TO_GROUP_ID
+    if not CONFIG_FILE.exists():
+        return
+    try:
+        data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+        if "attendee_groups" in data and data["attendee_groups"]:
+            BRELLA_ATTENDEE_GROUP_IDS = data["attendee_groups"]
+        if "group_priority" in data and data["group_priority"]:
+            GROUP_PRIORITY = data["group_priority"]
+        if "ticket_type_to_group" in data and data["ticket_type_to_group"]:
+            TICKET_TYPE_TO_GROUP_ID = data["ticket_type_to_group"]
+    except Exception:
+        pass
+
+
+def save_config(attendee_groups=None, group_priority=None, ticket_type_to_group=None):
+    """Write current values to config.json and update module-level vars."""
+    global BRELLA_ATTENDEE_GROUP_IDS, GROUP_PRIORITY, TICKET_TYPE_TO_GROUP_ID
+    data = {}
+    if CONFIG_FILE.exists():
+        try:
+            data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    if attendee_groups is not None:
+        data["attendee_groups"] = attendee_groups
+        BRELLA_ATTENDEE_GROUP_IDS = attendee_groups
+    if group_priority is not None:
+        data["group_priority"] = group_priority
+        GROUP_PRIORITY = group_priority
+    if ticket_type_to_group is not None:
+        data["ticket_type_to_group"] = ticket_type_to_group
+        TICKET_TYPE_TO_GROUP_ID = ticket_type_to_group
+    CONFIG_FILE.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n",
+                           encoding="utf-8")
+
+
+_load_config()
+
 
 def parse_args():
     parser = argparse.ArgumentParser(

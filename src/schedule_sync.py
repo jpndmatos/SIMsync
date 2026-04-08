@@ -2,16 +2,15 @@
 Schedule sync — import sessions from CSV into Brella's schedule.
 
 CSV format: comma-delimited with headers:
-  date, start_time, duration, title, subtitle, content, location, tags, speakers
+  date, start_time, duration, title, content, track, location, speakers
 
 - date: YYYY-MM-DD
 - start_time: HH:MM or HH:MM:SS
 - duration: integer minutes
-- title: track/category name
-- subtitle: session name (used as external_id key)
+- title: session name (used as external_id key)
 - content: session description
-- location: stage/room name
-- tags: session type (e.g., PANEL, FIRESIDE CHAT)
+- track: stage/track name (e.g., SIM STAGE, STARTUP STUDIO)
+- location: physical venue/room name
 - speakers: full names separated by " / "
 
 Speaker assignment matches names against Brella speaker profiles.
@@ -62,10 +61,6 @@ def _api_call(url, headers, method="GET", payload=None):
         return e.code, body
 
 
-# Module-level tag cache — populated on app startup or first successful fetch
-_tag_cache = None
-
-
 def _admin_headers():
     """Build DeviseTokenAuth headers for the Brella admin panel API."""
     token = os.environ.get("BRELLA_ADMIN_ACCESS_TOKEN", "")
@@ -96,8 +91,8 @@ def _admin_headers():
     }
 
 
-def _extract_tags_from_response(data):
-    """Extract tag items from an API response (list or dict with known keys)."""
+def _extract_items_from_response(data):
+    """Extract items from an API response (list or dict with known keys)."""
     if isinstance(data, list) and data:
         return data
     if isinstance(data, dict):
@@ -106,80 +101,6 @@ def _extract_tags_from_response(data):
         if items:
             return items
     return None
-
-
-def list_tags(headers, org, event, log_callback=None):
-    # Try admin panel endpoint first (requires BRELLA_ADMIN_* env vars)
-    admin_hdrs = _admin_headers()
-    if admin_hdrs:
-        url = f"https://api.brella.io/api/admin_panel/events/{event}/tags"
-        status, data = _api_call(url, admin_hdrs)
-        if status == 200:
-            items = _extract_tags_from_response(data)
-            if items:
-                return items
-            emit(f"[WARN] Admin tags endpoint returned 200 but no items. Response: {str(data)[:300]}",
-                 log_callback=log_callback)
-        else:
-            emit(f"[WARN] Admin tags endpoint: HTTP {status} — {str(data)[:200]}",
-                 log_callback=log_callback)
-
-    # Fallback: integration API variants
-    candidates = [
-        f"https://api.brella.io/api/integration/organizations/{org}/events/{event}/tags",
-        f"https://api.brella.io/api/v1/organizations/{org}/events/{event}/tags",
-        f"https://api.brella.io/api/organizations/{org}/events/{event}/tags",
-        f"https://api.brella.io/api/v1/events/{event}/tags",
-    ]
-    for url in candidates:
-        status, data = _api_call(url, headers)
-        if status == 200:
-            items = _extract_tags_from_response(data)
-            if items:
-                return items
-    return []
-
-
-def prefetch_tags(log_callback=None):
-    """Fetch Brella tags and store in module cache. Call once on startup."""
-    global _tag_cache
-    import api
-    api.API_KEY = os.environ.get("BRELLA_API_KEY", "")
-    api.ORG_ID = os.environ.get("BRELLA_ORG_ID", "1218")
-    api.EVENT_ID = os.environ.get("BRELLA_EVENT_ID", "10672")
-    headers = build_request_headers()
-    headers["Content-Type"] = "application/json"
-    tags = list_tags(headers, api.ORG_ID, api.EVENT_ID, log_callback=log_callback)
-    if tags:
-        _tag_cache = tags
-        emit(f"Tags loaded: {len(tags)} tags ready.", log_callback=log_callback)
-    elif not _admin_headers():
-        emit(
-            "[WARN] Tags not loaded — add BRELLA_ADMIN_ACCESS_TOKEN, "
-            "BRELLA_ADMIN_CLIENT, BRELLA_ADMIN_UID to .env",
-            log_callback=log_callback,
-        )
-    else:
-        emit("[WARN] Tags not loaded — admin tokens may be expired. Refresh from DevTools.",
-             log_callback=log_callback)
-    return tags
-
-
-def _build_tag_name_map(existing_tags):
-    """Build normalized name → tag dict from Brella tags list."""
-    tag_map = {}
-    for tag in existing_tags:
-        # JSON:API shape: {id, attributes: {name}}
-        if isinstance(tag, dict) and "attributes" in tag:
-            name = tag["attributes"].get("name", "").strip()
-            if name:
-                tag_map[name.lower()] = tag
-        # Flat shape: {id, name}
-        elif isinstance(tag, dict) and "name" in tag:
-            name = tag["name"].strip()
-            if name:
-                tag_map[name.lower()] = {"id": tag.get("id"), "attributes": {"name": name}}
-    return tag_map
 
 
 def list_timeslots(headers, org, event):
@@ -219,8 +140,6 @@ def _to_draftjs(text):
     return {"blocks": blocks, "entityMap": {}}
 
 
-
-
 def list_stages(event, log_callback=None):
     """Fetch tracks from Brella admin panel API (/tracks endpoint)."""
     admin_hdrs = _admin_headers()
@@ -229,13 +148,13 @@ def list_stages(event, log_callback=None):
     url = f"https://api.brella.io/api/admin_panel/events/{event}/tracks"
     status, data = _api_call(url, admin_hdrs)
     if status == 200:
-        items = _extract_tags_from_response(data)
+        items = _extract_items_from_response(data)
         return items if items else []
     return []
 
 
 def _build_stage_name_map(stages):
-    """Build normalized name → track dict from Brella tracks list."""
+    """Build normalized name -> track dict from Brella tracks list."""
     stage_map = {}
     for s in stages:
         if isinstance(s, dict):
@@ -246,7 +165,7 @@ def _build_stage_name_map(stages):
 
 
 def _admin_patch_timeslot(event, timeslot_id, patches, log_callback=None):
-    """Single admin panel PATCH covering tags, content (description), and stage_id."""
+    """Single admin panel PATCH covering content (description) and stage_id."""
     admin_hdrs = _admin_headers()
     if not admin_hdrs or not patches:
         return
@@ -269,17 +188,14 @@ def list_timeslot_speakers(headers, org, event, timeslot_id):
 
 
 def assign_speaker(headers, org, event, timeslot_id, speaker_id):
-    # Try format 1: {speaker_id: id}
     sc, sr = _api_call(_timeslots_url(org, event, timeslot_id, "speakers"), headers,
                        method="POST", payload={"speaker_id": speaker_id})
     if sc not in (404, 405):
         return sc, sr
-    # Try format 2: nested timeslot_speaker wrapper
     sc, sr = _api_call(_timeslots_url(org, event, timeslot_id, "speakers"), headers,
                        method="POST", payload={"timeslot_speaker": {"speaker_id": speaker_id}})
     if sc not in (404, 405):
         return sc, sr
-    # Try format 3: speaker_profile_id key
     return _api_call(_timeslots_url(org, event, timeslot_id, "speakers"), headers,
                      method="POST", payload={"speaker_profile_id": speaker_id})
 
@@ -314,7 +230,7 @@ def _build_end_time(start_time_str, duration_minutes):
 
 
 def _build_speaker_name_map(existing_speakers):
-    """Build normalized 'first last' → speaker dict from Brella speakers list."""
+    """Build normalized 'first last' -> speaker dict from Brella speakers list."""
     name_map = {}
     for sp in existing_speakers:
         attrs = sp.get("attributes", {})
@@ -338,16 +254,19 @@ def parse_schedule_csv(csv_path, log_callback=None):
 
     reader = csv.DictReader(text.splitlines())
     for line_num, row in enumerate(reader, start=2):
+        # Filter by sync column
+        sync_flag = row.get("sync", "TRUE").strip().upper()
+        if sync_flag == "FALSE":
+            skipped += 1
+            continue
+
         date = row.get("date", "").strip()
         start_time = row.get("start_time", "").strip()
-        subtitle = row.get("subtitle", "").strip()
         title = row.get("title", "").strip()
-        if not subtitle:
-            subtitle = title  # fall back to title as display name
 
-        if not date or not start_time or not subtitle:
+        if not date or not start_time or not title:
             skipped += 1
-            emit(f"[SKIP] line {line_num}: missing date, start_time or subtitle",
+            emit(f"[SKIP] line {line_num}: missing date, start_time or title",
                  log_callback=log_callback)
             continue
 
@@ -366,13 +285,12 @@ def parse_schedule_csv(csv_path, log_callback=None):
             "line_num": line_num,
             "start_time": _build_start_time(date, start_time),
             "duration": duration,
-            "title": title,
-            "subtitle": subtitle,
+            "title": row.get("track", "").strip(),       # track name -> Brella title
+            "subtitle": title,                             # session name -> Brella subtitle
             "description": row.get("content", "").strip(),
-            "location": row.get("location", "").strip(),
-            "tags": [t.strip() for t in row.get("tags", "").split(",") if t.strip()],
+            "location": row.get("location", "").strip(),   # physical venue
             "speaker_names": speaker_names,
-            "external_id": _make_external_id(subtitle),
+            "external_id": _make_external_id(title),
         })
 
     emit(f"Parsed {len(records)} sessions, {skipped} skipped.", log_callback=log_callback)
@@ -419,37 +337,22 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False, log_callback
     speaker_name_map = _build_speaker_name_map(existing_speakers)
     emit(f"Found {len(existing_speakers)} speakers in Brella.", log_callback=log_callback)
 
-    # Load Brella tags for name→ID matching (use pre-loaded cache if available)
-    global _tag_cache
-    if _tag_cache is not None:
-        existing_tags = _tag_cache
-        emit(f"Using {len(existing_tags)} pre-loaded tags.", log_callback=log_callback)
-    else:
-        existing_tags = list_tags(headers, org, event, log_callback=log_callback)
-        if existing_tags:
-            _tag_cache = existing_tags
-            emit(f"Found {len(existing_tags)} tags in Brella.", log_callback=log_callback)
-        elif not _admin_headers():
-            emit(
-                "[WARN] Tags not loaded — add BRELLA_ADMIN_ACCESS_TOKEN, "
-                "BRELLA_ADMIN_CLIENT, BRELLA_ADMIN_UID to .env",
-                log_callback=log_callback,
-            )
-        else:
-            emit("[WARN] Tags endpoint returned no data.", log_callback=log_callback)
-    tag_name_map = _build_tag_name_map(existing_tags)
-
-    # Load Brella stages for location→track mapping
+    # Load Brella stages for track->stage mapping
     existing_stages = list_stages(event, log_callback=log_callback)
     stage_name_map = _build_stage_name_map(existing_stages)
     if existing_stages:
-        emit(f"Found {len(existing_stages)} stages in Brella.", log_callback=log_callback)
+        names = [s.get("attributes", {}).get("name", s.get("name", ""))
+                 for s in existing_stages if isinstance(s, dict)]
+        emit(f"Found {len(existing_stages)} stages in Brella: {', '.join(names)}",
+             log_callback=log_callback)
+        emit(f"Stage lookup keys: {', '.join(sorted(stage_name_map.keys()))}",
+             log_callback=log_callback)
     else:
-        emit("[WARN] No stages found — tracks will not be set.", log_callback=log_callback)
+        emit("[WARN] No stages found — tracks will not be set. "
+             "Check BRELLA_ADMIN_ACCESS_TOKEN, BRELLA_ADMIN_CLIENT, BRELLA_ADMIN_UID in .env",
+             log_callback=log_callback)
 
     # Timezone offset: CSV times are local, Brella stores/displays in UTC.
-    # Set BRELLA_TIMEZONE_OFFSET=1 for UTC+1 (Portugal summer / WEST), etc.
-    # Read directly from .env each time so changes take effect without restart.
     from datetime import datetime, timedelta
     import api as _api_mod
     _api_mod.load_env_file(_api_mod.ENV_FILE)
@@ -493,23 +396,14 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False, log_callback
             for i, sp_id in enumerate(speaker_ids)
         ]
 
-        # Resolve tag names to IDs; warn on unmatched
-        tag_ids = []
-        for tag_name in rec["tags"]:
-            tag = tag_name_map.get(tag_name.lower())
-            if tag:
-                tag_ids.append(int(tag["id"]))
-            else:
-                emit(f"[WARN] Tag not found in Brella: {tag_name}", log_callback=log_callback)
-
-        # Resolve location name to stage ID
+        # Resolve track name to stage ID
         stage_id = None
-        if rec["location"]:
-            stage = stage_name_map.get(rec["location"].lower().strip())
+        if rec["title"]:
+            stage = stage_name_map.get(rec["title"].lower().strip())
             if stage:
                 stage_id = stage.get("id")
             else:
-                emit(f"[WARN] Stage not found in Brella: {rec['location']}", log_callback=log_callback)
+                emit(f"[WARN] Stage not found in Brella: {rec['title']}", log_callback=log_callback)
 
         payload = {
             "title": rec["title"],
@@ -568,11 +462,9 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False, log_callback
                          log_callback=log_callback)
                     continue
 
-            # Single admin panel PATCH: tags + description (DraftJS) + stage
+            # Admin panel PATCH: description (DraftJS) + stage
             if ts_id:
                 admin_patches = {}
-                if tag_ids:
-                    admin_patches["tags"] = [{"id": str(tid)} for tid in tag_ids]
                 if rec["description"]:
                     admin_patches["content"] = _to_draftjs(rec["description"])
                 if stage_id:
@@ -581,12 +473,10 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False, log_callback
                     asc, asr = _admin_patch_timeslot(event, ts_id, admin_patches, log_callback=log_callback)
                     if asc in (200, 201, 204):
                         parts = []
-                        if tag_ids:
-                            parts.append(f"tags: {', '.join(rec['tags'])}")
                         if rec["description"]:
                             parts.append("description")
                         if stage_id:
-                            parts.append(f"stage: {rec['location']}")
+                            parts.append(f"stage: {rec['title']}")
                         emit(f"[OK] Admin patch — {' | '.join(parts)}", log_callback=log_callback)
 
             time.sleep(REQUEST_DELAY_SECONDS)
