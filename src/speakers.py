@@ -7,8 +7,8 @@ Uses the Brella speakers API (not invites):
   PATCH  /speakers/{id}      — update speaker
   DELETE /speakers/{id}      — delete speaker
 
-CSV format: comma-delimited Typeform export.
-Only rows with Publish column == "Publish" are synced.
+CSV format: first_name,last_name,company,job_title,bio,photo,linkedin,email,token,publish
+Only rows with publish column == "Publish" are synced.
 """
 
 import csv
@@ -30,17 +30,17 @@ from api import (
 
 SPEAKERS_GROUP_ID = BRELLA_ATTENDEE_GROUP_IDS.get("speakers", "36334")
 
-# CSV column indices (comma-delimited Typeform export)
+# CSV column indices (clean format matching schedule.csv style)
 COL_FIRST_NAME = 0
 COL_LAST_NAME = 1
 COL_COMPANY = 2
 COL_JOB_TITLE = 3
 COL_BIO = 4
-COL_PHOTO = 7
-COL_LINKEDIN = 8
-COL_SPEAKER_EMAIL = 10
-COL_TOKEN = 15
-COL_PUBLISH = 16
+COL_PHOTO = 5
+COL_LINKEDIN = 6
+COL_SPEAKER_EMAIL = 7
+COL_TOKEN = 8
+COL_PUBLISH = 9
 
 
 def _speakers_url(speaker_id=None):

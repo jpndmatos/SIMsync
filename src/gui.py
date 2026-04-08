@@ -49,6 +49,7 @@ CARD_PAD_Y_TOP = 5
 CARD_PAD_Y_BOT = 5
 
 SIDEBAR_W = 250
+SIDEBAR_WIDTH_RATIO = 0.22
 
 APP_VERSION = "v1.0"
 
@@ -635,7 +636,8 @@ class SetupTab:
 
 class SyncTab:
     def __init__(self, parent, name, description, has_prune=False, has_cookie=False,
-                 run_func=None, enabled=True, app=None):
+                 run_func=None, enabled=True, app=None,
+                 csv_header_example="", csv_delimiter=","):
         self.name = name
         self.run_func = run_func
         self.enabled = enabled
@@ -655,6 +657,30 @@ class SyncTab:
         inner_frame.pack(fill="x", side="top")
 
         tk.Frame(inner_frame, bg=BG, height=4).pack(fill="x")
+
+        # CSV format card (description + header example)
+        if description or csv_header_example:
+            fmt_card = make_card(inner_frame)
+            card_title(fmt_card, "CSV FORMAT")
+            fmt_inner = tk.Frame(fmt_card, bg=SURFACE)
+            fmt_inner.pack(fill="x", padx=CARD_PAD_INNER, pady=(0, CARD_PAD_Y_BOT))
+
+            if description:
+                tk.Label(fmt_inner, text=description, font=FONT_SMALL, fg=TEXT_SEC,
+                         bg=SURFACE, anchor="w", justify="left",
+                         wraplength=980).pack(fill="x", pady=(0, 4))
+
+            if csv_delimiter:
+                tk.Label(fmt_inner, text=f"Delimiter: {csv_delimiter}",
+                         font=FONT_SMALL, fg=TEXT_TER, bg=SURFACE,
+                         anchor="w").pack(fill="x", pady=(0, 2))
+
+            if csv_header_example:
+                tk.Label(fmt_inner, text="Header example:", font=FONT_SMALL,
+                         fg=TEXT_SEC, bg=SURFACE, anchor="w").pack(fill="x")
+                tk.Label(fmt_inner, text=csv_header_example, font=FONT_MONO,
+                         fg=ACCENT_LIGHT, bg=SURFACE, anchor="w", justify="left",
+                         wraplength=980).pack(fill="x", pady=(1, 0))
 
         # CSV picker
         csv_card = make_card(inner_frame)
@@ -933,11 +959,15 @@ class App:
         # Main layout: sidebar left, right side = content top + log bottom
         outer = tk.Frame(self.root, bg=BG)
         outer.pack(fill="both", expand=True)
+        self._outer = outer
 
         # Sidebar
         sidebar = tk.Frame(outer, bg=SURFACE, width=SIDEBAR_W)
         sidebar.pack(side="left", fill="y")
         sidebar.pack_propagate(False)
+        self._sidebar = sidebar
+
+        self._outer.bind("<Configure>", self._on_outer_resize)
 
         tk.Frame(sidebar, bg=SURFACE, height=10).pack(fill="x")
 
@@ -1020,18 +1050,67 @@ class App:
             "Schedule": BASE_DIR / "data" / "schedule.csv",
         }
 
-        for name, desc, prune, cookie, func, en in [
-            ("Participants", "Sync 3cket participants to Brella.", True, True,
-             self._run_participants, True),
-            ("Speakers", "Sync published speakers to Brella.", True, False,
-             self._run_speakers, True),
-            ("Sponsors", "Sync sponsor data to Brella.", False, False, None, False),
-            ("Schedule", "Sync event sessions to Brella.", True, False,
-             self._run_schedule, True),
+        for name, desc, prune, cookie, func, en, header_example, delimiter in [
+            (
+                "Participants",
+                "Sync 3cket participants to Brella.",
+                True,
+                True,
+                self._run_participants,
+                True,
+                (
+                    "3cket_id [required]; name [full name]; phone; email [required]; "
+                    "gender; birth_date [YYYY-MM-DD]; country; language; "
+                    "check_in [in/out]; marketing_authorization [0/1]; "
+                    "tickets [pipe-separated values]; total_tickets [int]; "
+                    "email_fallback; company; group"
+                ),
+                ";",
+            ),
+            (
+                "Speakers",
+                "Sync published speakers to Brella.",
+                True,
+                False,
+                self._run_speakers,
+                True,
+                (
+                    "first_name [required], last_name [required], company, job_title, bio, "
+                    "photo [URL], linkedin [URL], email [required], "
+                    "token [optional external_id], publish [Publish or Do not publish]"
+                ),
+                ",",
+            ),
+            (
+                "Sponsors",
+                "Sync sponsor data to Brella.",
+                False,
+                False,
+                None,
+                False,
+                "",
+                ",",
+            ),
+            (
+                "Schedule",
+                "Sync event sessions to Brella.",
+                True,
+                False,
+                self._run_schedule,
+                True,
+                (
+                    "date [YYYY-MM-DD], start_time [HH:MM:SS], duration [int min], "
+                    "title, content, track [predetermined tracks in ALL CAPS], "
+                    "location, speakers [full names separated by \" / \"]"
+                ),
+                ",",
+            ),
         ]:
             self._add_nav(sidebar, name)
             tab = SyncTab(self.content, name, desc, has_prune=prune, has_cookie=cookie,
-                          run_func=func, enabled=en, app=self)
+                          run_func=func, enabled=en, app=self,
+                          csv_header_example=header_example,
+                          csv_delimiter=delimiter)
             tab._log_callback = self.log
             default_csv = _default_csvs.get(name)
             if default_csv and default_csv.exists():
@@ -1044,8 +1123,23 @@ class App:
         log_nav_sep.pack(fill="x", padx=10, pady=(8, 0))
         self._log_frame.pack(fill="both", expand=True, pady=(0, 0))
 
+        self._set_sidebar_width()
+
         self._switch_panel("Setup")
         self._apply_env()
+
+    def _set_sidebar_width(self, total_width=None):
+        if total_width is None:
+            total_width = self._outer.winfo_width()
+        if total_width <= 1:
+            return
+        target_width = max(1, int(total_width * SIDEBAR_WIDTH_RATIO))
+        current_width = int(self._sidebar.cget("width"))
+        if current_width != target_width:
+            self._sidebar.config(width=target_width)
+
+    def _on_outer_resize(self, event):
+        self._set_sidebar_width(event.width)
 
     def _add_nav(self, sidebar, name):
         row = tk.Frame(sidebar, bg=SURFACE)
