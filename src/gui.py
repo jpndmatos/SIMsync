@@ -49,7 +49,7 @@ CARD_PAD_Y_TOP = 5
 CARD_PAD_Y_BOT = 5
 
 SIDEBAR_W = 250
-SIDEBAR_WIDTH_RATIO = 0.22
+SIDEBAR_WIDTH_RATIO = 0.35
 
 APP_VERSION = "v1.0"
 
@@ -63,6 +63,10 @@ LOG_FADE_STEPS = 8
 LOG_FADE_INTERVAL = 30
 INDICATOR_ANIM_STEPS = 8
 GAP = 6
+ACTION_ROW_PAD_Y = 2
+ACTION_BTN_PADX = 12
+ACTION_BTN_PADY = 4
+ACTION_BTN_GAP = 5
 
 
 # --- Color interpolation helpers ---
@@ -145,7 +149,8 @@ def card_title(card, text):
              anchor="w").pack(fill="x", padx=CARD_PAD_INNER, pady=(CARD_PAD_Y_TOP, 4))
 
 def make_field(parent, label, var, show=None, placeholder=""):
-    tk.Label(parent, text=label, font=FONT_SMALL, fg=TEXT_SEC, bg=SURFACE,
+    parent_bg = parent.cget("bg") if hasattr(parent, "cget") else SURFACE
+    tk.Label(parent, text=label, font=FONT_SMALL, fg=TEXT_SEC, bg=parent_bg,
              anchor="w").pack(fill="x")
     kw = dict(textvariable=var, font=FONT_MONO, bg=BG, fg=TEXT, insertbackground=TEXT,
               relief="flat", highlightthickness=1, highlightbackground=SURFACE_RAISED,
@@ -251,36 +256,39 @@ class StatusPulse:
 # --- Setup Tab (merged: API config + Values) ---
 
 class SetupTab:
-    def __init__(self, parent, log_callback=None):
+    def __init__(self, parent, log_callback=None, app=None):
         self.log_callback = log_callback
+        self._app = app
+        self.action_row = None
         self.frame = tk.Frame(parent, bg=BG)
 
         P = 4  # grid gap
 
-        # 3-column grid: API+Priority | Groups | Tickets
-        self.frame.columnconfigure(0, weight=2)
-        self.frame.columnconfigure(1, weight=1)
-        self.frame.columnconfigure(2, weight=2)
-        self.frame.rowconfigure(0, weight=1)
-
-        # === Column 0: API config + Group Priority + Save ===
-        col0 = tk.Frame(self.frame, bg=BG)
-        col0.grid(row=0, column=0, sticky="nsew", padx=(P, P), pady=P)
-
-        # -- Brella API card --
-        api_card = tk.Frame(col0, bg=SURFACE, highlightbackground=SURFACE_RAISED,
-                            highlightthickness=1)
-        api_card.pack(fill="x", pady=(0, GAP))
-        card_title(api_card, "BRELLA API")
-        api_inner = tk.Frame(api_card, bg=SURFACE)
-        api_inner.pack(fill="x", padx=CARD_PAD_INNER, pady=(0, CARD_PAD_Y_BOT))
+        # Single-column flat layout: Connection (top) -> Groups & Tickets (bottom)
+        self.frame.columnconfigure(0, weight=1)
+        self.frame.rowconfigure(0, weight=0)
+        self.frame.rowconfigure(1, weight=0)
+        self.frame.rowconfigure(2, weight=1)
 
         self.api_key = tk.StringVar(value=load_env_value("BRELLA_API_KEY"))
         self.org_id = tk.StringVar(value=load_env_value("BRELLA_ORG_ID"))
         self.event_id = tk.StringVar(value=load_env_value("BRELLA_EVENT_ID"))
+        self.admin_token = tk.StringVar(value=load_env_value("BRELLA_ADMIN_ACCESS_TOKEN"))
+        self.admin_client = tk.StringVar(value=load_env_value("BRELLA_ADMIN_CLIENT"))
+        self.admin_uid = tk.StringVar(value=load_env_value("BRELLA_ADMIN_UID"))
+
+        # === Top block: API / Admin connection ===
+        conn_block = tk.Frame(self.frame, bg=BG)
+        conn_block.grid(row=0, column=0, sticky="nsew", padx=P, pady=(P, P // 2))
+        tk.Label(conn_block, text="CONNECTION", font=FONT_SECTION, fg=ACCENT,
+             bg=BG, anchor="w").pack(fill="x", padx=2, pady=(0, 4))
+        tk.Frame(conn_block, bg=SURFACE_RAISED, height=1).pack(fill="x", pady=(0, 6))
+
+        conn_inner = tk.Frame(conn_block, bg=BG)
+        conn_inner.pack(fill="x")
 
         # Status pill
-        api_status_row = tk.Frame(api_inner, bg=SURFACE)
+        api_status_row = tk.Frame(conn_inner, bg=BG)
         api_status_row.pack(fill="x", pady=(0, 2))
         api_loaded = bool(self.api_key.get())
         self._api_status_dot = tk.Frame(api_status_row,
@@ -290,250 +298,239 @@ class SetupTab:
         self._api_status_lbl = tk.Label(api_status_row,
                                         text="API key loaded" if api_loaded else "API key not set",
                                         font=FONT_SMALL,
-                                        fg=SUCCESS if api_loaded else DANGER, bg=SURFACE)
+                                        fg=SUCCESS if api_loaded else DANGER, bg=BG)
         self._api_status_lbl.pack(side="left")
 
-        make_field(api_inner, "API Key", self.api_key, show="*")
-        ids_row = tk.Frame(api_inner, bg=SURFACE)
+        creds_grid = tk.Frame(conn_inner, bg=BG)
+        creds_grid.pack(fill="x")
+        creds_grid.columnconfigure(0, weight=1)
+        creds_grid.columnconfigure(1, weight=1)
+
+        api_col = tk.Frame(creds_grid, bg=BG)
+        api_col.grid(row=0, column=0, sticky="nsew", padx=(0, 4))
+        tk.Label(
+            api_col,
+            text="INTEGRATION API",
+            font=FONT_SECTION,
+            fg=ACCENT,
+            bg=BG,
+            anchor="w",
+        ).pack(fill="x")
+        make_field(api_col, "API Key", self.api_key, show="*")
+
+        ids_row = tk.Frame(api_col, bg=BG)
         ids_row.pack(fill="x")
-        ids_left = tk.Frame(ids_row, bg=SURFACE)
+        ids_left = tk.Frame(ids_row, bg=BG)
         ids_left.pack(side="left", fill="x", expand=True, padx=(0, 4))
-        ids_right = tk.Frame(ids_row, bg=SURFACE)
+        ids_right = tk.Frame(ids_row, bg=BG)
         ids_right.pack(side="right", fill="x", expand=True, padx=(4, 0))
         make_field(ids_left, "Org ID", self.org_id)
         make_field(ids_right, "Event ID", self.event_id)
 
-        # Admin panel credentials
-        tk.Frame(api_inner, bg=SURFACE_RAISED, height=1).pack(fill="x", pady=(2, 4))
-        admin_hdr = tk.Frame(api_inner, bg=SURFACE)
-        admin_hdr.pack(fill="x")
-        tk.Label(admin_hdr, text="ADMIN PANEL", font=FONT_SECTION, fg=ACCENT,
-                 bg=SURFACE, anchor="w").pack(side="left")
-        tk.Label(admin_hdr, text="(stage sync)", font=FONT_SMALL, fg=TEXT_TER,
-                 bg=SURFACE, anchor="w").pack(side="left", padx=(6, 0))
+        admin_col = tk.Frame(creds_grid, bg=BG)
+        admin_col.grid(row=0, column=1, sticky="nsew", padx=(4, 0))
+        tk.Label(
+            admin_col,
+            text="ADMIN PANEL",
+            font=FONT_SECTION,
+            fg=ACCENT,
+            bg=BG,
+            anchor="w",
+        ).pack(fill="x")
+        make_field(admin_col, "Access Token", self.admin_token, show="*")
 
-        self.admin_token = tk.StringVar(value=load_env_value("BRELLA_ADMIN_ACCESS_TOKEN"))
-        self.admin_client = tk.StringVar(value=load_env_value("BRELLA_ADMIN_CLIENT"))
-        self.admin_uid = tk.StringVar(value=load_env_value("BRELLA_ADMIN_UID"))
-
-        make_field(api_inner, "Access Token", self.admin_token, show="*")
-        admin_row = tk.Frame(api_inner, bg=SURFACE)
+        admin_row = tk.Frame(admin_col, bg=BG)
         admin_row.pack(fill="x")
-        al = tk.Frame(admin_row, bg=SURFACE)
+        al = tk.Frame(admin_row, bg=BG)
         al.pack(side="left", fill="x", expand=True, padx=(0, 4))
-        ar = tk.Frame(admin_row, bg=SURFACE)
+        ar = tk.Frame(admin_row, bg=BG)
         ar.pack(side="right", fill="x", expand=True, padx=(4, 0))
         make_field(al, "Client", self.admin_client)
         make_field(ar, "UID", self.admin_uid)
 
-        # API buttons
-        api_btns = tk.Frame(api_inner, bg=SURFACE)
-        api_btns.pack(fill="x", pady=(0, 2))
-        test_btn = tk.Button(api_btns, text="Test Connection", font=FONT_SMALL,
-                             bg=SURFACE_RAISED, fg=TEXT_SEC,
-                             activebackground="#2e2e38", activeforeground=TEXT,
-                             relief="flat", cursor="hand2", pady=4,
-                             command=self._test_connection)
-        test_btn.pack(side="left", fill="x", expand=True, padx=(0, 3))
-        save_api_btn = tk.Button(api_btns, text="Save", font=FONT_SMALL,
-                                  bg=ACCENT, fg="white",
-                                  activebackground=ACCENT_LIGHT, activeforeground="white",
-                                  relief="flat", cursor="hand2", pady=4,
-                                  command=self._save_api)
-        save_api_btn.pack(side="left", fill="x", expand=True, padx=(3, 0))
-        _bind_button_flash(test_btn, SURFACE_RAISED, "#2e2e38")
-        _bind_button_flash(save_api_btn, ACCENT, ACCENT_LIGHT)
+        # API status row (action buttons are in bottom action bar)
+        self._api_status_var = tk.StringVar(value="")
+        self._api_status_result = tk.Label(conn_inner, textvariable=self._api_status_var,
+                                            font=FONT_SMALL, fg=TEXT_SEC, bg=BG,
+                                            anchor="w")
+        self._api_status_result.pack(fill="x", pady=(4, 0))
 
-        self._api_status_var = tk.StringVar()
-        self._api_status_result = tk.Label(api_inner, textvariable=self._api_status_var,
-                                            font=FONT_SMALL, fg=TEXT_SEC, bg=SURFACE, anchor="w")
+        # Divider between major Setup blocks
+        tk.Frame(self.frame, bg=SURFACE_RAISED, height=1).grid(
+            row=1, column=0, sticky="ew", padx=P, pady=(0, P // 2)
+        )
 
-        # -- Group Priority card (fills remaining height) --
-        priority_card = tk.Frame(col0, bg=SURFACE, highlightbackground=SURFACE_RAISED,
-                                 highlightthickness=1)
-        priority_card.pack(fill="both", expand=True, pady=(0, GAP))
-        card_title(priority_card, "GROUP PRIORITY")
-        priority_inner = tk.Frame(priority_card, bg=SURFACE)
-        priority_inner.pack(fill="both", expand=True, padx=CARD_PAD_INNER,
-                            pady=(0, CARD_PAD_Y_BOT))
-
-        tk.Label(priority_inner, text="Top = highest priority.",
-                 font=FONT_SMALL, fg=TEXT_TER, bg=SURFACE, anchor="w").pack(fill="x", pady=(0, 2))
-
-        _, prio_scroll = _make_scroll_list(priority_inner)
-        self._priority_frame = prio_scroll
-        self._priority_rows = []
-
+        # === Bottom block: compact mappings ===
         import api
-        for gid in api.GROUP_PRIORITY:
-            self._add_priority_row(gid)
 
-        tk.Button(priority_inner, text="+ Add", font=FONT_SMALL,
-                  bg=SURFACE_RAISED, fg=TEXT_SEC,
-                  activebackground=ACCENT, activeforeground="white",
-                  relief="flat", cursor="hand2", pady=2,
-                  command=lambda: self._add_priority_row("")).pack(anchor="w", pady=(2, 0))
+        values_block = tk.Frame(self.frame, bg=BG)
+        values_block.grid(row=2, column=0, sticky="nsew", padx=P, pady=(P // 2, P))
+        tk.Label(values_block, text="GROUPS & TICKETS", font=FONT_SECTION, fg=ACCENT,
+             bg=BG, anchor="w").pack(fill="x", padx=2, pady=(0, 4))
+        tk.Frame(values_block, bg=SURFACE_RAISED, height=1).pack(fill="x", pady=(0, 6))
 
-        # Save Values button
-        save_vals_btn = tk.Button(col0, text="Save Values", font=FONT_BOLD,
-                                   bg=ACCENT, fg="white",
-                                   activebackground=ACCENT_LIGHT, activeforeground="white",
-                                   relief="flat", cursor="hand2", pady=6,
-                                   command=self._save_values)
-        save_vals_btn.pack(fill="x")
-        _bind_button_flash(save_vals_btn, ACCENT, ACCENT_LIGHT)
+        values_inner = tk.Frame(values_block, bg=BG)
+        values_inner.pack(fill="both", expand=True)
 
-        # === Column 1: Attendee Groups ===
-        groups_card = tk.Frame(self.frame, bg=SURFACE, highlightbackground=SURFACE_RAISED,
-                               highlightthickness=1)
-        groups_card.grid(row=0, column=1, sticky="nsew", padx=(0, P), pady=P)
-        card_title(groups_card, "ATTENDEE GROUPS")
-        groups_inner = tk.Frame(groups_card, bg=SURFACE)
-        groups_inner.pack(fill="both", expand=True, padx=CARD_PAD_INNER,
-                          pady=(0, CARD_PAD_Y_BOT))
+        self.groups_inline_var = tk.StringVar(
+            value=self._format_mapping_inline(api.BRELLA_ATTENDEE_GROUP_IDS)
+        )
+        self.priority_inline_var = tk.StringVar(value="; ".join(api.GROUP_PRIORITY))
 
-        hdr = tk.Frame(groups_inner, bg=SURFACE)
-        hdr.pack(fill="x")
-        tk.Label(hdr, text="Name", font=FONT_SECTION, fg=TEXT_SEC, bg=SURFACE,
-                 width=12, anchor="w").pack(side="left")
-        tk.Label(hdr, text="ID", font=FONT_SECTION, fg=TEXT_SEC, bg=SURFACE,
-                 anchor="w").pack(side="left", fill="x", expand=True)
+        tk.Label(values_inner, text="Group numbers",
+                 font=FONT_SMALL, fg=TEXT_SEC, bg=BG, anchor="w").pack(fill="x")
+        self.groups_inline_entry = tk.Entry(
+            values_inner,
+            textvariable=self.groups_inline_var,
+            font=FONT_MONO,
+            bg=BG,
+            fg=TEXT,
+            insertbackground=TEXT,
+            relief="flat",
+            highlightthickness=1,
+            highlightbackground=SURFACE_RAISED,
+            highlightcolor=ACCENT,
+        )
+        self.groups_inline_entry.pack(fill="x", ipady=4, pady=(1, 4))
 
-        _, groups_scroll = _make_scroll_list(groups_inner)
-        self._groups_frame = groups_scroll
-        self._group_rows = []
+        tk.Label(values_inner, text="Priority group IDs",
+                 font=FONT_SMALL, fg=TEXT_SEC, bg=BG, anchor="w").pack(fill="x")
+        self.priority_inline_entry = tk.Entry(
+            values_inner,
+            textvariable=self.priority_inline_var,
+            font=FONT_MONO,
+            bg=BG,
+            fg=TEXT,
+            insertbackground=TEXT,
+            relief="flat",
+            highlightthickness=1,
+            highlightbackground=SURFACE_RAISED,
+            highlightcolor=ACCENT,
+        )
+        self.priority_inline_entry.pack(fill="x", ipady=4, pady=(1, 4))
 
-        for name, gid in api.BRELLA_ATTENDEE_GROUP_IDS.items():
-            self._add_group_row(name, gid)
+        tk.Label(values_inner, text="Ticket types",
+                 font=FONT_SMALL, fg=TEXT_SEC, bg=BG, anchor="w").pack(fill="x")
+        self.tickets_inline_text = tk.Text(
+            values_inner,
+            font=FONT_MONO,
+            bg=BG,
+            fg=TEXT,
+            insertbackground=TEXT,
+            relief="flat",
+            highlightthickness=1,
+            highlightbackground=SURFACE_RAISED,
+            highlightcolor=ACCENT,
+            wrap="word",
+            height=12,
+            padx=6,
+            pady=6,
+        )
+        self.tickets_inline_text.pack(fill="both", expand=True, pady=(1, 6))
+        self.tickets_inline_text.insert(
+            "1.0", self._format_mapping_inline(api.TICKET_TYPE_TO_GROUP_ID)
+        )
 
-        tk.Button(groups_inner, text="+ Add", font=FONT_SMALL,
-                  bg=SURFACE_RAISED, fg=TEXT_SEC,
-                  activebackground=ACCENT, activeforeground="white",
-                  relief="flat", cursor="hand2", pady=2,
-                  command=lambda: self._add_group_row("", "")).pack(anchor="w", pady=(2, 0))
+        # Log-hosted action row for Setup
+        if self._app and hasattr(self._app, "_log_action_host"):
+            self.action_row = tk.Frame(self._app._log_action_host, bg=SURFACE)
+            action_parent = self.action_row
+        else:
+            action_parent = self.frame
 
-        # === Column 2: Ticket Type Mappings ===
-        tickets_card = tk.Frame(self.frame, bg=SURFACE, highlightbackground=SURFACE_RAISED,
-                                highlightthickness=1)
-        tickets_card.grid(row=0, column=2, sticky="nsew", padx=(0, P), pady=P)
-        card_title(tickets_card, "TICKET TYPE MAPPINGS")
-        tickets_inner = tk.Frame(tickets_card, bg=SURFACE)
-        tickets_inner.pack(fill="both", expand=True, padx=CARD_PAD_INNER,
-                           pady=(0, CARD_PAD_Y_BOT))
+        self.test_btn = tk.Button(
+            action_parent,
+            text="Test Connection",
+            font=FONT_SMALL,
+            bg=SURFACE_RAISED,
+            fg=TEXT_SEC,
+            activebackground="#2e2e38",
+            activeforeground=TEXT,
+            relief="flat",
+            cursor="hand2",
+            padx=ACTION_BTN_PADX,
+            pady=ACTION_BTN_PADY,
+            command=self._test_connection,
+        )
 
-        hdr2 = tk.Frame(tickets_inner, bg=SURFACE)
-        hdr2.pack(fill="x")
-        tk.Label(hdr2, text="Ticket Type", font=FONT_SECTION, fg=TEXT_SEC, bg=SURFACE,
-                 width=22, anchor="w").pack(side="left")
-        tk.Label(hdr2, text="Group ID", font=FONT_SECTION, fg=TEXT_SEC, bg=SURFACE,
-                 anchor="w").pack(side="left", fill="x", expand=True)
+        self.save_api_btn = tk.Button(
+            action_parent,
+            text="Save",
+            font=FONT_SMALL,
+            bg=ACCENT,
+            fg="white",
+            activebackground=ACCENT_LIGHT,
+            activeforeground="white",
+            relief="flat",
+            cursor="hand2",
+            padx=ACTION_BTN_PADX,
+            pady=ACTION_BTN_PADY,
+            command=self._save_api,
+        )
 
-        _, tickets_scroll = _make_scroll_list(tickets_inner)
-        self._tickets_frame = tickets_scroll
-        self._ticket_rows = []
+        self.save_vals_btn = tk.Button(
+            action_parent,
+            text="Save Values",
+            font=FONT_SMALL,
+            bg=ACCENT,
+            fg="white",
+            activebackground=ACCENT_LIGHT,
+            activeforeground="white",
+            relief="flat",
+            cursor="hand2",
+            padx=ACTION_BTN_PADX,
+            pady=ACTION_BTN_PADY,
+            command=self._save_values,
+        )
 
-        for ttype, gid in api.TICKET_TYPE_TO_GROUP_ID.items():
-            self._add_ticket_row(ttype, gid)
+        if self.action_row is not None:
+            self.test_btn.pack(side="left", padx=(0, ACTION_BTN_GAP))
+            self.save_api_btn.pack(side="left", padx=(0, ACTION_BTN_GAP))
+            self.save_vals_btn.pack(side="left")
+        else:
+            self.test_btn.pack(side="left", padx=(0, ACTION_BTN_GAP), pady=(ACTION_ROW_PAD_Y, 0))
+            self.save_api_btn.pack(side="left", padx=(0, ACTION_BTN_GAP), pady=(ACTION_ROW_PAD_Y, 0))
+            self.save_vals_btn.pack(side="left", pady=(ACTION_ROW_PAD_Y, 0))
 
-        tk.Button(tickets_inner, text="+ Add", font=FONT_SMALL,
-                  bg=SURFACE_RAISED, fg=TEXT_SEC,
-                  activebackground=ACCENT, activeforeground="white",
-                  relief="flat", cursor="hand2", pady=2,
-                  command=lambda: self._add_ticket_row("", "")).pack(anchor="w", pady=(2, 0))
+        _bind_button_flash(self.test_btn, SURFACE_RAISED, "#2e2e38")
+        _bind_button_flash(self.save_api_btn, ACCENT, ACCENT_LIGHT)
+        _bind_button_flash(self.save_vals_btn, ACCENT, ACCENT_LIGHT)
 
-    # --- Value row helpers ---
+    # --- Inline value helpers ---
 
-    def _make_entry(self, parent, value="", width=20):
-        var = tk.StringVar(value=value)
-        entry = tk.Entry(parent, textvariable=var, font=FONT_MONO, bg=BG, fg=TEXT,
-                         insertbackground=TEXT, relief="flat", width=width,
-                         highlightthickness=1, highlightbackground=SURFACE_RAISED,
-                         highlightcolor=ACCENT)
-        return entry, var
+    def _format_mapping_inline(self, mapping):
+        return "; ".join(f"{k}={v}" for k, v in mapping.items())
 
-    def _make_del_btn(self, parent, command):
-        btn = tk.Button(parent, text="\u2715", font=("Poppins", 8), bg=SURFACE, fg=TEXT_TER,
-                        activebackground=DANGER, activeforeground="white",
-                        relief="flat", cursor="hand2", bd=0, command=command)
-        btn.bind("<Enter>", lambda e: btn.config(fg=DANGER))
-        btn.bind("<Leave>", lambda e: btn.config(fg=TEXT_TER))
-        return btn
+    def _parse_mapping_inline(self, raw_text, label):
+        parsed = {}
+        invalid = []
 
-    def _add_group_row(self, name, gid):
-        row = tk.Frame(self._groups_frame, bg=SURFACE)
-        row.pack(fill="x", pady=0)
-        name_entry, name_var = self._make_entry(row, name, width=16)
-        name_entry.pack(side="left", padx=(0, 4), ipady=1)
-        id_entry, id_var = self._make_entry(row, gid, width=8)
-        id_entry.pack(side="left", fill="x", expand=True, ipady=1)
-        def remove():
-            row.destroy()
-            self._group_rows = [(r, n, i) for r, n, i in self._group_rows if r.winfo_exists()]
-        self._make_del_btn(row, remove).pack(side="right", padx=(4, 0))
-        self._group_rows.append((row, name_var, id_var))
+        for token in raw_text.split(";"):
+            item = token.strip()
+            if not item:
+                continue
+            if "=" not in item:
+                invalid.append(item)
+                continue
+            key, value = item.split("=", 1)
+            key = key.strip()
+            value = value.strip()
+            if not key or not value:
+                invalid.append(item)
+                continue
+            parsed[key] = value
 
-    def _add_ticket_row(self, ttype, gid):
-        row = tk.Frame(self._tickets_frame, bg=SURFACE)
-        row.pack(fill="x", pady=0)
-        type_entry, type_var = self._make_entry(row, ttype, width=30)
-        type_entry.pack(side="left", padx=(0, 4), ipady=1)
-        id_entry, id_var = self._make_entry(row, gid, width=8)
-        id_entry.pack(side="left", fill="x", expand=True, ipady=1)
-        def remove():
-            row.destroy()
-            self._ticket_rows = [(r, t, i) for r, t, i in self._ticket_rows if r.winfo_exists()]
-        self._make_del_btn(row, remove).pack(side="right", padx=(4, 0))
-        self._ticket_rows.append((row, type_var, id_var))
+        if invalid and self.log_callback:
+            preview = "; ".join(invalid[:5])
+            suffix = " ..." if len(invalid) > 5 else ""
+            self.log_callback(
+                f"[WARN] {label}: ignored invalid item(s) without key=value: {preview}{suffix}"
+            )
 
-    def _add_priority_row(self, gid):
-        row = tk.Frame(self._priority_frame, bg=SURFACE)
-        row.pack(fill="x", pady=0)
-        pos_label = tk.Label(row, text=str(len(self._priority_rows) + 1), font=FONT_SMALL,
-                             fg=TEXT_TER, bg=SURFACE, width=3)
-        pos_label.pack(side="left")
-        entry, var = self._make_entry(row, gid, width=10)
-        entry.pack(side="left", fill="x", expand=True, ipady=1)
-        def remove():
-            row.destroy()
-            self._priority_rows = [(r, v) for r, v in self._priority_rows if r.winfo_exists()]
-            self._renumber_priority()
-        self._make_del_btn(row, remove).pack(side="right", padx=(4, 0))
-        def move_up():
-            idx = next((i for i, (r, v) in enumerate(self._priority_rows) if r == row), None)
-            if idx and idx > 0:
-                self._priority_rows[idx], self._priority_rows[idx - 1] = \
-                    self._priority_rows[idx - 1], self._priority_rows[idx]
-                self._repack_priority()
-        def move_down():
-            idx = next((i for i, (r, v) in enumerate(self._priority_rows) if r == row), None)
-            if idx is not None and idx < len(self._priority_rows) - 1:
-                self._priority_rows[idx], self._priority_rows[idx + 1] = \
-                    self._priority_rows[idx + 1], self._priority_rows[idx]
-                self._repack_priority()
-        down_btn = tk.Button(row, text="\u25BC", font=("Poppins", 7), bg=SURFACE, fg=TEXT_TER,
-                             activebackground=SURFACE_RAISED, activeforeground=TEXT,
-                             relief="flat", cursor="hand2", bd=0, command=move_down)
-        down_btn.pack(side="right", padx=1)
-        up_btn = tk.Button(row, text="\u25B2", font=("Poppins", 7), bg=SURFACE, fg=TEXT_TER,
-                           activebackground=SURFACE_RAISED, activeforeground=TEXT,
-                           relief="flat", cursor="hand2", bd=0, command=move_up)
-        up_btn.pack(side="right", padx=1)
-        self._priority_rows.append((row, var))
+        return parsed
 
-    def _renumber_priority(self):
-        for i, (row, var) in enumerate(self._priority_rows):
-            if row.winfo_exists():
-                for child in row.winfo_children():
-                    if isinstance(child, tk.Label):
-                        child.config(text=str(i + 1))
-                        break
-
-    def _repack_priority(self):
-        for row, var in self._priority_rows:
-            row.pack_forget()
-        for row, var in self._priority_rows:
-            row.pack(fill="x", pady=0)
-        self._renumber_priority()
+    def _parse_priority_inline(self, raw_text):
+        return [item.strip() for item in raw_text.split(";") if item.strip()]
 
     # --- Save / Test ---
 
@@ -597,34 +594,27 @@ class SetupTab:
 
     def _save_values(self):
         import api
-        groups = {}
-        for row, name_var, id_var in self._group_rows:
-            if not row.winfo_exists():
-                continue
-            name = name_var.get().strip()
-            gid = id_var.get().strip()
-            if name and gid:
-                groups[name] = gid
-        tickets = {}
-        for row, type_var, id_var in self._ticket_rows:
-            if not row.winfo_exists():
-                continue
-            ttype = type_var.get().strip()
-            gid = id_var.get().strip()
-            if ttype and gid:
-                tickets[ttype] = gid
-        priority = []
-        for row, var in self._priority_rows:
-            if not row.winfo_exists():
-                continue
-            gid = var.get().strip()
-            if gid:
-                priority.append(gid)
+
+        groups_raw = self.groups_inline_var.get().strip()
+        priority_raw = self.priority_inline_var.get().strip()
+        tickets_raw = self.tickets_inline_text.get("1.0", "end").strip()
+
+        groups = self._parse_mapping_inline(groups_raw, "Groups")
+        tickets = self._parse_mapping_inline(tickets_raw, "Ticket mappings")
+        priority = self._parse_priority_inline(priority_raw)
+
         api.save_config(
             attendee_groups=groups,
             group_priority=priority,
             ticket_type_to_group=tickets,
         )
+
+        # Normalize UI text after save so format stays clean and compact.
+        self.groups_inline_var.set(self._format_mapping_inline(groups))
+        self.priority_inline_var.set("; ".join(priority))
+        self.tickets_inline_text.delete("1.0", "end")
+        self.tickets_inline_text.insert("1.0", self._format_mapping_inline(tickets))
+
         if self.log_callback:
             self.log_callback(
                 f"Values saved — {len(groups)} groups, "
@@ -650,101 +640,81 @@ class SyncTab:
         self.download_from_3cket = tk.BooleanVar(value=False)
         self.cookie = tk.StringVar(value=load_env_value("THREECKET_COOKIE"))
         self.running = False
+        self.action_row = None
 
         self.frame = tk.Frame(parent, bg=BG)
 
         inner_frame = tk.Frame(self.frame, bg=BG)
         inner_frame.pack(fill="x", side="top")
 
-        tk.Frame(inner_frame, bg=BG, height=4).pack(fill="x")
+        # CSV header section (exact header row only)
+        if csv_header_example:
+            fmt_inner = self._make_section(inner_frame, "CSV HEADER", compact=True)
+            for field in self._split_header_fields(csv_header_example, csv_delimiter):
+                tk.Label(
+                    fmt_inner,
+                    text=field,
+                    font=("Consolas", 8),
+                    fg=ACCENT_LIGHT,
+                    bg=BG,
+                    anchor="w",
+                    justify="left",
+                ).pack(fill="x", pady=0)
 
-        # CSV format card (description + header example)
-        if description or csv_header_example:
-            fmt_card = make_card(inner_frame)
-            card_title(fmt_card, "CSV FORMAT")
-            fmt_inner = tk.Frame(fmt_card, bg=SURFACE)
-            fmt_inner.pack(fill="x", padx=CARD_PAD_INNER, pady=(0, CARD_PAD_Y_BOT))
-
-            if description:
-                tk.Label(fmt_inner, text=description, font=FONT_SMALL, fg=TEXT_SEC,
-                         bg=SURFACE, anchor="w", justify="left",
-                         wraplength=980).pack(fill="x", pady=(0, 4))
-
-            if csv_delimiter:
-                tk.Label(fmt_inner, text=f"Delimiter: {csv_delimiter}",
-                         font=FONT_SMALL, fg=TEXT_TER, bg=SURFACE,
-                         anchor="w").pack(fill="x", pady=(0, 2))
-
-            if csv_header_example:
-                tk.Label(fmt_inner, text="Header example:", font=FONT_SMALL,
-                         fg=TEXT_SEC, bg=SURFACE, anchor="w").pack(fill="x")
-                tk.Label(fmt_inner, text=csv_header_example, font=FONT_MONO,
-                         fg=ACCENT_LIGHT, bg=SURFACE, anchor="w", justify="left",
-                         wraplength=980).pack(fill="x", pady=(1, 0))
-
-        # CSV picker
-        csv_card = make_card(inner_frame)
-        card_title(csv_card, "CSV FILE")
-        csv_row = tk.Frame(csv_card, bg=SURFACE)
-        csv_row.pack(fill="x", padx=CARD_PAD_INNER, pady=(0, CARD_PAD_Y_BOT))
+        # CSV picker section
+        csv_inner = self._make_section(inner_frame, "CSV FILE")
+        csv_row = tk.Frame(csv_inner, bg=BG)
+        csv_row.pack(fill="x")
+        csv_row.columnconfigure(0, weight=1)
 
         self.path_entry = tk.Entry(csv_row, textvariable=self.csv_path, font=FONT_MONO,
                                    bg=BG, fg=TEXT, insertbackground=TEXT,
                                    relief="flat", highlightthickness=1,
                                    highlightbackground=SURFACE_RAISED, highlightcolor=ACCENT)
-        self.path_entry.pack(side="left", fill="x", expand=True, ipady=5)
+        self.path_entry.grid(row=0, column=0, sticky="ew", ipady=5)
 
-        self.browse_btn = tk.Button(csv_row, text="Browse", font=FONT_SMALL, bg=SURFACE_RAISED,
-                                    fg=TEXT, activebackground=ACCENT, activeforeground="white",
-                                    relief="flat", cursor="hand2", padx=14, pady=5,
-                                    command=self._browse)
-        self.browse_btn.pack(side="right", padx=(8, 0))
+        self.browse_btn = tk.Button(
+            csv_row,
+            text="Browse",
+            font=FONT_SMALL,
+            bg=SURFACE_RAISED,
+            fg=TEXT,
+            activebackground=ACCENT,
+            activeforeground="white",
+            relief="flat",
+            cursor="hand2",
+            padx=14,
+            pady=2,
+            height=1,
+            command=self._browse,
+        )
+        self.browse_btn.grid(row=0, column=1, padx=(8, 0), sticky="ns")
 
-        # Options card
+        # Options section
         if has_prune or has_cookie:
-            opts = make_card(inner_frame)
-            card_title(opts, "OPTIONS")
-            opts_inner = tk.Frame(opts, bg=SURFACE)
-            opts_inner.pack(fill="x", padx=CARD_PAD_INNER, pady=(0, CARD_PAD_Y_BOT))
+            opts_inner = self._make_section(inner_frame, "OPTIONS")
             if has_prune:
                 self.prune_cb = tk.Checkbutton(opts_inner,
                                                text="Prune missing (remove from Brella if not in CSV)",
                                                variable=self.prune, font=FONT_SMALL,
-                                               fg=TEXT_SEC, bg=SURFACE, selectcolor=BG,
-                                               activebackground=SURFACE, activeforeground=TEXT,
+                                               fg=TEXT_SEC, bg=BG, selectcolor=BG,
+                                               activebackground=BG, activeforeground=TEXT,
                                                anchor="w")
                 self.prune_cb.pack(fill="x")
             if has_cookie:
                 self.dl_cb = tk.Checkbutton(opts_inner,
                                             text="Download CSV from 3cket instead of local file",
                                             variable=self.download_from_3cket, font=FONT_SMALL,
-                                            fg=TEXT_SEC, bg=SURFACE, selectcolor=BG,
-                                            activebackground=SURFACE, activeforeground=TEXT,
+                                            fg=TEXT_SEC, bg=BG, selectcolor=BG,
+                                            activebackground=BG, activeforeground=TEXT,
                                             anchor="w", command=self._toggle_source)
                 self.dl_cb.pack(fill="x", pady=(4, 0))
                 self.cookie_entry = make_field(opts_inner, "Session Cookie", self.cookie, show="*")
 
-        # Action buttons
-        btn_row = tk.Frame(inner_frame, bg=BG)
-        btn_row.pack(fill="x", padx=CARD_PAD_X, pady=(0, GAP))
-        self.preview_btn = tk.Button(btn_row, text="Preview", font=FONT_BOLD,
-                                      bg=SURFACE_RAISED, fg=TEXT_SEC,
-                                      activebackground="#2e2e38", activeforeground=TEXT,
-                                      relief="flat", cursor="hand2", pady=7,
-                                      command=lambda: self._run(dry_run=True))
-        self.preview_btn.pack(side="left", fill="x", expand=True, padx=(0, 3))
-        self.import_btn = tk.Button(btn_row, text="Import", font=FONT_BOLD,
-                                     bg=ACCENT, fg="white",
-                                     activebackground=ACCENT_LIGHT, activeforeground="white",
-                                     relief="flat", cursor="hand2", pady=7,
-                                     command=lambda: self._run(dry_run=False))
-        self.import_btn.pack(side="left", fill="x", expand=True, padx=(3, 0))
-        _bind_button_flash(self.preview_btn, SURFACE_RAISED, "#2e2e38")
-        _bind_button_flash(self.import_btn, ACCENT, ACCENT_LIGHT)
-
-        # Detail boxes: 2x2 grid
-        detail_container = tk.Frame(self.frame, bg=BG)
-        detail_container.pack(fill="both", expand=True, padx=CARD_PAD_X, pady=(0, CARD_PAD_X))
+        # Detail boxes: 2x2 grid with line dividers and no card spacing
+        tk.Frame(self.frame, bg=SURFACE_RAISED, height=1).pack(fill="x")
+        detail_container = tk.Frame(self.frame, bg=SURFACE_RAISED)
+        detail_container.pack(fill="both", expand=True, padx=0, pady=0)
         detail_container.columnconfigure(0, weight=1)
         detail_container.columnconfigure(1, weight=1)
         detail_container.rowconfigure(0, weight=1)
@@ -759,40 +729,110 @@ class SyncTab:
         self.card_missing, _, self.list_missing = self._make_unified_box(
             detail_container, "MISSING INFO", "0", WARN, row=1, col=1, copyable=True)
 
+        # Log-hosted action row for Preview/Import
+        if self._app and hasattr(self._app, "_log_action_host"):
+            self.action_row = tk.Frame(self._app._log_action_host, bg=SURFACE)
+            action_parent = self.action_row
+        else:
+            action_parent = self.frame
+
+        self.preview_btn = tk.Button(
+            action_parent,
+            text="Preview",
+            font=FONT_SMALL,
+            bg=SURFACE_RAISED,
+            fg=TEXT_SEC,
+            activebackground="#2e2e38",
+            activeforeground=TEXT,
+            relief="flat",
+            cursor="hand2",
+            padx=ACTION_BTN_PADX,
+            pady=ACTION_BTN_PADY,
+            command=lambda: self._run(dry_run=True),
+        )
+
+        self.import_btn = tk.Button(
+            action_parent,
+            text="Import",
+            font=FONT_SMALL,
+            bg=ACCENT,
+            fg="white",
+            activebackground=ACCENT_LIGHT,
+            activeforeground="white",
+            relief="flat",
+            cursor="hand2",
+            padx=ACTION_BTN_PADX,
+            pady=ACTION_BTN_PADY,
+            command=lambda: self._run(dry_run=False),
+        )
+
+        if self.action_row is not None:
+            self.preview_btn.pack(side="left", padx=(0, ACTION_BTN_GAP))
+            self.import_btn.pack(side="left")
+        else:
+            self.preview_btn.pack(side="left", padx=(0, ACTION_BTN_GAP), pady=(ACTION_ROW_PAD_Y, 0))
+            self.import_btn.pack(side="left", pady=(ACTION_ROW_PAD_Y, 0))
+
+        _bind_button_flash(self.preview_btn, SURFACE_RAISED, "#2e2e38")
+        _bind_button_flash(self.import_btn, ACCENT, ACCENT_LIGHT)
+
         if not enabled:
             self.browse_btn.config(state="disabled")
             self.path_entry.config(state="disabled")
             self.preview_btn.config(state="disabled")
             self.import_btn.config(state="disabled")
 
+    def _make_section(self, parent, title, compact=False):
+        section = tk.Frame(parent, bg=BG)
+        section.pack(fill="x")
+
+        tk.Frame(section, bg=SURFACE_RAISED, height=1).pack(fill="x")
+        title_pady = (3, 2) if compact else (5, 4)
+        inner_pady = (0, 2) if compact else (0, 6)
+        tk.Label(section, text=title, font=FONT_SECTION, fg=ACCENT,
+                 bg=BG, anchor="w").pack(fill="x", padx=CARD_PAD_INNER, pady=title_pady)
+
+        inner = tk.Frame(section, bg=BG)
+        inner.pack(fill="x", padx=CARD_PAD_INNER, pady=inner_pady)
+        return inner
+
+    def _split_header_fields(self, header_text, delimiter):
+        if not header_text:
+            return []
+
+        delim = (delimiter or "").strip()
+        if not delim:
+            return [header_text.strip()]
+
+        return [part.strip() for part in header_text.split(delim) if part.strip()]
+
     def _make_unified_box(self, parent, title, value, color, row=0, col=0, copyable=False):
-        outer = tk.Frame(parent, bg=SURFACE, highlightbackground=SURFACE_RAISED,
-                         highlightthickness=1)
-        padx = (0 if col == 0 else GAP, 0 if col == 1 else GAP)
-        pady = (0 if row == 0 else GAP, 0 if row == 1 else GAP)
+        outer = tk.Frame(parent, bg=BG)
+        padx = (0, 1) if col == 0 else (0, 0)
+        pady = (0, 1) if row == 0 else (0, 0)
         outer.grid(row=row, column=col, sticky="nsew", padx=padx, pady=pady)
         outer.columnconfigure(0, weight=1)
 
-        accent_line = tk.Frame(outer, bg=color, height=3)
+        accent_line = tk.Frame(outer, bg=color, height=2)
         accent_line.grid(row=0, column=0, sticky="ew")
 
-        header = tk.Frame(outer, bg=SURFACE)
+        header = tk.Frame(outer, bg=BG)
         header.grid(row=1, column=0, sticky="ew")
 
-        count_label = tk.Label(header, text=value, font=("Poppins", 18, "bold"),
-                               fg=color, bg=SURFACE, anchor="w")
-        count_label.pack(anchor="w", padx=8, pady=(4, 0))
+        title_row = tk.Frame(header, bg=BG)
+        title_row.pack(fill="x", padx=7, pady=(1, 2))
 
-        title_row = tk.Frame(header, bg=SURFACE)
-        title_row.pack(fill="x", padx=9, pady=(0, 4))
+        count_label = tk.Label(title_row, text=value, font=("Poppins", 14, "bold"),
+                       fg=color, bg=BG, anchor="w")
+        count_label.pack(side="left")
 
-        title_label = tk.Label(title_row, text=title, font=("Poppins", 8, "bold"),
-                               fg=TEXT_TER, bg=SURFACE, anchor="w")
-        title_label.pack(side="left")
+        title_label = tk.Label(title_row, text=title, font=("Poppins", 7, "bold"),
+                               fg=TEXT_TER, bg=BG, anchor="w")
+        title_label.pack(side="left", padx=(7, 0), pady=(3, 0))
 
         if copyable:
             copy_btn = tk.Button(title_row, text="Copy", font=("Poppins", 7),
-                                 bg=SURFACE, fg=TEXT_TER,
+                                 bg=BG, fg=TEXT_TER,
                                  activebackground=SURFACE_RAISED, activeforeground=TEXT,
                                  relief="flat", cursor="hand2", bd=0,
                                  command=lambda: self._copy_listbox(lb))
@@ -803,13 +843,13 @@ class SyncTab:
         sep = tk.Frame(outer, bg=SURFACE_RAISED, height=1)
         sep.grid(row=2, column=0, sticky="ew")
 
-        list_frame = tk.Frame(outer, bg=SURFACE)
+        list_frame = tk.Frame(outer, bg=BG)
         list_frame.grid(row=3, column=0, sticky="nsew")
         outer.rowconfigure(3, weight=1)
         list_frame.rowconfigure(0, weight=1)
         list_frame.columnconfigure(0, weight=1)
 
-        lb = tk.Listbox(list_frame, font=FONT_SMALL, bg=SURFACE, fg=TEXT_SEC,
+        lb = tk.Listbox(list_frame, font=FONT_SMALL, bg=BG, fg=TEXT_SEC,
                         selectbackground=SURFACE_RAISED, selectforeground=TEXT,
                         relief="flat", borderwidth=0, highlightthickness=0,
                         activestyle="none")
@@ -995,15 +1035,8 @@ class App:
         log_title_row = tk.Frame(log_header, bg=SURFACE)
         log_title_row.pack(fill="x", padx=CARD_PAD_X, pady=(6, 0))
 
-        self._log_status_dot = tk.Frame(log_title_row, bg=TEXT_TER, width=7, height=7)
-        self._log_status_dot.pack(side="left", padx=(0, 6), pady=1)
-        self._log_status_dot.pack_propagate(False)
-        self._log_status_pulse = StatusPulse(self._log_status_dot)
-
-        self._log_status_var = tk.StringVar(value="Ready")
-        self._log_status_label = tk.Label(log_title_row, textvariable=self._log_status_var,
-                                           font=("Poppins", 9, "bold"), fg=TEXT_SEC, bg=SURFACE)
-        self._log_status_label.pack(side="left")
+        tk.Label(log_title_row, text="LOG", font=("Poppins", 8, "bold"),
+             fg=TEXT_TER, bg=SURFACE, anchor="w").pack(side="left")
 
         clear_btn = tk.Button(log_title_row, text="Clear", font=("Poppins", 8),
                               bg=SURFACE, fg=TEXT_TER,
@@ -1021,7 +1054,32 @@ class App:
         self.log_text = tk.Text(self._log_frame, font=("Consolas", 8), bg="#0c0c12", fg=TEXT_SEC,
                                 relief="flat", wrap="word", insertbackground=ACCENT_LIGHT,
                                 state="disabled", padx=6, pady=6)
-        self.log_text.pack(fill="both", expand=True, padx=4, pady=(GAP, 4))
+        self.log_text.pack(fill="both", expand=True, padx=4, pady=(GAP, 2))
+
+        # Shared host for per-page floating actions inside log panel.
+        self._log_action_host = tk.Frame(self._log_frame, bg=SURFACE)
+        self._log_action_host.pack(side="bottom", fill="x", padx=4, pady=(0, 2))
+
+        self._log_status_row = tk.Frame(self._log_action_host, bg=SURFACE)
+        self._log_status_row.pack(side="right", padx=(8, 2), pady=ACTION_ROW_PAD_Y)
+
+        self._log_status_dot = tk.Frame(self._log_status_row, bg=TEXT_TER, width=7, height=7)
+        self._log_status_dot.pack(side="left", padx=(0, 6), pady=1)
+        self._log_status_dot.pack_propagate(False)
+        self._log_status_pulse = StatusPulse(self._log_status_dot)
+
+        self._log_status_var = tk.StringVar(value="Ready")
+        self._log_status_label = tk.Label(
+            self._log_status_row,
+            textvariable=self._log_status_var,
+            font=("Poppins", 8, "bold"),
+            fg=TEXT_SEC,
+            bg=SURFACE,
+            anchor="w",
+        )
+        self._log_status_label.pack(side="left")
+
+        self._panel_action_rows = {}
 
         # Configure log text tags
         self.log_text.tag_configure("timestamp", foreground=TEXT_TER)
@@ -1034,9 +1092,11 @@ class App:
 
         # --- Setup tab ---
         self._add_nav(sidebar, "Setup")
-        setup = SetupTab(self.content, log_callback=self.log)
+        setup = SetupTab(self.content, log_callback=self.log, app=self)
         self._setup_tab = setup
         self.panels["Setup"] = setup.frame
+        if getattr(setup, "action_row", None) is not None:
+            self._panel_action_rows["Setup"] = setup.action_row
 
         nav_sep = tk.Frame(sidebar, bg=SURFACE_RAISED, height=1)
         nav_sep.pack(fill="x", padx=16, pady=(6, 6))
@@ -1059,25 +1119,25 @@ class App:
                 self._run_participants,
                 True,
                 (
-                    "3cket_id [required]; name [full name]; phone; email [required]; "
-                    "gender; birth_date [YYYY-MM-DD]; country; language; "
-                    "check_in [in/out]; marketing_authorization [0/1]; "
-                    "tickets [pipe-separated values]; total_tickets [int]; "
-                    "email_fallback; company; group"
+                    "3cket_id [required];name [full name];phone;email [required];"
+                    "gender;birth_date [YYYY-MM-DD];country;language;"
+                    "check_in [in/out];marketing_authorization [0/1];"
+                    "tickets [pipe-separated values];total_tickets [int];"
+                    "email_fallback;company;group;"
                 ),
                 ";",
             ),
             (
                 "Speakers",
                 "Sync published speakers to Brella.",
-                True,
+                False,
                 False,
                 self._run_speakers,
                 True,
                 (
-                    "first_name [required], last_name [required], company, job_title, bio, "
-                    "photo [URL], linkedin [URL], email [required], "
-                    "token [optional external_id], publish [Publish or Do not publish]"
+                    "first_name [required],last_name [required],company,job_title,bio,"
+                    "photo [URL],linkedin [URL],email [required],"
+                    "token [optional external_id],publish [Publish or Do not publish]"
                 ),
                 ",",
             ),
@@ -1094,7 +1154,7 @@ class App:
             (
                 "Schedule",
                 "Sync event sessions to Brella.",
-                True,
+                False,
                 False,
                 self._run_schedule,
                 True,
@@ -1117,6 +1177,8 @@ class App:
                 tab.csv_path.set(str(default_csv))
             self.panels[name] = tab.frame
             self._sync_tabs[name] = tab
+            if getattr(tab, "action_row", None) is not None:
+                self._panel_action_rows[name] = tab.action_row
 
         # Pack log into sidebar below nav
         log_nav_sep = tk.Frame(sidebar, bg=SURFACE_RAISED, height=1)
@@ -1234,6 +1296,16 @@ class App:
 
         for ind_name, indicator in self.nav_indicators:
             indicator.config(bg=ACCENT if ind_name == name else SURFACE)
+
+        self._show_log_actions(name)
+
+    def _show_log_actions(self, panel_name):
+        for row in self._panel_action_rows.values():
+            row.pack_forget()
+
+        active_row = self._panel_action_rows.get(panel_name)
+        if active_row is not None:
+            active_row.pack(side="left", padx=(2, 0), pady=ACTION_ROW_PAD_Y)
 
     def log(self, msg):
         ts = datetime.datetime.now().strftime("%H:%M:%S")

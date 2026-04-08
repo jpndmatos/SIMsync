@@ -25,10 +25,24 @@ import json
 import os
 import re
 import time
+import unicodedata
+import zlib
 from pathlib import Path
 from urllib import request as url_request, error as url_error
 
 from api import build_request_headers, emit, REQUEST_DELAY_SECONDS
+
+
+def _is_verbose_logging():
+    """Verbose mode for diagnostics (off by default)."""
+    raw = os.environ.get("SIMSYNC_VERBOSE_LOGS", "").strip().lower()
+    return raw in ("1", "true", "yes", "on")
+
+
+def _emit_log(message, log_callback=None, verbose_only=False):
+    if verbose_only and not _is_verbose_logging():
+        return
+    emit(message, log_callback=log_callback)
 
 
 def _timeslots_url(org, event, timeslot_id=None, suffix=None):
@@ -43,14 +57,33 @@ def _timeslots_url(org, event, timeslot_id=None, suffix=None):
 
 
 def _api_call(url, headers, method="GET", payload=None):
+    def _decode_raw_response(raw_bytes, response_headers):
+        encoding = str(response_headers.get("Content-Encoding", "")).lower()
+
+        try:
+            if "gzip" in encoding:
+                raw_bytes = gzip.decompress(raw_bytes)
+            elif "deflate" in encoding:
+                raw_bytes = zlib.decompress(raw_bytes)
+            elif "br" in encoding:
+                # Try optional brotli support if installed.
+                try:
+                    import brotli  # type: ignore
+                    raw_bytes = brotli.decompress(raw_bytes)
+                except Exception:
+                    pass
+        except Exception:
+            # Fall back to raw payload if decompression fails.
+            pass
+
+        return raw_bytes.decode("utf-8", errors="replace")
+
     data = json.dumps(payload).encode() if payload else None
     req = url_request.Request(url, data=data, headers=headers, method=method)
     try:
         resp = url_request.urlopen(req)
         raw = resp.read()
-        if resp.headers.get("Content-Encoding") == "gzip":
-            raw = gzip.decompress(raw)
-        body = raw.decode("utf-8", errors="replace")
+        body = _decode_raw_response(raw, resp.headers)
 
         body_stripped = body.strip()
         if not body_stripped:
@@ -64,9 +97,7 @@ def _api_call(url, headers, method="GET", payload=None):
     except url_error.HTTPError as e:
         raw = e.read()
         try:
-            if e.headers.get("Content-Encoding") == "gzip":
-                raw = gzip.decompress(raw)
-            body = raw.decode("utf-8", errors="replace")
+            body = _decode_raw_response(raw, e.headers)
         except Exception:
             body = repr(raw)
 
@@ -96,7 +127,8 @@ def _admin_headers():
         "uid": uid,
         "token-type": "Bearer",
         "Accept": "application/vnd.brella.v4+json",
-        "Accept-Encoding": "gzip, deflate, br",
+        # Prefer encodings we can decode without extra dependencies.
+        "Accept-Encoding": "gzip, deflate",
         "Accept-Language": "en-US,en;q=0.9",
         "Content-Type": "application/json",
         "Origin": "https://manager.brella.io",
@@ -272,24 +304,36 @@ def list_locations(org, event, log_callback=None):
 
         if items:
             if tmpl != primary_template:
-                emit(
+                _emit_log(
                     f"[INFO] Locations resolved using fallback endpoint: {url}",
                     log_callback=log_callback,
+                    verbose_only=True,
                 )
             return items
 
     status_info = ", ".join(f"{sc} {url}" for url, sc, _ in attempts)
-    emit(
-        f"[WARN] Locations lookup returned no usable items (attempts: {status_info}). "
-        "Set BRELLA_LOCATIONS_URL if your endpoint differs.",
-        log_callback=log_callback,
-    )
+    if _is_verbose_logging():
+        emit(
+            f"[WARN] Locations lookup returned no usable items (attempts: {status_info}). "
+            "Set BRELLA_LOCATIONS_URL if your endpoint differs.",
+            log_callback=log_callback,
+        )
+    else:
+        statuses = sorted({str(sc) for _, sc, _ in attempts})
+        emit(
+            "[WARN] Locations lookup returned no usable items. "
+            f"Endpoint statuses: {', '.join(statuses) if statuses else 'none'}. "
+            "Set BRELLA_LOCATIONS_URL if your endpoint differs. "
+            "Set SIMSYNC_VERBOSE_LOGS=1 for per-URL details.",
+            log_callback=log_callback,
+        )
     return []
 
 
 def _build_location_name_map(locations):
     """Build normalized name -> location dict from Brella locations list."""
     location_map = {}
+
     for loc in locations:
         if isinstance(loc, dict):
             attrs = loc.get("attributes", {}) if isinstance(loc.get("attributes"), dict) else {}
@@ -308,7 +352,7 @@ def _build_location_name_map(locations):
             for candidate in candidates:
                 if not candidate:
                     continue
-                norm = re.sub(r"\s+", " ", str(candidate).strip()).lower()
+                norm = _normalize_name_key(candidate)
                 if norm:
                     location_map[norm] = loc
                     break
@@ -414,10 +458,20 @@ def _build_location_name_id_map_from_timeslots(existing_timeslots):
             location_id = _extract_location_id(nested_location_obj)
 
         if not location_id:
+            rel = ts.get("relationships", {})
+            if isinstance(rel, dict):
+                rel_locations = rel.get("locations", {})
+                rel_data = rel_locations.get("data", []) if isinstance(rel_locations, dict) else []
+                if isinstance(rel_data, list) and rel_data:
+                    first_rel = rel_data[0]
+                    if isinstance(first_rel, dict):
+                        location_id = _extract_location_id(first_rel)
+
+        if not location_id:
             continue
 
         for location_name in location_candidates:
-            norm = re.sub(r"\s+", " ", str(location_name).strip()).lower()
+            norm = _normalize_name_key(location_name)
             if norm:
                 mapping[norm] = location_id
 
@@ -628,6 +682,15 @@ def _allowed_tracks_from_env():
     return allowed or None
 
 
+def _normalize_name_key(value):
+    """Normalize names for matching across accent/encoding variations."""
+    text = re.sub(r"\s+", " ", str(value or "").strip()).lower()
+    text = unicodedata.normalize("NFKD", text)
+    text = "".join(ch for ch in text if not unicodedata.combining(ch))
+    text = text.encode("ascii", "ignore").decode("ascii")
+    return re.sub(r"\s+", " ", text).strip()
+
+
 def parse_schedule_csv(csv_path, log_callback=None):
     from datetime import datetime
 
@@ -642,19 +705,25 @@ def parse_schedule_csv(csv_path, log_callback=None):
     allowed_tracks = _allowed_tracks_from_env()
 
     if allowed_tracks:
-        emit(
+        _emit_log(
             f"Track whitelist enabled from BRELLA_ALLOWED_TRACKS ({len(allowed_tracks)} values).",
             log_callback=log_callback,
+            verbose_only=True,
         )
 
     reader = csv.DictReader(text.splitlines())
     raw_headers = [h.strip() for h in (reader.fieldnames or []) if h]
     normalized_headers = [_normalize_csv_header(h) for h in raw_headers]
     if raw_headers:
-        emit(f"Detected CSV headers: {', '.join(raw_headers)}", log_callback=log_callback)
-        emit(
+        _emit_log(
+            f"Detected CSV headers: {', '.join(raw_headers)}",
+            log_callback=log_callback,
+            verbose_only=True,
+        )
+        _emit_log(
             f"Normalized CSV headers: {', '.join(normalized_headers)}",
             log_callback=log_callback,
+            verbose_only=True,
         )
     else:
         emit("[WARN] No CSV headers detected; check CSV format.", log_callback=log_callback)
@@ -809,26 +878,33 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False, log_callback
     )
     timeslot_location_id_map = _build_location_name_id_map_from_timeslots(existing_timeslots)
 
-    emit(
+    _emit_log(
         f"Found {len(existing_timeslots)} existing timeslots "
         f"({len(existing_map)} with external_id).",
         log_callback=log_callback,
+        verbose_only=True,
     )
-    emit(
+    _emit_log(
         f"Fallback match keys available (title+start_time): {len(existing_title_start_map)}",
         log_callback=log_callback,
+        verbose_only=True,
     )
     if timeslot_location_id_map:
-        emit(
+        _emit_log(
             f"Inferred location ids from existing timeslots: {len(timeslot_location_id_map)}",
             log_callback=log_callback,
+            verbose_only=True,
         )
 
     # Load Brella speakers for name matching
     from speakers import list_speakers
     existing_speakers = list_speakers(headers)
     speaker_name_map = _build_speaker_name_map(existing_speakers)
-    emit(f"Found {len(existing_speakers)} speakers in Brella.", log_callback=log_callback)
+    _emit_log(
+        f"Found {len(existing_speakers)} speakers in Brella.",
+        log_callback=log_callback,
+        verbose_only=True,
+    )
 
     # Load Brella stages for track->stage mapping
     existing_stages = list_stages(event, log_callback=log_callback)
@@ -836,10 +912,16 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False, log_callback
     if existing_stages:
         names = [s.get("attributes", {}).get("name", s.get("name", ""))
                  for s in existing_stages if isinstance(s, dict)]
-        emit(f"Found {len(existing_stages)} stages in Brella: {', '.join(names)}",
-             log_callback=log_callback)
-        emit(f"Stage lookup keys: {', '.join(sorted(stage_name_map.keys()))}",
-             log_callback=log_callback)
+        _emit_log(
+            f"Found {len(existing_stages)} stages in Brella: {', '.join(names)}",
+            log_callback=log_callback,
+            verbose_only=True,
+        )
+        _emit_log(
+            f"Stage lookup keys: {', '.join(sorted(stage_name_map.keys()))}",
+            log_callback=log_callback,
+            verbose_only=True,
+        )
     else:
         emit("[WARN] No stages found — tracks will not be set. "
              "Check BRELLA_ADMIN_ACCESS_TOKEN, BRELLA_ADMIN_CLIENT, BRELLA_ADMIN_UID in .env",
@@ -851,8 +933,17 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False, log_callback
     if existing_locations:
         names = [loc_item.get("attributes", {}).get("name", loc_item.get("name", ""))
                  for loc_item in existing_locations if isinstance(loc_item, dict)]
-        emit(f"Found {len(existing_locations)} locations in Brella: {', '.join(names)}",
-             log_callback=log_callback)
+        _emit_log(
+            f"Found {len(existing_locations)} locations in Brella: {', '.join(names)}",
+            log_callback=log_callback,
+            verbose_only=True,
+        )
+    elif timeslot_location_id_map:
+        _emit_log(
+            "[INFO] No locations list from admin API — using inferred location ids from existing timeslots.",
+            log_callback=log_callback,
+            verbose_only=True,
+        )
     else:
         emit("[WARN] No locations found from admin API — location_id mapping unavailable.",
              log_callback=log_callback)
@@ -884,14 +975,26 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False, log_callback
         start_time = start_dt.strftime("%Y-%m-%d %H:%M:%S")
         end_time = _build_end_time(start_time, rec["duration"])
         match_key = _timeslot_match_key(rec["title"], start_time)
+        # Legacy fallback: match using raw CSV local start_time for sessions imported before
+        # timezone offset handling was enabled.
+        legacy_match_key = _timeslot_match_key(rec["title"], rec["start_time"])
 
         existing_ts = existing_map.get(ext_id)
         if not existing_ts and match_key:
             existing_ts = existing_title_start_map.get(match_key)
             if existing_ts:
-                emit(
+                _emit_log(
                     f"[INFO] Matched existing by title+start_time: {session_name}",
                     log_callback=log_callback,
+                    verbose_only=True,
+                )
+        if not existing_ts and legacy_match_key and legacy_match_key != match_key:
+            existing_ts = existing_title_start_map.get(legacy_match_key)
+            if existing_ts:
+                _emit_log(
+                    f"[INFO] Matched existing by legacy local start_time: {session_name}",
+                    log_callback=log_callback,
+                    verbose_only=True,
                 )
 
         # Resolve speaker IDs from name map; track unmatched ones
@@ -923,16 +1026,17 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False, log_callback
         # Resolve location name to location ID (if available)
         location_id = None
         if rec["location"]:
-            location_lookup = re.sub(r"\s+", " ", rec["location"].strip()).lower()
+            location_lookup = _normalize_name_key(rec["location"])
             loc = location_name_map.get(location_lookup)
             if loc:
                 location_id = _extract_location_id(loc) or loc.get("id")
             if not location_id:
                 location_id = timeslot_location_id_map.get(location_lookup)
                 if location_id:
-                    emit(
+                    _emit_log(
                         f"[INFO] Location id inferred from existing timeslots: {rec['location']}",
                         log_callback=log_callback,
+                        verbose_only=True,
                     )
             if not location_id and existing_locations:
                 emit(
@@ -1014,7 +1118,11 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False, log_callback
                             parts.append("description")
                         if stage_id:
                             parts.append(f"stage: {rec['track']}")
-                        emit(f"[OK] Admin patch — {' | '.join(parts)}", log_callback=log_callback)
+                        _emit_log(
+                            f"[OK] Admin patch — {' | '.join(parts)}",
+                            log_callback=log_callback,
+                            verbose_only=True,
+                        )
 
                 if rec["location"]:
                     location_key, lsc, lsr = _admin_patch_timeslot_location(
@@ -1025,9 +1133,10 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False, log_callback
                         log_callback=log_callback,
                     )
                     if location_key:
-                        emit(
+                        _emit_log(
                             f"[OK] Admin patch — location: {rec['location']} ({location_key})",
                             log_callback=log_callback,
+                            verbose_only=True,
                         )
 
             time.sleep(REQUEST_DELAY_SECONDS)
