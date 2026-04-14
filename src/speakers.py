@@ -7,8 +7,12 @@ Uses the Brella speakers API (not invites):
   PATCH  /speakers/{id}      — update speaker
   DELETE /speakers/{id}      — delete speaker
 
-CSV format: first_name,last_name,company,job_title,bio,photo,linkedin,email,token,publish
-Only rows with publish column == "Publish" are synced.
+CSV format (Typeform export, comma-delimited):
+  First name, Last Name, Company, Job Title, Bio, [consent fields],
+  Photo, Social media links, Email Contact, Speaker Email,
+  [survey fields], Submitted At, Token, Publish
+Only rows with Publish column == "Publish" are synced.
+Token is used as external_id and external_qr_string for participant invites.
 """
 
 import csv
@@ -30,17 +34,24 @@ from api import (
 
 SPEAKERS_GROUP_ID = BRELLA_ATTENDEE_GROUP_IDS.get("speakers", "36334")
 
-# CSV column indices (clean format matching schedule.csv style)
+# CSV column indices (Typeform export layout)
 COL_FIRST_NAME = 0
 COL_LAST_NAME = 1
 COL_COMPANY = 2
 COL_JOB_TITLE = 3
 COL_BIO = 4
-COL_PHOTO = 5
-COL_LINKEDIN = 6
-COL_SPEAKER_EMAIL = 7
-COL_TOKEN = 8
-COL_PUBLISH = 9
+# 5 = Privacy Policy consent (unused)
+# 6 = Optional consents (unused)
+COL_PHOTO = 7
+COL_LINKEDIN = 8       # "Social media links"
+COL_EMAIL_CONTACT = 9
+COL_SPEAKER_EMAIL = 10
+# 11 = Phone Contact (unused)
+# 12 = Pre-event communication interest (unused)
+# 13 = Media availability (unused)
+# 14 = Submitted At (unused)
+COL_TOKEN = 15
+COL_PUBLISH = 16
 
 
 def _speakers_url(speaker_id=None):
@@ -297,6 +308,8 @@ def parse_speakers_csv(csv_path, log_callback=None):
         if last_name == last_name.upper() and len(last_name) > 1:
             last_name = last_name.title()
         email = row[COL_SPEAKER_EMAIL].strip() if len(row) > COL_SPEAKER_EMAIL else ""
+        if not email:
+            email = row[COL_EMAIL_CONTACT].strip() if len(row) > COL_EMAIL_CONTACT else ""
         company = row[COL_COMPANY].strip()
         job_title = row[COL_JOB_TITLE].strip()
         bio = row[COL_BIO].strip() if len(row) > COL_BIO else ""
@@ -320,7 +333,7 @@ def parse_speakers_csv(csv_path, log_callback=None):
             "external_id": external_id,
         }
 
-        records.append((line_num, speaker_data, f"{first_name} {last_name}", email, photo_url))
+        records.append((line_num, speaker_data, f"{first_name} {last_name}", email, photo_url, token))
 
     emit(f"Parsed {len(records)} published speakers, {skipped} skipped.",
          log_callback=log_callback)
@@ -328,7 +341,7 @@ def parse_speakers_csv(csv_path, log_callback=None):
     return records, missing_info
 
 
-def _build_invite_payload(speaker_data, email, ext_id):
+def _build_invite_payload(speaker_data, email, ext_id, token=""):
     """Build a Brella invite payload for the speaker (participant entry)."""
     return {
         "event_invite": {
@@ -338,6 +351,7 @@ def _build_invite_payload(speaker_data, email, ext_id):
             "external_last_name": speaker_data["last_name"],
             "seats": 1,
             "external_company": speaker_data.get("company_name", ""),
+            "external_qr_string": token or ext_id,
             "attendee_group_id": SPEAKERS_GROUP_ID,
         },
         "import_interest_selections": False,
@@ -377,7 +391,7 @@ def run_speakers_sync(csv_path, dry_run=False, prune_missing=False, log_callback
     removed = []
     failed = 0
 
-    for line_num, speaker_data, name, email, photo_url in records:
+    for line_num, speaker_data, name, email, photo_url, token in records:
         ext_id = speaker_data["external_id"]
         desired_external_ids.add(ext_id)
 
@@ -424,7 +438,7 @@ def run_speakers_sync(csv_path, dry_run=False, prune_missing=False, log_callback
             time.sleep(REQUEST_DELAY_SECONDS)
 
             # --- Participant invite ---
-            invite_payload = _build_invite_payload(speaker_data, email, ext_id)
+            invite_payload = _build_invite_payload(speaker_data, email, ext_id, token)
             invite_id = find_invite_by_external_id(invite_headers, ext_id)
             if invite_id:
                 sc, _ = update_invite(build_update_url(invite_id), invite_headers, invite_payload)

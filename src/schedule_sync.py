@@ -2,18 +2,7 @@
 Schedule sync — import sessions from CSV into Brella's schedule.
 
 CSV format: comma-delimited with headers:
-    date [YYYY-MM-DD], start_time [HH:MM:SS], duration [int min], title,
-    content, track [predetermined tracks in ALL CAPS], location,
-    speakers [full names separated by " / "]
-
-- date: YYYY-MM-DD
-- start_time: HH:MM:SS
-- duration: integer minutes
-- title: session name (used as external_id key)
-- content: session description
-- track: predetermined stage/track name in ALL CAPS
-- location: physical venue/room name
-- speakers: full names separated by " / "
+    date,start_time,duration,title,content,track,location,speakers
 
 Speaker assignment matches names against Brella speaker profiles.
 Run speakers sync first to ensure all speakers exist in Brella.

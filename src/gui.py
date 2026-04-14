@@ -39,7 +39,7 @@ WARN = "#f0a030"
 FONT = ("Poppins", 10)
 FONT_BOLD = ("Poppins", 10, "bold")
 FONT_SMALL = ("Poppins", 9)
-FONT_MONO = ("Consolas", 9)
+FONT_MONO = ("Poppins", 9)
 FONT_TITLE = ("Poppins", 14, "bold")
 FONT_SECTION = ("Poppins", 9, "bold")
 
@@ -65,7 +65,7 @@ INDICATOR_ANIM_STEPS = 8
 GAP = 6
 ACTION_ROW_PAD_Y = 2
 ACTION_BTN_PADX = 12
-ACTION_BTN_PADY = 4
+ACTION_BTN_PADY = 2
 ACTION_BTN_GAP = 5
 
 
@@ -483,14 +483,9 @@ class SetupTab:
             command=self._save_values,
         )
 
-        if self.action_row is not None:
-            self.test_btn.pack(side="left", padx=(0, ACTION_BTN_GAP))
-            self.save_api_btn.pack(side="left", padx=(0, ACTION_BTN_GAP))
-            self.save_vals_btn.pack(side="left")
-        else:
-            self.test_btn.pack(side="left", padx=(0, ACTION_BTN_GAP), pady=(ACTION_ROW_PAD_Y, 0))
-            self.save_api_btn.pack(side="left", padx=(0, ACTION_BTN_GAP), pady=(ACTION_ROW_PAD_Y, 0))
-            self.save_vals_btn.pack(side="left", pady=(ACTION_ROW_PAD_Y, 0))
+        self.test_btn.pack(side="left", padx=(0, ACTION_BTN_GAP))
+        self.save_api_btn.pack(side="left", padx=(0, ACTION_BTN_GAP))
+        self.save_vals_btn.pack(side="left")
 
         _bind_button_flash(self.test_btn, SURFACE_RAISED, "#2e2e38")
         _bind_button_flash(self.save_api_btn, ACCENT, ACCENT_LIGHT)
@@ -627,7 +622,7 @@ class SetupTab:
 class SyncTab:
     def __init__(self, parent, name, description, has_prune=False, has_cookie=False,
                  run_func=None, enabled=True, app=None,
-                 csv_header_example="", csv_delimiter=","):
+                 csv_header_fields=None):
         self.name = name
         self.run_func = run_func
         self.enabled = enabled
@@ -647,19 +642,36 @@ class SyncTab:
         inner_frame = tk.Frame(self.frame, bg=BG)
         inner_frame.pack(fill="x", side="top")
 
-        # CSV header section (exact header row only)
-        if csv_header_example:
+        # CSV header section — inline, required fields only, copyable
+        req_fields = [f for f, req in (csv_header_fields or []) if req]
+        if req_fields:
             fmt_inner = self._make_section(inner_frame, "CSV HEADER", compact=True)
-            for field in self._split_header_fields(csv_header_example, csv_delimiter):
-                tk.Label(
-                    fmt_inner,
-                    text=field,
-                    font=("Consolas", 8),
-                    fg=ACCENT_LIGHT,
-                    bg=BG,
-                    anchor="w",
-                    justify="left",
-                ).pack(fill="x", pady=0)
+            txt = tk.Text(
+                fmt_inner, font=("Poppins", 8), bg=BG, fg=ACCENT_LIGHT,
+                relief="flat", borderwidth=0, highlightthickness=0,
+                wrap="word", cursor="hand2", height=1,
+            )
+            txt.insert("end", ", ".join(req_fields))
+            txt.config(state="disabled")
+            txt.pack(fill="x", pady=0)
+            def _fit_height(tw=txt):
+                tw.update_idletasks()
+                lines = int(tw.index("end-1c").split(".")[0])
+                tw.config(height=max(lines, 1))
+            txt.after_idle(_fit_height)
+            # Click to copy
+            def _copy_header(event=None, names=req_fields, widget=txt):
+                widget.clipboard_clear()
+                widget.clipboard_append(",".join(names))
+                widget.config(state="normal")
+                widget.tag_configure("flash", foreground=SUCCESS)
+                widget.tag_add("flash", "1.0", "end")
+                def _unflash():
+                    widget.tag_delete("flash")
+                    widget.config(state="disabled")
+                widget.after(350, _unflash)
+                widget.config(state="disabled")
+            txt.bind("<Button-1>", _copy_header)
 
         # CSV picker section
         csv_inner = self._make_section(inner_frame, "CSV FILE")
@@ -766,12 +778,8 @@ class SyncTab:
             command=lambda: self._run(dry_run=False),
         )
 
-        if self.action_row is not None:
-            self.preview_btn.pack(side="left", padx=(0, ACTION_BTN_GAP))
-            self.import_btn.pack(side="left")
-        else:
-            self.preview_btn.pack(side="left", padx=(0, ACTION_BTN_GAP), pady=(ACTION_ROW_PAD_Y, 0))
-            self.import_btn.pack(side="left", pady=(ACTION_ROW_PAD_Y, 0))
+        self.preview_btn.pack(side="left", padx=(0, ACTION_BTN_GAP))
+        self.import_btn.pack(side="left")
 
         _bind_button_flash(self.preview_btn, SURFACE_RAISED, "#2e2e38")
         _bind_button_flash(self.import_btn, ACCENT, ACCENT_LIGHT)
@@ -796,15 +804,6 @@ class SyncTab:
         inner.pack(fill="x", padx=CARD_PAD_INNER, pady=inner_pady)
         return inner
 
-    def _split_header_fields(self, header_text, delimiter):
-        if not header_text:
-            return []
-
-        delim = (delimiter or "").strip()
-        if not delim:
-            return [header_text.strip()]
-
-        return [part.strip() for part in header_text.split(delim) if part.strip()]
 
     def _make_unified_box(self, parent, title, value, color, row=0, col=0, copyable=False):
         outer = tk.Frame(parent, bg=BG)
@@ -1051,17 +1050,17 @@ class App:
         log_sep.pack(fill="x", padx=CARD_PAD_X, pady=(GAP, 0))
 
         # Log text
-        self.log_text = tk.Text(self._log_frame, font=("Consolas", 8), bg="#0c0c12", fg=TEXT_SEC,
+        self.log_text = tk.Text(self._log_frame, font=("Poppins", 8), bg="#0c0c12", fg=TEXT_SEC,
                                 relief="flat", wrap="word", insertbackground=ACCENT_LIGHT,
                                 state="disabled", padx=6, pady=6)
         self.log_text.pack(fill="both", expand=True, padx=4, pady=(GAP, 2))
 
         # Shared host for per-page floating actions inside log panel.
         self._log_action_host = tk.Frame(self._log_frame, bg=SURFACE)
-        self._log_action_host.pack(side="bottom", fill="x", padx=4, pady=(0, 2))
+        self._log_action_host.pack(side="bottom", fill="x", padx=4, pady=(0, 4))
 
         self._log_status_row = tk.Frame(self._log_action_host, bg=SURFACE)
-        self._log_status_row.pack(side="right", padx=(8, 2), pady=ACTION_ROW_PAD_Y)
+        self._log_status_row.pack(side="right", padx=(8, 4), pady=4)
 
         self._log_status_dot = tk.Frame(self._log_status_row, bg=TEXT_TER, width=7, height=7)
         self._log_status_dot.pack(side="left", padx=(0, 6), pady=1)
@@ -1110,7 +1109,7 @@ class App:
             "Schedule": BASE_DIR / "data" / "schedule.csv",
         }
 
-        for name, desc, prune, cookie, func, en, header_example, delimiter in [
+        for name, desc, prune, cookie, func, en, fields in [
             (
                 "Participants",
                 "Sync 3cket participants to Brella.",
@@ -1118,14 +1117,14 @@ class App:
                 True,
                 self._run_participants,
                 True,
-                (
-                    "3cket_id [required];name [full name];phone;email [required];"
-                    "gender;birth_date [YYYY-MM-DD];country;language;"
-                    "check_in [in/out];marketing_authorization [0/1];"
-                    "tickets [pipe-separated values];total_tickets [int];"
-                    "email_fallback;company;group;"
-                ),
-                ";",
+                [
+                    ("#", True), ("Name", True), ("Phone", False),
+                    ("Email", True), ("Gender", False), ("Birth date", False),
+                    ("Country", False), ("Language", False), ("Check in", False),
+                    ("Marketing authorization", False), ("Tickets", True),
+                    ("Total tickets", False), ("E-mail", True),
+                    ("Company // Empresa", True), ("Group", False),
+                ],
             ),
             (
                 "Speakers",
@@ -1134,12 +1133,17 @@ class App:
                 False,
                 self._run_speakers,
                 True,
-                (
-                    "first_name [required],last_name [required],company,job_title,bio,"
-                    "photo [URL],linkedin [URL],email [required],"
-                    "token [optional external_id],publish [Publish or Do not publish]"
-                ),
-                ",",
+                [
+                    ("First name", True), ("Last Name", True),
+                    ("Company", True), ("Job Title", True), ("Bio", True),
+                    ("Privacy Policy consent", False),
+                    ("Optional consents", False), ("Photo", True),
+                    ("Social media links", True), ("Email Contact", True),
+                    ("Speaker Email", True), ("Phone Contact", False),
+                    ("Pre-event communication interest", False),
+                    ("Media availability", False), ("Submitted At", False),
+                    ("Token", True), ("Publish", True),
+                ],
             ),
             (
                 "Sponsors",
@@ -1148,8 +1152,7 @@ class App:
                 False,
                 None,
                 False,
-                "",
-                ",",
+                [],
             ),
             (
                 "Schedule",
@@ -1158,19 +1161,17 @@ class App:
                 False,
                 self._run_schedule,
                 True,
-                (
-                    "date [YYYY-MM-DD], start_time [HH:MM:SS], duration [int min], "
-                    "title, content, track [predetermined tracks in ALL CAPS], "
-                    "location, speakers [full names separated by \" / \"]"
-                ),
-                ",",
+                [
+                    ("date", True), ("start_time", True), ("duration", True),
+                    ("title", True), ("content", False), ("track", True),
+                    ("location", False), ("speakers", False),
+                ],
             ),
         ]:
             self._add_nav(sidebar, name)
             tab = SyncTab(self.content, name, desc, has_prune=prune, has_cookie=cookie,
                           run_func=func, enabled=en, app=self,
-                          csv_header_example=header_example,
-                          csv_delimiter=delimiter)
+                          csv_header_fields=fields)
             tab._log_callback = self.log
             default_csv = _default_csvs.get(name)
             if default_csv and default_csv.exists():
@@ -1305,7 +1306,7 @@ class App:
 
         active_row = self._panel_action_rows.get(panel_name)
         if active_row is not None:
-            active_row.pack(side="left", padx=(2, 0), pady=ACTION_ROW_PAD_Y)
+            active_row.pack(side="left", padx=(4, 0), pady=4)
 
     def log(self, msg):
         ts = datetime.datetime.now().strftime("%H:%M:%S")
