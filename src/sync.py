@@ -5,7 +5,6 @@ Usage:
     python sync.py participants --csv data/participants.csv
     python sync.py participants --csv data/participants.csv --dry-run
     python sync.py speakers --csv data/speakers.csv
-    python sync.py sponsors --csv data/sponsors.csv
     python sync.py schedule --csv data/schedule.csv
 """
 
@@ -33,11 +32,6 @@ def cmd_speakers(args):
         dry_run=args.dry_run,
         prune_missing=getattr(args, "prune", False),
     )
-
-
-def cmd_sponsors(args):
-    print(f"[sponsors] CSV: {args.csv}")
-    print("[sponsors] Not implemented yet — coming soon.")
 
 
 def cmd_schedule(args):
@@ -71,12 +65,6 @@ def build_parser():
     p.add_argument("--csv", required=True, help="Path to speakers CSV")
     p.add_argument("--dry-run", action="store_true", help="Preview without changes")
     p.set_defaults(func=cmd_speakers)
-
-    # -- sponsors --
-    p = sub.add_parser("sponsors", help="Sync sponsors to Brella")
-    p.add_argument("--csv", required=True, help="Path to sponsors CSV")
-    p.add_argument("--dry-run", action="store_true", help="Preview without changes")
-    p.set_defaults(func=cmd_sponsors)
 
     # -- schedule --
     p = sub.add_parser("schedule", help="Sync schedule to Brella")

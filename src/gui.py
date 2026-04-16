@@ -8,7 +8,7 @@ import os
 import sys
 import threading
 import tkinter as tk
-from tkinter import filedialog
+from tkinter import filedialog, ttk
 from pathlib import Path
 
 # Import api early so it runs load_env_file (which handles exe path resolution),
@@ -28,28 +28,46 @@ ENV_PATH = BASE_DIR / ".env"
 BG = "#101016"
 SURFACE = "#19191f"
 SURFACE_RAISED = "#222229"
+SURFACE_HOVER = "#2a2a33"
+ROW_ALT = "#15151b"
 TEXT = "#f0f0f5"
 TEXT_SEC = "#8e8e9a"
 TEXT_TER = "#55555f"
 ACCENT = "#e6007e"
 ACCENT_LIGHT = "#ff3da5"
+ACCENT_DIM = "#4a1434"
 SUCCESS = "#2dd4a8"
 DANGER = "#f85149"
 WARN = "#f0a030"
+
+# --- Typography ---
+# Poppins regular everywhere. Hierarchy comes from size and color, not weight.
 FONT = ("Poppins", 10)
-FONT_BOLD = ("Poppins", 10, "bold")
-FONT_SMALL = ("Poppins", 9)
-FONT_MONO = ("Poppins", 9)
-FONT_TITLE = ("Poppins", 14, "bold")
-FONT_SECTION = ("Poppins", 9, "bold")
+FONT_BOLD = FONT              # legacy alias — no bold variants anywhere
+FONT_SMALL = FONT
+FONT_MONO = FONT
+FONT_SECTION = FONT
+FONT_TITLE = FONT               # section titles match sidebar labels
+FONT_DISPLAY = ("Poppins", 16)  # big stat numbers
 
-CARD_PAD_X = 8
-CARD_PAD_INNER = 8
-CARD_PAD_Y_TOP = 5
-CARD_PAD_Y_BOT = 5
+# --- Spacing scale ---
+SP_XS = 2
+SP_SM = 4
+SP_MD = 8
+SP_LG = 12
+SP_XL = 16
 
-SIDEBAR_W = 250
-SIDEBAR_WIDTH_RATIO = 0.35
+# Canonical input-bar height — Entry + Browse button always render at exactly this.
+BAR_H = 34
+
+CARD_PAD_X = SP_MD
+CARD_PAD_INNER = SP_MD
+CARD_PAD_Y_TOP = SP_SM
+CARD_PAD_Y_BOT = SP_SM
+
+SIDEBAR_W = 280            # minimum sidebar width
+SIDEBAR_MAX_W = 800        # cap only to prevent runaway growth on ultrawide
+SIDEBAR_WIDTH_RATIO = 0.38
 
 APP_VERSION = "v1.0"
 
@@ -62,11 +80,11 @@ PULSE_STEPS = 30
 LOG_FADE_STEPS = 8
 LOG_FADE_INTERVAL = 30
 INDICATOR_ANIM_STEPS = 8
-GAP = 6
-ACTION_ROW_PAD_Y = 2
-ACTION_BTN_PADX = 12
-ACTION_BTN_PADY = 2
-ACTION_BTN_GAP = 5
+GAP = SP_MD
+ACTION_ROW_PAD_Y = SP_XS
+ACTION_BTN_PADX = SP_LG
+ACTION_BTN_PADY = SP_SM
+ACTION_BTN_GAP = SP_MD
 
 
 # --- Color interpolation helpers ---
@@ -139,27 +157,94 @@ def _make_scroll_list(parent, bg=None):
 
 # --- Card helpers ---
 
-def make_card(parent):
-    card = tk.Frame(parent, bg=SURFACE, highlightbackground=SURFACE_RAISED, highlightthickness=1)
-    card.pack(fill="x", padx=CARD_PAD_X, pady=(0, GAP))
-    return card
-
-def card_title(card, text):
-    tk.Label(card, text=text, font=FONT_SECTION, fg=ACCENT, bg=SURFACE,
-             anchor="w").pack(fill="x", padx=CARD_PAD_INNER, pady=(CARD_PAD_Y_TOP, 4))
-
 def make_field(parent, label, var, show=None, placeholder=""):
     parent_bg = parent.cget("bg") if hasattr(parent, "cget") else SURFACE
-    tk.Label(parent, text=label, font=FONT_SMALL, fg=TEXT_SEC, bg=parent_bg,
-             anchor="w").pack(fill="x")
-    kw = dict(textvariable=var, font=FONT_MONO, bg=BG, fg=TEXT, insertbackground=TEXT,
-              relief="flat", highlightthickness=1, highlightbackground=SURFACE_RAISED,
+    tk.Label(parent, text=label, font=FONT, fg=TEXT_SEC, bg=parent_bg,
+             anchor="w").pack(fill="x", pady=(0, SP_XS))
+    kw = dict(textvariable=var, font=FONT, bg=BG, fg=TEXT, insertbackground=TEXT,
+              relief="flat", bd=SP_MD,  # internal horizontal padding
+              highlightthickness=1, highlightbackground=SURFACE_RAISED,
               highlightcolor=ACCENT)
     if show:
         kw["show"] = show
     entry = tk.Entry(parent, **kw)
-    entry.pack(fill="x", ipady=4, pady=(1, 5))
+    entry.pack(fill="x", ipady=SP_SM, pady=(0, SP_MD))
     return entry
+
+
+def make_section(parent, title, subtitle=None, pady=(0, SP_LG)):
+    """Consistent section: title (accent) + subtitle (muted) + body. A thin
+    divider is drawn on TOP of the section (skipped for the first section
+    in its parent), so dividers separate consecutive sections rather than
+    splitting a section's title from its body."""
+    is_first = len(parent.winfo_children()) == 0
+
+    section = tk.Frame(parent, bg=BG)
+    section.pack(fill="x", pady=pady)
+
+    if not is_first:
+        tk.Frame(section, bg=SURFACE_RAISED, height=1).pack(
+            fill="x", pady=(0, SP_MD))
+
+    tk.Label(section, text=title, font=FONT_TITLE, fg=ACCENT,
+             bg=BG, anchor="w").pack(fill="x", pady=(0, SP_SM))
+    if subtitle:
+        tk.Label(section, text=subtitle, font=FONT, fg=TEXT_TER,
+                 bg=BG, anchor="w").pack(fill="x", pady=(0, SP_SM))
+    body = tk.Frame(section, bg=BG)
+    body.pack(fill="both", expand=True)
+    return body
+
+
+def make_page(parent):
+    """Consistent outer page padding; returns inner frame to populate."""
+    outer = tk.Frame(parent, bg=BG)
+    outer.pack(fill="both", expand=True, padx=SP_LG, pady=SP_LG)
+    return outer
+
+
+def make_checkbox(parent, text, variable, command=None):
+    return tk.Checkbutton(
+        parent, text=text, variable=variable, font=FONT,
+        fg=TEXT_SEC, bg=BG, selectcolor=BG,
+        activebackground=BG, activeforeground=TEXT,
+        anchor="w", bd=0, highlightthickness=0,
+        command=command, cursor="hand2",
+    )
+
+
+def make_toggle(parent, text, variable, command=None):
+    """Button-styled boolean toggle bound to a tk.BooleanVar.
+    Active = accent pink text (same as other buttons).
+    Inactive = muted text on the same raised surface."""
+    btn = tk.Button(
+        parent, text=text, font=FONT,
+        bg=SURFACE_RAISED,
+        activebackground=SURFACE_HOVER,
+        relief="flat", cursor="hand2", borderwidth=0,
+        padx=ACTION_BTN_PADX, pady=ACTION_BTN_PADY,
+    )
+
+    def _apply():
+        on = bool(variable.get())
+        btn.config(
+            fg=ACCENT_LIGHT if on else TEXT_SEC,
+            activeforeground="#ffffff" if on else TEXT,
+        )
+
+    def _toggle():
+        variable.set(not variable.get())
+        if command:
+            command()
+
+    btn.config(command=_toggle)
+    variable.trace_add("write", lambda *_: _apply())
+    _apply()
+
+    btn.bind("<Enter>", lambda _e: btn.config(bg=SURFACE_HOVER), add="+")
+    btn.bind("<Leave>", lambda _e: btn.config(bg=SURFACE_RAISED), add="+")
+    _bind_button_flash(btn, SURFACE_RAISED, ACCENT_DIM)
+    return btn
 
 
 # --- Scrollable frame wrapper ---
@@ -194,6 +279,104 @@ def _bind_button_flash(btn, rest_color, flash_color):
         btn.config(bg=flash_color)
         btn.after(BUTTON_FLASH_MS, lambda: btn.config(bg=rest_color))
     btn.bind("<ButtonPress-1>", on_press, add="+")
+
+
+# --- Button factory (consistent styling) ---
+
+def make_button(parent, text, command, primary=False, danger=False):
+    """Unified button style.
+    - primary: pink background, white text — for important actions (Sync, Save).
+    - danger:  dark background with danger-colored text.
+    - default: dark raised surface with accent pink text.
+    """
+    if primary:
+        bg = ACCENT
+        fg = "#ffffff"
+        hover_bg = ACCENT_LIGHT
+        hover_fg = "#ffffff"
+        press_bg = "#c8006d"
+    elif danger:
+        bg = SURFACE_RAISED
+        fg = DANGER
+        hover_bg = SURFACE_HOVER
+        hover_fg = "#ffffff"
+        press_bg = SURFACE_HOVER
+    else:
+        bg = SURFACE_RAISED
+        fg = ACCENT_LIGHT
+        hover_bg = SURFACE_HOVER
+        hover_fg = "#ffffff"
+        press_bg = ACCENT_DIM
+
+    btn = tk.Button(
+        parent, text=text, font=FONT,
+        bg=bg, fg=fg,
+        activebackground=hover_bg, activeforeground=hover_fg,
+        relief="flat", cursor="hand2", borderwidth=0,
+        padx=ACTION_BTN_PADX, pady=ACTION_BTN_PADY, command=command,
+    )
+
+    def on_enter(_e):
+        btn.config(bg=hover_bg, fg=hover_fg)
+
+    def on_leave(_e):
+        btn.config(bg=bg, fg=fg)
+
+    btn.bind("<Enter>", on_enter, add="+")
+    btn.bind("<Leave>", on_leave, add="+")
+    _bind_button_flash(btn, bg, press_bg)
+    return btn
+
+
+def make_card(parent, accent_color=None, pady=(0, SP_MD), padx=0):
+    """Card-like container: thin accent top line + 1px border + padded body.
+    Returns the inner content frame (BG background) to populate with widgets."""
+    outer = tk.Frame(parent, bg=SURFACE_RAISED)
+    outer.pack(fill="x", pady=pady, padx=padx)
+
+    if accent_color:
+        tk.Frame(outer, bg=accent_color, height=2).pack(fill="x")
+
+    inner = tk.Frame(outer, bg=BG)
+    inner.pack(fill="both", expand=True, padx=1, pady=(0 if accent_color else 1, 1))
+
+    content = tk.Frame(inner, bg=BG)
+    content.pack(fill="both", expand=True, padx=SP_MD, pady=SP_MD)
+    return content
+
+
+# --- ttk styling (scrollbars, treeview) ---
+
+def _configure_ttk_styles():
+    style = ttk.Style()
+    try:
+        style.theme_use("default")
+    except Exception:
+        pass
+
+    # Vertical + horizontal scrollbar — dark, slim, no arrows.
+    style.configure(
+        "Dark.Vertical.TScrollbar",
+        background=SURFACE_RAISED, troughcolor=SURFACE,
+        bordercolor=SURFACE, arrowcolor=TEXT_TER,
+        lightcolor=SURFACE_RAISED, darkcolor=SURFACE_RAISED,
+        relief="flat", borderwidth=0, arrowsize=0, gripcount=0,
+    )
+    style.map(
+        "Dark.Vertical.TScrollbar",
+        background=[("active", SURFACE_HOVER), ("pressed", ACCENT_DIM)],
+        troughcolor=[("!disabled", SURFACE)],
+    )
+    style.configure(
+        "Dark.Horizontal.TScrollbar",
+        background=SURFACE_RAISED, troughcolor=SURFACE,
+        bordercolor=SURFACE, arrowcolor=TEXT_TER,
+        relief="flat", borderwidth=0, arrowsize=0,
+    )
+    style.map(
+        "Dark.Horizontal.TScrollbar",
+        background=[("active", SURFACE_HOVER), ("pressed", ACCENT_DIM)],
+    )
 
 
 # --- Status dot pulse animation ---
@@ -262,14 +445,6 @@ class SetupTab:
         self.action_row = None
         self.frame = tk.Frame(parent, bg=BG)
 
-        P = 4  # grid gap
-
-        # Single-column flat layout: Connection (top) -> Groups & Tickets (bottom)
-        self.frame.columnconfigure(0, weight=1)
-        self.frame.rowconfigure(0, weight=0)
-        self.frame.rowconfigure(1, weight=0)
-        self.frame.rowconfigure(2, weight=1)
-
         self.api_key = tk.StringVar(value=load_env_value("BRELLA_API_KEY"))
         self.org_id = tk.StringVar(value=load_env_value("BRELLA_ORG_ID"))
         self.event_id = tk.StringVar(value=load_env_value("BRELLA_EVENT_ID"))
@@ -277,156 +452,139 @@ class SetupTab:
         self.admin_client = tk.StringVar(value=load_env_value("BRELLA_ADMIN_CLIENT"))
         self.admin_uid = tk.StringVar(value=load_env_value("BRELLA_ADMIN_UID"))
 
-        # === Top block: API / Admin connection ===
-        conn_block = tk.Frame(self.frame, bg=BG)
-        conn_block.grid(row=0, column=0, sticky="nsew", padx=P, pady=(P, P // 2))
-        tk.Label(conn_block, text="CONNECTION", font=FONT_SECTION, fg=ACCENT,
-             bg=BG, anchor="w").pack(fill="x", padx=2, pady=(0, 4))
-        tk.Frame(conn_block, bg=SURFACE_RAISED, height=1).pack(fill="x", pady=(0, 6))
+        page = make_page(self.frame)
 
-        conn_inner = tk.Frame(conn_block, bg=BG)
-        conn_inner.pack(fill="x")
+        # ===== CONNECTION — custom header with status pill on the right =====
+        conn_section = tk.Frame(page, bg=BG)
+        conn_section.pack(fill="x", pady=(0, SP_LG))
 
-        # Status pill
-        api_status_row = tk.Frame(conn_inner, bg=BG)
-        api_status_row.pack(fill="x", pady=(0, 2))
+        hdr_row = tk.Frame(conn_section, bg=BG)
+        hdr_row.pack(fill="x")
+
+        hdr_left = tk.Frame(hdr_row, bg=BG)
+        hdr_left.pack(side="left", fill="x", expand=True)
+        tk.Label(hdr_left, text="Connection", font=FONT_TITLE, fg=ACCENT,
+                 bg=BG, anchor="w").pack(fill="x", pady=(0, SP_SM))
+        tk.Label(
+            hdr_left,
+            text="Brella API credentials. The API key is required for syncing.",
+            font=FONT, fg=TEXT_TER, bg=BG, anchor="w",
+        ).pack(fill="x", pady=(0, SP_SM))
+
+        # Status pill anchored top-right
         api_loaded = bool(self.api_key.get())
-        self._api_status_dot = tk.Frame(api_status_row,
-                                        bg=SUCCESS if api_loaded else DANGER, width=7, height=7)
-        self._api_status_dot.pack(side="left", padx=(0, 6), pady=3)
+        status_col = tk.Frame(hdr_row, bg=BG)
+        status_col.pack(side="right", padx=(SP_LG, 0), pady=(SP_XS, 0))
+        self._api_status_dot = tk.Frame(status_col,
+                                        bg=SUCCESS if api_loaded else DANGER,
+                                        width=8, height=8)
+        self._api_status_dot.pack(side="left", padx=(0, SP_SM))
         self._api_status_dot.pack_propagate(False)
-        self._api_status_lbl = tk.Label(api_status_row,
-                                        text="API key loaded" if api_loaded else "API key not set",
-                                        font=FONT_SMALL,
-                                        fg=SUCCESS if api_loaded else DANGER, bg=BG)
+        self._api_status_lbl = tk.Label(
+            status_col,
+            text="API key loaded" if api_loaded else "API key not set",
+            font=FONT,
+            fg=SUCCESS if api_loaded else DANGER, bg=BG,
+        )
         self._api_status_lbl.pack(side="left")
 
-        creds_grid = tk.Frame(conn_inner, bg=BG)
-        creds_grid.pack(fill="x")
-        creds_grid.columnconfigure(0, weight=1)
-        creds_grid.columnconfigure(1, weight=1)
+        # Two credential cards: Integration API | Admin Panel
+        creds_grid = tk.Frame(conn_section, bg=BG)
+        creds_grid.pack(fill="x", pady=(SP_SM, 0))
+        creds_grid.columnconfigure(0, weight=1, uniform="creds")
+        creds_grid.columnconfigure(1, weight=1, uniform="creds")
 
-        api_col = tk.Frame(creds_grid, bg=BG)
-        api_col.grid(row=0, column=0, sticky="nsew", padx=(0, 4))
-        tk.Label(
-            api_col,
-            text="INTEGRATION API",
-            font=FONT_SECTION,
-            fg=ACCENT,
-            bg=BG,
-            anchor="w",
-        ).pack(fill="x")
+        # --- Integration API card ---
+        api_wrap = tk.Frame(creds_grid, bg=BG)
+        api_wrap.grid(row=0, column=0, sticky="nsew", padx=(0, SP_MD))
+        api_col = make_card(api_wrap, accent_color=ACCENT, pady=(0, 0))
+        tk.Label(api_col, text="Integration API", font=FONT,
+                 fg=TEXT_SEC, bg=BG, anchor="w").pack(fill="x", pady=(0, SP_SM))
         make_field(api_col, "API Key", self.api_key, show="*")
 
         ids_row = tk.Frame(api_col, bg=BG)
         ids_row.pack(fill="x")
+        ids_row.columnconfigure(0, weight=1, uniform="ids")
+        ids_row.columnconfigure(1, weight=1, uniform="ids")
         ids_left = tk.Frame(ids_row, bg=BG)
-        ids_left.pack(side="left", fill="x", expand=True, padx=(0, 4))
+        ids_left.grid(row=0, column=0, sticky="nsew", padx=(0, SP_SM))
         ids_right = tk.Frame(ids_row, bg=BG)
-        ids_right.pack(side="right", fill="x", expand=True, padx=(4, 0))
+        ids_right.grid(row=0, column=1, sticky="nsew", padx=(SP_SM, 0))
         make_field(ids_left, "Org ID", self.org_id)
         make_field(ids_right, "Event ID", self.event_id)
 
-        admin_col = tk.Frame(creds_grid, bg=BG)
-        admin_col.grid(row=0, column=1, sticky="nsew", padx=(4, 0))
-        tk.Label(
-            admin_col,
-            text="ADMIN PANEL",
-            font=FONT_SECTION,
-            fg=ACCENT,
-            bg=BG,
-            anchor="w",
-        ).pack(fill="x")
+        # --- Admin Panel card ---
+        admin_wrap = tk.Frame(creds_grid, bg=BG)
+        admin_wrap.grid(row=0, column=1, sticky="nsew", padx=(SP_MD, 0))
+        admin_col = make_card(admin_wrap, accent_color=ACCENT, pady=(0, 0))
+        tk.Label(admin_col, text="Admin Panel", font=FONT,
+                 fg=TEXT_SEC, bg=BG, anchor="w").pack(fill="x", pady=(0, SP_SM))
         make_field(admin_col, "Access Token", self.admin_token, show="*")
 
         admin_row = tk.Frame(admin_col, bg=BG)
         admin_row.pack(fill="x")
+        admin_row.columnconfigure(0, weight=1, uniform="adm")
+        admin_row.columnconfigure(1, weight=1, uniform="adm")
         al = tk.Frame(admin_row, bg=BG)
-        al.pack(side="left", fill="x", expand=True, padx=(0, 4))
+        al.grid(row=0, column=0, sticky="nsew", padx=(0, SP_SM))
         ar = tk.Frame(admin_row, bg=BG)
-        ar.pack(side="right", fill="x", expand=True, padx=(4, 0))
+        ar.grid(row=0, column=1, sticky="nsew", padx=(SP_SM, 0))
         make_field(al, "Client", self.admin_client)
         make_field(ar, "UID", self.admin_uid)
 
-        # API status row (action buttons are in bottom action bar)
+        # Connection test result (below the cards)
         self._api_status_var = tk.StringVar(value="")
-        self._api_status_result = tk.Label(conn_inner, textvariable=self._api_status_var,
-                                            font=FONT_SMALL, fg=TEXT_SEC, bg=BG,
-                                            anchor="w")
-        self._api_status_result.pack(fill="x", pady=(4, 0))
-
-        # Divider between major Setup blocks
-        tk.Frame(self.frame, bg=SURFACE_RAISED, height=1).grid(
-            row=1, column=0, sticky="ew", padx=P, pady=(0, P // 2)
+        self._api_status_result = tk.Label(
+            conn_section, textvariable=self._api_status_var,
+            font=FONT, fg=TEXT_SEC, bg=BG, anchor="w",
         )
+        self._api_status_result.pack(fill="x", pady=(SP_MD, 0))
 
-        # === Bottom block: compact mappings ===
+        # ===== MAPPINGS =====
         import api
 
-        values_block = tk.Frame(self.frame, bg=BG)
-        values_block.grid(row=2, column=0, sticky="nsew", padx=P, pady=(P // 2, P))
-        tk.Label(values_block, text="GROUPS & TICKETS", font=FONT_SECTION, fg=ACCENT,
-             bg=BG, anchor="w").pack(fill="x", padx=2, pady=(0, 4))
-        tk.Frame(values_block, bg=SURFACE_RAISED, height=1).pack(fill="x", pady=(0, 6))
-
-        values_inner = tk.Frame(values_block, bg=BG)
-        values_inner.pack(fill="both", expand=True)
+        maps_body = make_section(
+            page, "Groups & Tickets",
+            subtitle="How 3cket ticket types map to Brella attendee groups.",
+        )
 
         self.groups_inline_var = tk.StringVar(
             value=self._format_mapping_inline(api.BRELLA_ATTENDEE_GROUP_IDS)
         )
         self.priority_inline_var = tk.StringVar(value="; ".join(api.GROUP_PRIORITY))
 
-        tk.Label(values_inner, text="Group numbers",
-                 font=FONT_SMALL, fg=TEXT_SEC, bg=BG, anchor="w").pack(fill="x")
+        tk.Label(maps_body, text="Group numbers", font=FONT, fg=TEXT_SEC,
+                 bg=BG, anchor="w").pack(fill="x", pady=(0, SP_XS))
         self.groups_inline_entry = tk.Entry(
-            values_inner,
-            textvariable=self.groups_inline_var,
-            font=FONT_MONO,
-            bg=BG,
-            fg=TEXT,
-            insertbackground=TEXT,
-            relief="flat",
-            highlightthickness=1,
-            highlightbackground=SURFACE_RAISED,
+            maps_body, textvariable=self.groups_inline_var,
+            font=FONT, bg=BG, fg=TEXT, insertbackground=TEXT,
+            relief="flat", bd=SP_MD,
+            highlightthickness=1, highlightbackground=SURFACE_RAISED,
             highlightcolor=ACCENT,
         )
-        self.groups_inline_entry.pack(fill="x", ipady=4, pady=(1, 4))
+        self.groups_inline_entry.pack(fill="x", ipady=SP_MD, pady=(0, SP_MD))
 
-        tk.Label(values_inner, text="Priority group IDs",
-                 font=FONT_SMALL, fg=TEXT_SEC, bg=BG, anchor="w").pack(fill="x")
+        tk.Label(maps_body, text="Priority group IDs", font=FONT, fg=TEXT_SEC,
+                 bg=BG, anchor="w").pack(fill="x", pady=(0, SP_XS))
         self.priority_inline_entry = tk.Entry(
-            values_inner,
-            textvariable=self.priority_inline_var,
-            font=FONT_MONO,
-            bg=BG,
-            fg=TEXT,
-            insertbackground=TEXT,
-            relief="flat",
-            highlightthickness=1,
-            highlightbackground=SURFACE_RAISED,
+            maps_body, textvariable=self.priority_inline_var,
+            font=FONT, bg=BG, fg=TEXT, insertbackground=TEXT,
+            relief="flat", bd=SP_MD,
+            highlightthickness=1, highlightbackground=SURFACE_RAISED,
             highlightcolor=ACCENT,
         )
-        self.priority_inline_entry.pack(fill="x", ipady=4, pady=(1, 4))
+        self.priority_inline_entry.pack(fill="x", ipady=SP_MD, pady=(0, SP_MD))
 
-        tk.Label(values_inner, text="Ticket types",
-                 font=FONT_SMALL, fg=TEXT_SEC, bg=BG, anchor="w").pack(fill="x")
+        tk.Label(maps_body, text="Ticket types (key=value, separated by ';')",
+                 font=FONT, fg=TEXT_SEC, bg=BG, anchor="w").pack(
+            fill="x", pady=(0, SP_XS))
         self.tickets_inline_text = tk.Text(
-            values_inner,
-            font=FONT_MONO,
-            bg=BG,
-            fg=TEXT,
-            insertbackground=TEXT,
-            relief="flat",
-            highlightthickness=1,
-            highlightbackground=SURFACE_RAISED,
-            highlightcolor=ACCENT,
-            wrap="word",
-            height=12,
-            padx=6,
-            pady=6,
+            maps_body, font=FONT, bg=BG, fg=TEXT, insertbackground=TEXT,
+            relief="flat", highlightthickness=1,
+            highlightbackground=SURFACE_RAISED, highlightcolor=ACCENT,
+            wrap="word", height=10, padx=SP_MD, pady=SP_MD,
         )
-        self.tickets_inline_text.pack(fill="both", expand=True, pady=(1, 6))
+        self.tickets_inline_text.pack(fill="both", expand=True, pady=(0, 0))
         self.tickets_inline_text.insert(
             "1.0", self._format_mapping_inline(api.TICKET_TYPE_TO_GROUP_ID)
         )
@@ -438,58 +596,13 @@ class SetupTab:
         else:
             action_parent = self.frame
 
-        self.test_btn = tk.Button(
-            action_parent,
-            text="Test Connection",
-            font=FONT_SMALL,
-            bg=SURFACE_RAISED,
-            fg=TEXT_SEC,
-            activebackground="#2e2e38",
-            activeforeground=TEXT,
-            relief="flat",
-            cursor="hand2",
-            padx=ACTION_BTN_PADX,
-            pady=ACTION_BTN_PADY,
-            command=self._test_connection,
-        )
+        self.save_btn = make_button(action_parent, "Save",
+                                    command=self._save_all, primary=True)
+        self.test_btn = make_button(action_parent, "Test",
+                                    command=self._test_connection)
 
-        self.save_api_btn = tk.Button(
-            action_parent,
-            text="Save",
-            font=FONT_SMALL,
-            bg=ACCENT,
-            fg="white",
-            activebackground=ACCENT_LIGHT,
-            activeforeground="white",
-            relief="flat",
-            cursor="hand2",
-            padx=ACTION_BTN_PADX,
-            pady=ACTION_BTN_PADY,
-            command=self._save_api,
-        )
-
-        self.save_vals_btn = tk.Button(
-            action_parent,
-            text="Save Values",
-            font=FONT_SMALL,
-            bg=ACCENT,
-            fg="white",
-            activebackground=ACCENT_LIGHT,
-            activeforeground="white",
-            relief="flat",
-            cursor="hand2",
-            padx=ACTION_BTN_PADX,
-            pady=ACTION_BTN_PADY,
-            command=self._save_values,
-        )
-
-        self.test_btn.pack(side="left", padx=(0, ACTION_BTN_GAP))
-        self.save_api_btn.pack(side="left", padx=(0, ACTION_BTN_GAP))
-        self.save_vals_btn.pack(side="left")
-
-        _bind_button_flash(self.test_btn, SURFACE_RAISED, "#2e2e38")
-        _bind_button_flash(self.save_api_btn, ACCENT, ACCENT_LIGHT)
-        _bind_button_flash(self.save_vals_btn, ACCENT, ACCENT_LIGHT)
+        self.save_btn.pack(side="left", padx=(0, ACTION_BTN_GAP))
+        self.test_btn.pack(side="left")
 
     # --- Inline value helpers ---
 
@@ -528,6 +641,11 @@ class SetupTab:
         return [item.strip() for item in raw_text.split(";") if item.strip()]
 
     # --- Save / Test ---
+
+    def _save_all(self):
+        """Save credentials + groups/tickets mappings in one click."""
+        self._save_api()
+        self._save_values()
 
     def _save_api(self):
         save_env_values({
@@ -620,7 +738,8 @@ class SetupTab:
 # --- Sync Tab ---
 
 class SyncTab:
-    def __init__(self, parent, name, description, has_prune=False, has_cookie=False,
+    def __init__(self, parent, name, description, has_prune=False,
+                 has_staff_only=False,
                  run_func=None, enabled=True, app=None,
                  csv_header_fields=None):
         self.name = name
@@ -630,116 +749,157 @@ class SyncTab:
         self.csv_path = tk.StringVar()
         self.dry_run = tk.BooleanVar(value=False)
         self.prune = tk.BooleanVar(value=False)
+        self.update_existing = tk.BooleanVar(value=False)
+        self.staff_only = tk.BooleanVar(value=False)
         self.has_prune = has_prune
-        self.has_cookie = has_cookie
-        self.download_from_3cket = tk.BooleanVar(value=False)
-        self.cookie = tk.StringVar(value=load_env_value("THREECKET_COOKIE"))
+        self.has_staff_only = has_staff_only
         self.running = False
         self.action_row = None
 
         self.frame = tk.Frame(parent, bg=BG)
 
-        inner_frame = tk.Frame(self.frame, bg=BG)
-        inner_frame.pack(fill="x", side="top")
+        page = make_page(self.frame)
 
-        # CSV header section — inline, required fields only, copyable
+        # ===== CSV header preview (inline: prefix + values + hint) =====
         req_fields = [f for f, req in (csv_header_fields or []) if req]
         if req_fields:
-            fmt_inner = self._make_section(inner_frame, "CSV HEADER", compact=True)
+            hdr_body = make_section(page, "CSV Header")
             txt = tk.Text(
-                fmt_inner, font=("Poppins", 8), bg=BG, fg=ACCENT_LIGHT,
+                hdr_body, font=FONT, bg=BG, fg=TEXT_SEC,
                 relief="flat", borderwidth=0, highlightthickness=0,
                 wrap="word", cursor="hand2", height=1,
             )
-            txt.insert("end", ", ".join(req_fields))
+            txt.tag_configure("prefix", foreground=TEXT_SEC)
+            txt.tag_configure("values", foreground=ACCENT_LIGHT)
+            txt.tag_configure("hint", foreground=TEXT_TER)
+
+            values_str = ", ".join(req_fields)
+            txt.insert("end", "Required columns: ", "prefix")
+            txt.insert("end", values_str, "values")
+            txt.insert("end", "   click to copy", "hint")
             txt.config(state="disabled")
-            txt.pack(fill="x", pady=0)
+            txt.pack(fill="x")
+
             def _fit_height(tw=txt):
                 tw.update_idletasks()
                 lines = int(tw.index("end-1c").split(".")[0])
                 tw.config(height=max(lines, 1))
             txt.after_idle(_fit_height)
-            # Click to copy
+            txt.bind("<Configure>", lambda _e, tw=txt: _fit_height(tw))
+
             def _copy_header(event=None, names=req_fields, widget=txt):
                 widget.clipboard_clear()
                 widget.clipboard_append(",".join(names))
                 widget.config(state="normal")
-                widget.tag_configure("flash", foreground=SUCCESS)
-                widget.tag_add("flash", "1.0", "end")
-                def _unflash():
-                    widget.tag_delete("flash")
-                    widget.config(state="disabled")
+                widget.tag_configure("values", foreground=SUCCESS)
+
+                def _unflash(tw=widget):
+                    tw.tag_configure("values", foreground=ACCENT_LIGHT)
+                    tw.config(state="disabled")
+
                 widget.after(350, _unflash)
                 widget.config(state="disabled")
             txt.bind("<Button-1>", _copy_header)
 
-        # CSV picker section
-        csv_inner = self._make_section(inner_frame, "CSV FILE")
-        csv_row = tk.Frame(csv_inner, bg=BG)
+        # ===== CSV file picker (path + optional prune toggle + browse) =====
+        csv_body = make_section(page, "CSV File")
+        csv_row = tk.Frame(csv_body, bg=BG)
         csv_row.pack(fill="x")
-        csv_row.columnconfigure(0, weight=1)
 
-        self.path_entry = tk.Entry(csv_row, textvariable=self.csv_path, font=FONT_MONO,
-                                   bg=BG, fg=TEXT, insertbackground=TEXT,
-                                   relief="flat", highlightthickness=1,
-                                   highlightbackground=SURFACE_RAISED, highlightcolor=ACCENT)
-        self.path_entry.grid(row=0, column=0, sticky="ew", ipady=5)
+        self.browse_btn = make_button(csv_row, "Browse", command=self._browse)
+        self.browse_btn.config(pady=SP_MD, highlightthickness=1,
+                               highlightbackground=SURFACE_RAISED)
+        # side=right first so it sits flush to the right after the entry expands.
+        self.browse_btn.pack(side="right", padx=(SP_MD, 0), fill="y")
 
-        self.browse_btn = tk.Button(
-            csv_row,
-            text="Browse",
-            font=FONT_SMALL,
-            bg=SURFACE_RAISED,
-            fg=TEXT,
-            activebackground=ACCENT,
-            activeforeground="white",
-            relief="flat",
-            cursor="hand2",
-            padx=14,
-            pady=2,
-            height=1,
-            command=self._browse,
+        # Right-to-left packing: last packed sits furthest left in the row.
+        # Visual order (left to right): [Staff] [Update] [Remove] [Browse]
+        if has_prune:
+            self.prune_cb = make_toggle(csv_row, "Remove", self.prune)
+            self.prune_cb.config(pady=SP_MD, highlightthickness=1,
+                                 highlightbackground=SURFACE_RAISED)
+            self.prune_cb.pack(side="right", padx=(SP_MD, 0), fill="y")
+
+            self.update_cb = make_toggle(csv_row, "Update existing",
+                                         self.update_existing)
+            self.update_cb.config(pady=SP_MD, highlightthickness=1,
+                                  highlightbackground=SURFACE_RAISED)
+            self.update_cb.pack(side="right", padx=(SP_MD, 0), fill="y")
+
+            if has_staff_only:
+                self.staff_cb = make_toggle(csv_row, "Staff only",
+                                            self.staff_only)
+                self.staff_cb.config(pady=SP_MD, highlightthickness=1,
+                                     highlightbackground=SURFACE_RAISED)
+                self.staff_cb.pack(side="right", padx=(SP_MD, 0), fill="y")
+
+        # Notices area: surfaces active-mode system messages between the
+        # CSV bar and the result containers.
+        self._notices = tk.Frame(csv_body, bg=BG)
+        self._notices.pack(fill="x", pady=(SP_MD, 0))
+        self._notice_labels = {}
+        if has_prune:
+            self._install_notice(
+                "prune", self.prune,
+                "Removing from Brella if not in CSV", WARN,
+            )
+            self._install_notice(
+                "update", self.update_existing,
+                "Updating existing rows in Brella (will overwrite manual edits)",
+                ACCENT_LIGHT,
+            )
+            if has_staff_only:
+                self._install_notice(
+                    "staff", self.staff_only,
+                    "Syncing only Staff ticket types", SUCCESS,
+                )
+
+        self.path_entry = tk.Entry(
+            csv_row, textvariable=self.csv_path, font=FONT,
+            bg=BG, fg=TEXT, insertbackground=TEXT,
+            relief="flat", bd=SP_MD,
+            highlightthickness=1, highlightbackground=SURFACE_RAISED,
+            highlightcolor=ACCENT,
         )
-        self.browse_btn.grid(row=0, column=1, padx=(8, 0), sticky="ns")
+        self.path_entry.pack(side="left", fill="x", expand=True, ipady=SP_SM)
 
-        # Options section
-        if has_prune or has_cookie:
-            opts_inner = self._make_section(inner_frame, "OPTIONS")
-            if has_prune:
-                self.prune_cb = tk.Checkbutton(opts_inner,
-                                               text="Prune missing (remove from Brella if not in CSV)",
-                                               variable=self.prune, font=FONT_SMALL,
-                                               fg=TEXT_SEC, bg=BG, selectcolor=BG,
-                                               activebackground=BG, activeforeground=TEXT,
-                                               anchor="w")
-                self.prune_cb.pack(fill="x")
-            if has_cookie:
-                self.dl_cb = tk.Checkbutton(opts_inner,
-                                            text="Download CSV from 3cket instead of local file",
-                                            variable=self.download_from_3cket, font=FONT_SMALL,
-                                            fg=TEXT_SEC, bg=BG, selectcolor=BG,
-                                            activebackground=BG, activeforeground=TEXT,
-                                            anchor="w", command=self._toggle_source)
-                self.dl_cb.pack(fill="x", pady=(4, 0))
-                self.cookie_entry = make_field(opts_inner, "Session Cookie", self.cookie, show="*")
+        # Detail boxes: 2x2 grid. The wrapper's height is synced to the
+        # sidebar log panel's height, so its top edge lines up with where
+        # the log starts. Wrapper is pinned to the bottom of the tab.
+        self._stat_wrap = tk.Frame(self.frame, bg=SURFACE_RAISED)
+        self._stat_wrap.pack(side="bottom", fill="x")
+        self._stat_wrap.pack_propagate(False)
 
-        # Detail boxes: 2x2 grid with line dividers and no card spacing
-        tk.Frame(self.frame, bg=SURFACE_RAISED, height=1).pack(fill="x")
-        detail_container = tk.Frame(self.frame, bg=SURFACE_RAISED)
+        tk.Frame(self._stat_wrap, bg=SURFACE_RAISED, height=1).pack(fill="x")
+        detail_container = tk.Frame(self._stat_wrap, bg=SURFACE_RAISED)
         detail_container.pack(fill="both", expand=True, padx=0, pady=0)
-        detail_container.columnconfigure(0, weight=1)
-        detail_container.columnconfigure(1, weight=1)
+        detail_container.columnconfigure(0, weight=1, uniform="stats")
+        detail_container.columnconfigure(1, weight=1, uniform="stats")
         detail_container.rowconfigure(0, weight=1)
         detail_container.rowconfigure(1, weight=1)
 
         self.card_added, self.card_added_title, self.list_added = self._make_unified_box(
-            detail_container, "ADDED", "0", SUCCESS, row=0, col=0)
+            detail_container, "Added", "0", SUCCESS, row=0, col=0)
         self.card_updated, _, self.list_updated = self._make_unified_box(
-            detail_container, "UPDATED", "0", ACCENT, row=0, col=1)
+            detail_container, "Updated", "0", ACCENT, row=0, col=1)
         self.card_removed, _, self.list_removed = self._make_unified_box(
-            detail_container, "REMOVED", "0", DANGER, row=1, col=0)
+            detail_container, "Removed", "0", DANGER, row=1, col=0)
         self.card_missing, _, self.list_missing = self._make_unified_box(
-            detail_container, "MISSING INFO", "0", WARN, row=1, col=1, copyable=True)
+            detail_container, "Missing info", "0", WARN, row=1, col=1, copyable=True)
+
+        # Sync the wrapper's height to match the log panel's height so its
+        # top edge aligns with where the log starts.
+        if self._app and hasattr(self._app, "_log_frame"):
+            self._app._log_frame.bind(
+                "<Configure>",
+                lambda e, w=self._stat_wrap: w.config(height=e.height),
+                add="+",
+            )
+            self.frame.after_idle(
+                lambda w=self._stat_wrap: w.config(
+                    height=self._app._log_frame.winfo_height()
+                )
+            )
 
         # Log-hosted action row for Preview/Import
         if self._app and hasattr(self._app, "_log_action_host"):
@@ -748,41 +908,14 @@ class SyncTab:
         else:
             action_parent = self.frame
 
-        self.preview_btn = tk.Button(
-            action_parent,
-            text="Preview",
-            font=FONT_SMALL,
-            bg=SURFACE_RAISED,
-            fg=TEXT_SEC,
-            activebackground="#2e2e38",
-            activeforeground=TEXT,
-            relief="flat",
-            cursor="hand2",
-            padx=ACTION_BTN_PADX,
-            pady=ACTION_BTN_PADY,
-            command=lambda: self._run(dry_run=True),
-        )
+        self.import_btn = make_button(action_parent, "Sync",
+                                      command=lambda: self._run(dry_run=False),
+                                      primary=True)
+        self.preview_btn = make_button(action_parent, "Preview",
+                                       command=lambda: self._run(dry_run=True))
 
-        self.import_btn = tk.Button(
-            action_parent,
-            text="Import",
-            font=FONT_SMALL,
-            bg=ACCENT,
-            fg="white",
-            activebackground=ACCENT_LIGHT,
-            activeforeground="white",
-            relief="flat",
-            cursor="hand2",
-            padx=ACTION_BTN_PADX,
-            pady=ACTION_BTN_PADY,
-            command=lambda: self._run(dry_run=False),
-        )
-
-        self.preview_btn.pack(side="left", padx=(0, ACTION_BTN_GAP))
-        self.import_btn.pack(side="left")
-
-        _bind_button_flash(self.preview_btn, SURFACE_RAISED, "#2e2e38")
-        _bind_button_flash(self.import_btn, ACCENT, ACCENT_LIGHT)
+        self.import_btn.pack(side="left", padx=(0, ACTION_BTN_GAP))
+        self.preview_btn.pack(side="left")
 
         if not enabled:
             self.browse_btn.config(state="disabled")
@@ -790,23 +923,45 @@ class SyncTab:
             self.preview_btn.config(state="disabled")
             self.import_btn.config(state="disabled")
 
-    def _make_section(self, parent, title, compact=False):
-        section = tk.Frame(parent, bg=BG)
-        section.pack(fill="x")
+    def _install_notice(self, key, variable, text, color):
+        """Show/hide a one-line notice whenever `variable` changes.
+        Rendered as a small dot + muted text in the notices strip."""
+        row = tk.Frame(self._notices, bg=BG)
+        dot = tk.Frame(row, bg=color, width=8, height=8)
+        dot.pack(side="left", padx=(0, SP_SM), pady=(SP_XS, 0))
+        dot.pack_propagate(False)
+        lbl = tk.Label(row, text=text, font=FONT, fg=TEXT_SEC, bg=BG, anchor="w")
+        lbl.pack(side="left")
 
-        tk.Frame(section, bg=SURFACE_RAISED, height=1).pack(fill="x")
-        title_pady = (3, 2) if compact else (5, 4)
-        inner_pady = (0, 2) if compact else (0, 6)
-        tk.Label(section, text=title, font=FONT_SECTION, fg=ACCENT,
-                 bg=BG, anchor="w").pack(fill="x", padx=CARD_PAD_INNER, pady=title_pady)
+        self._notice_labels[key] = row
 
-        inner = tk.Frame(section, bg=BG)
-        inner.pack(fill="x", padx=CARD_PAD_INNER, pady=inner_pady)
-        return inner
+        def _apply(*_):
+            if variable.get():
+                row.pack(fill="x", pady=(0, SP_XS))
+            else:
+                row.pack_forget()
 
+        variable.trace_add("write", _apply)
+        _apply()
+        return row
+
+    @staticmethod
+    def _attach_dark_scrollbar(parent, target):
+        """Attach a Dark.Vertical.TScrollbar to the Listbox/Text `target`
+        inside `parent`. Assumes parent is a grid-using frame with row 0 and
+        col 0 holding `target`."""
+        _configure_ttk_styles()
+        vsb = ttk.Scrollbar(parent, orient="vertical",
+                            style="Dark.Vertical.TScrollbar",
+                            command=target.yview)
+        target.configure(yscrollcommand=vsb.set)
+        vsb.grid(row=0, column=1, sticky="ns")
+        parent.columnconfigure(1, weight=0)
+        return vsb
 
     def _make_unified_box(self, parent, title, value, color, row=0, col=0, copyable=False):
         outer = tk.Frame(parent, bg=BG)
+        # 1px separator on the right of left column and under the top row.
         padx = (0, 1) if col == 0 else (0, 0)
         pady = (0, 1) if row == 0 else (0, 0)
         outer.grid(row=row, column=col, sticky="nsew", padx=padx, pady=pady)
@@ -819,18 +974,18 @@ class SyncTab:
         header.grid(row=1, column=0, sticky="ew")
 
         title_row = tk.Frame(header, bg=BG)
-        title_row.pack(fill="x", padx=7, pady=(1, 2))
+        title_row.pack(fill="x", padx=SP_MD, pady=(SP_XS, SP_XS))
 
-        count_label = tk.Label(title_row, text=value, font=("Poppins", 14, "bold"),
+        count_label = tk.Label(title_row, text=value, font=FONT_DISPLAY,
                        fg=color, bg=BG, anchor="w")
         count_label.pack(side="left")
 
-        title_label = tk.Label(title_row, text=title, font=("Poppins", 7, "bold"),
+        title_label = tk.Label(title_row, text=title, font=FONT_BOLD,
                                fg=TEXT_TER, bg=BG, anchor="w")
-        title_label.pack(side="left", padx=(7, 0), pady=(3, 0))
+        title_label.pack(side="left", padx=(SP_MD, 0), pady=(SP_SM, 0))
 
         if copyable:
-            copy_btn = tk.Button(title_row, text="Copy", font=("Poppins", 7),
+            copy_btn = tk.Button(title_row, text="Copy", font=FONT,
                                  bg=BG, fg=TEXT_TER,
                                  activebackground=SURFACE_RAISED, activeforeground=TEXT,
                                  relief="flat", cursor="hand2", bd=0,
@@ -848,11 +1003,13 @@ class SyncTab:
         list_frame.rowconfigure(0, weight=1)
         list_frame.columnconfigure(0, weight=1)
 
-        lb = tk.Listbox(list_frame, font=FONT_SMALL, bg=BG, fg=TEXT_SEC,
+        lb = tk.Listbox(list_frame, font=FONT, bg=BG, fg=TEXT_SEC,
                         selectbackground=SURFACE_RAISED, selectforeground=TEXT,
                         relief="flat", borderwidth=0, highlightthickness=0,
                         activestyle="none")
-        lb.grid(row=0, column=0, sticky="nsew", padx=6, pady=(6, 6))
+        lb.grid(row=0, column=0, sticky="nsew", padx=(SP_MD, 0), pady=SP_MD)
+
+        self._attach_dark_scrollbar(list_frame, lb)
 
         return count_label, title_label, lb
 
@@ -865,7 +1022,7 @@ class SyncTab:
     def update_summary(self, added=0, updated=0, removed=0, missing=0):
         def _update():
             self.card_added.config(text=str(added))
-            self.card_added_title.config(text="TO SYNC" if self.dry_run.get() else "ADDED")
+            self.card_added_title.config(text="To add" if self.dry_run.get() else "Added")
             self.card_updated.config(text=str(updated))
             self.card_removed.config(text=str(removed))
             self.card_missing.config(text=str(missing))
@@ -887,14 +1044,6 @@ class SyncTab:
                     lb.insert("end", "  —")
         self.frame.after(0, _update)
 
-    def _toggle_source(self):
-        if self.download_from_3cket.get():
-            self.path_entry.config(state="disabled")
-            self.browse_btn.config(state="disabled")
-        else:
-            self.path_entry.config(state="normal")
-            self.browse_btn.config(state="normal")
-
     def _browse(self):
         path = filedialog.askopenfilename(
             title=f"Select {self.name} CSV",
@@ -906,20 +1055,16 @@ class SyncTab:
     def _run(self, dry_run=False):
         if self.running:
             return
-        downloading = self.has_cookie and self.download_from_3cket.get()
-        if not downloading and not self.csv_path.get().strip():
+        if not self.csv_path.get().strip():
             self._set_status("Select a CSV file first.", DANGER)
             return
-        if not downloading and not Path(self.csv_path.get()).exists():
+        if not Path(self.csv_path.get()).exists():
             self._set_status("File not found.", DANGER)
             return
-        if self.has_cookie and self.cookie.get().strip():
-            os.environ["THREECKET_COOKIE"] = self.cookie.get().strip()
-            save_env_values({"THREECKET_COOKIE": self.cookie.get().strip()})
         self.dry_run.set(dry_run)
         self.running = True
         self._set_busy(True)
-        mode = "preview" if dry_run else "import"
+        mode = "preview" if dry_run else "sync"
         self._set_status(f"Running {mode}...", ACCENT_LIGHT)
         if self._app:
             self._app._log_status_pulse.start(ACCENT_LIGHT)
@@ -931,7 +1076,7 @@ class SyncTab:
                 self.run_func(self)
             else:
                 self._log(f"[{self.name}] Not implemented yet.")
-            mode = "Preview" if self.dry_run.get() else "Import"
+            mode = "Preview" if self.dry_run.get() else "Sync"
             self._set_status(f"{mode} complete.", SUCCESS)
         except Exception as exc:
             self._log(f"[ERROR] {exc}")
@@ -946,8 +1091,7 @@ class SyncTab:
         state = "disabled" if busy else "normal"
         self.preview_btn.config(state=state)
         self.import_btn.config(state=state)
-        if not (self.has_cookie and self.download_from_3cket.get()):
-            self.browse_btn.config(state=state)
+        self.browse_btn.config(state=state)
 
     def _set_status(self, text, color=TEXT_TER):
         def _update():
@@ -964,6 +1108,675 @@ class SyncTab:
     def _log(self, msg):
         if hasattr(self, '_log_callback') and self._log_callback:
             self.frame.after(0, lambda: self._log_callback(msg))
+
+
+# --- Debug Tab ---
+
+class DebugTab:
+    """
+    Inspect every Brella invite, highlight ones whose external_qr_string
+    is missing or still falling back to `brella_invite_id=...`, and patch
+    them individually (auto from 3cket CSV, or manual value).
+    """
+
+    BRELLA_FALLBACK_PREFIX = "brella_invite_id="
+
+    def __init__(self, parent, app=None, log_callback=None):
+        self._app = app
+        self._log_callback = log_callback
+        self.frame = tk.Frame(parent, bg=BG)
+        self.action_row = None
+
+        self._invites = []            # raw Brella invites
+        self._csv_ticket_map = {}     # email -> "ticket / ticket" string
+        self._csv_qr_map = {}         # email -> expected external_qr_string (from 3cket)
+        self._loading = False
+
+        self.csv_path = tk.StringVar(value=str(BASE_DIR / "data" / "participants.csv"))
+        self.filter_missing_only = tk.BooleanVar(value=False)
+        self.search_var = tk.StringVar(value="")
+        self.total_var = tk.StringVar(value="—")
+        self.missing_var = tk.StringVar(value="—")
+
+        page = make_page(self.frame)
+
+        # ===== CSV picker =====
+        csv_body = make_section(
+            page, "3cket CSV",
+            subtitle="Used to show ticket types and auto-fill 'Fix from CSV'.",
+        )
+        csv_row = tk.Frame(csv_body, bg=BG)
+        csv_row.pack(fill="x")
+
+        self.browse_btn = make_button(csv_row, "Browse", command=self._browse_csv)
+        self.browse_btn.config(pady=SP_MD, highlightthickness=1,
+                               highlightbackground=SURFACE_RAISED)
+        self.browse_btn.pack(side="right", padx=(SP_MD, 0), fill="y")
+
+        self.csv_entry = tk.Entry(
+            csv_row, textvariable=self.csv_path, font=FONT,
+            bg=BG, fg=TEXT, insertbackground=TEXT,
+            relief="flat", bd=SP_MD,
+            highlightthickness=1, highlightbackground=SURFACE_RAISED,
+            highlightcolor=ACCENT,
+        )
+        self.csv_entry.pack(side="left", fill="x", expand=True, ipady=SP_SM)
+
+        # ===== Filter / search bar =====
+        filter_bar = tk.Frame(page, bg=BG)
+        filter_bar.pack(fill="x", pady=(0, SP_SM))
+
+        self.missing_cb = make_checkbox(
+            filter_bar, "Only missing QR", self.filter_missing_only,
+            command=self._refresh_display,
+        )
+        self.missing_cb.pack(side="left")
+
+        tk.Label(filter_bar, text="Search", font=FONT, fg=TEXT_TER,
+                 bg=BG).pack(side="left", padx=(SP_LG, SP_SM))
+        search_entry = tk.Entry(
+            filter_bar, textvariable=self.search_var, font=FONT,
+            bg=BG, fg=TEXT, insertbackground=TEXT, width=28,
+            relief="flat", bd=SP_MD,
+            highlightthickness=1, highlightbackground=SURFACE_RAISED,
+            highlightcolor=ACCENT,
+        )
+        search_entry.pack(side="left", ipady=0)
+        self.search_var.trace_add("write", lambda *a: self._refresh_display())
+
+        # Summary counters (right) — just two labels, no separator dot.
+        summary = tk.Frame(filter_bar, bg=BG)
+        summary.pack(side="right")
+        tk.Label(summary, textvariable=self.total_var, font=FONT,
+                 fg=TEXT_SEC, bg=BG).pack(side="right")
+        self._missing_label = tk.Label(
+            summary, textvariable=self.missing_var, font=FONT,
+            fg=TEXT_TER, bg=BG,
+        )
+        self._missing_label.pack(side="right", padx=(0, SP_LG))
+
+        # ===== Treeview =====
+        self._configure_tree_style()
+
+        tree_wrap = tk.Frame(page, bg=SURFACE_RAISED)
+        tree_wrap.pack(fill="both", expand=True, pady=(SP_SM, 0))
+
+        cols = ("email", "ticket", "group", "qr", "invite_id")
+        self.tree = ttk.Treeview(
+            tree_wrap, columns=cols, show="headings",
+            style="Debug.Treeview", selectmode="browse",
+        )
+        widths = {
+            "email": 280, "ticket": 200, "group": 100,
+            "qr": 220, "invite_id": 80,
+        }
+        headings = {
+            "email": "Email", "ticket": "Ticket type", "group": "Group",
+            "qr": "External QR", "invite_id": "Invite ID",
+        }
+        for col in cols:
+            self.tree.heading(col, text=headings[col], anchor="w")
+            self.tree.column(col, width=widths[col], anchor="w", stretch=True)
+
+        vsb = ttk.Scrollbar(tree_wrap, orient="vertical",
+                            style="Dark.Vertical.TScrollbar",
+                            command=self.tree.yview)
+        self.tree.configure(yscrollcommand=vsb.set)
+        vsb.pack(side="right", fill="y")
+        self.tree.pack(side="left", fill="both", expand=True)
+
+        # Column separator overlay: thin vertical frames placed on top of the
+        # tree at column boundaries. Redrawn whenever the tree is resized.
+        self._column_separators = []
+        self._tree_wrap = tree_wrap
+        self.tree.bind("<Configure>", self._draw_column_separators, add="+")
+        self.tree.bind("<ButtonRelease-1>", self._draw_column_separators, add="+")
+
+        self.tree.tag_configure("missing", background="#2a1f0a", foreground=WARN)
+        self.tree.tag_configure("ok", background=BG, foreground=TEXT)
+        self.tree.tag_configure("ok_alt", background=ROW_ALT, foreground=TEXT)
+
+        self.tree.bind("<<TreeviewSelect>>", self._on_select)
+        self.tree.bind("<Double-1>", lambda e: self._edit_qr_dialog())
+
+        # === Action buttons (hosted in log panel like other tabs) ===
+        if self._app and hasattr(self._app, "_log_action_host"):
+            self.action_row = tk.Frame(self._app._log_action_host, bg=SURFACE)
+            action_parent = self.action_row
+        else:
+            action_parent = self.frame
+
+        self.fix_btn = make_button(action_parent, "Fix",
+                                   command=self._fix_from_csv, primary=True)
+        self.fix_btn.config(state="disabled")
+        self.refresh_btn = make_button(action_parent, "Refresh",
+                                       command=self._refresh)
+
+        self.fix_btn.pack(side="left", padx=(0, ACTION_BTN_GAP))
+        self.refresh_btn.pack(side="left")
+
+    # --- Styling ---
+
+    def _draw_column_separators(self, _event=None):
+        """Overlay 1px vertical dividers at column boundaries.
+        Re-runs on tree resize so dividers track the current column widths."""
+        for sep in self._column_separators:
+            try:
+                sep.destroy()
+            except Exception:
+                pass
+        self._column_separators = []
+
+        try:
+            cols = self.tree["columns"]
+            x = 0
+            for col in cols[:-1]:  # no divider after the last column
+                x += int(self.tree.column(col, option="width"))
+                sep = tk.Frame(self.tree, bg=SURFACE_RAISED, width=1)
+                # place uses tree's client area; height takes full tree height.
+                sep.place(x=x - 1, y=0, relheight=1.0, width=1)
+                self._column_separators.append(sep)
+        except Exception:
+            pass
+
+    def _configure_tree_style(self):
+        _configure_ttk_styles()
+        style = ttk.Style()
+        table_font = ("Poppins", 9)
+        style.configure(
+            "Debug.Treeview",
+            background=BG, foreground=TEXT, fieldbackground=BG,
+            borderwidth=0, relief="flat", rowheight=22, font=table_font,
+        )
+        style.map(
+            "Debug.Treeview",
+            background=[("selected", SURFACE_RAISED)],
+            foreground=[("selected", TEXT)],
+        )
+        style.configure(
+            "Debug.Treeview.Heading",
+            background=SURFACE, foreground=TEXT_SEC,
+            borderwidth=0, relief="flat", font=table_font,
+            padding=(SP_SM, SP_XS),
+        )
+        style.map(
+            "Debug.Treeview.Heading",
+            background=[("active", SURFACE_RAISED)],
+            foreground=[("active", ACCENT_LIGHT)],
+        )
+        style.layout("Debug.Treeview", style.layout("Treeview"))
+
+    # --- Actions ---
+
+    def _browse_csv(self):
+        path = filedialog.askopenfilename(
+            title="Select 3cket participants CSV",
+            filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
+        )
+        if path:
+            self.csv_path.set(path)
+
+    def _refresh(self):
+        if self._loading:
+            return
+        self._loading = True
+        self._set_busy(True)
+        self._log("[INFO] Loading Brella invites...")
+        if self._app:
+            self._app._log_status_var.set("Loading invites...")
+            self._app._log_status_label.config(fg=ACCENT_LIGHT)
+            self._app._log_status_pulse.start(ACCENT_LIGHT)
+        threading.Thread(target=self._load_thread, daemon=True).start()
+
+    def _load_thread(self):
+        try:
+            import api
+            api.API_KEY = os.environ.get("BRELLA_API_KEY", api.API_KEY)
+            api.ORG_ID = os.environ.get("BRELLA_ORG_ID", api.ORG_ID)
+            api.EVENT_ID = os.environ.get("BRELLA_EVENT_ID", api.EVENT_ID)
+
+            self._csv_ticket_map = {}
+            self._csv_qr_map = {}
+            csv_path = Path(self.csv_path.get().strip())
+            if csv_path.exists():
+                self._load_csv_map(csv_path)
+                self._log(f"[INFO] Loaded {len(self._csv_ticket_map)} rows from 3cket CSV.")
+            else:
+                self._log(f"[WARN] CSV not found: {csv_path} — ticket types and 'Fix from CSV' will be empty.")
+
+            headers = api.build_request_headers()
+            invites = api.list_invites(headers)
+            self._invites = invites
+            self._log(f"[OK] Loaded {len(invites)} invites from Brella. Fetching details...")
+            # First render (QR still empty) so the UI feels responsive.
+            self.frame.after(0, self._refresh_display)
+
+            self._fetch_invite_details(headers, invites)
+            self._log("[OK] Invite details loaded.")
+            self.frame.after(0, self._refresh_display)
+
+            if self._app:
+                self.frame.after(0, lambda: self._app._log_status_var.set(
+                    f"{len(invites)} invites loaded"))
+                self.frame.after(0, lambda: self._app._log_status_label.config(fg=SUCCESS))
+        except Exception as exc:
+            self._log(f"[ERROR] Debug load failed: {exc}")
+            if self._app:
+                self.frame.after(0, lambda: self._app._log_status_var.set("Load failed"))
+                self.frame.after(0, lambda: self._app._log_status_label.config(fg=DANGER))
+        finally:
+            self._loading = False
+            self.frame.after(0, lambda: self._set_busy(False))
+            if self._app:
+                self.frame.after(0, self._app._log_status_pulse.stop)
+
+    def _fetch_invite_details(self, headers, invites):
+        """GET per-invite detail to populate fields not returned by the list endpoint
+        (notably external_qr_string). Runs concurrently to stay responsive."""
+        import api
+        import json as _json
+        from concurrent.futures import ThreadPoolExecutor
+
+        stats = {"ok": 0, "fail": 0}
+        sample = {"logged": False}
+
+        def merge_detail_into(invite, detail):
+            # Detail shape may be JSON:API ({"data": {"attributes": {...}}})
+            # or legacy ({"event_invite": {...}}) or flat.
+            data = detail.get("data", detail) if isinstance(detail, dict) else None
+            if isinstance(data, dict):
+                attrs = data.get("attributes")
+                if isinstance(attrs, dict):
+                    tgt = invite.get("attributes")
+                    if not isinstance(tgt, dict):
+                        tgt = {}
+                        invite["attributes"] = tgt
+                    for k, v in attrs.items():
+                        if v is not None:
+                            tgt[k] = v
+                ei = data.get("event_invite")
+                if isinstance(ei, dict):
+                    invite["event_invite"] = ei
+            if isinstance(detail, dict):
+                ei = detail.get("event_invite")
+                if isinstance(ei, dict):
+                    invite["event_invite"] = ei
+
+        def fetch_one(invite):
+            invite_id = str(invite.get("id", "")).strip()
+            if not invite_id:
+                return
+            try:
+                url = api.build_update_url(invite_id)
+                status, resp = api.api_request(url, headers, "GET")
+                if status != 200:
+                    stats["fail"] += 1
+                    if stats["fail"] <= 2:
+                        self._log(f"[WARN] detail GET {invite_id} -> {status}: {resp[:200]}")
+                    return
+                payload = _json.loads(resp)
+                # Log the first successful payload shape so we can see the keys.
+                if not sample["logged"]:
+                    sample["logged"] = True
+                    self._log_detail_sample(invite_id, payload)
+                merge_detail_into(invite, payload)
+                stats["ok"] += 1
+            except Exception as exc:
+                stats["fail"] += 1
+                if stats["fail"] <= 2:
+                    self._log(f"[WARN] detail GET {invite_id} exception: {exc}")
+
+        workers = min(8, max(1, len(invites)))
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            list(pool.map(fetch_one, invites))
+
+        self._log(f"[INFO] Detail fetches: {stats['ok']} ok, {stats['fail']} failed.")
+
+    def _log_detail_sample(self, invite_id, payload):
+        """Dump attribute/event_invite keys from one response so we can see
+        what fields Brella actually returns for an invite detail."""
+        keys_found = []
+        if isinstance(payload, dict):
+            data = payload.get("data", payload)
+            if isinstance(data, dict):
+                attrs = data.get("attributes")
+                if isinstance(attrs, dict):
+                    keys_found.append(f"attributes: {sorted(attrs.keys())}")
+                ei = data.get("event_invite")
+                if isinstance(ei, dict):
+                    keys_found.append(f"event_invite: {sorted(ei.keys())}")
+            if "event_invite" in payload and isinstance(payload["event_invite"], dict):
+                keys_found.append(f"top event_invite: {sorted(payload['event_invite'].keys())}")
+        self._log(f"[INFO] Sample invite {invite_id} keys -> {' | '.join(keys_found) or 'no dict keys'}")
+
+    def _load_csv_map(self, csv_path):
+        import api
+        for _line_no, row in api.iter_threecket_rows(csv_path):
+            email = api.pick_email(row)
+            if not email:
+                continue
+            tickets = api.pick_ticket_types(row)
+            ticket_str = " / ".join(tickets) if tickets else ""
+            self._csv_ticket_map[email] = ticket_str
+
+            threecket_id = api.pick_threecket_id(row)
+            expected_qr = api.pick_external_qr(row, threecket_id)
+            if expected_qr:
+                self._csv_qr_map[email] = expected_qr
+
+    # --- Display ---
+
+    def _invite_field(self, invite, *field_names):
+        """Read a field from an invite, trying event_invite wrapper, top-level,
+        and JSON:API `attributes` (both snake_case and kebab-case)."""
+        if not isinstance(invite, dict):
+            return ""
+
+        event_invite = invite.get("event_invite")
+        if isinstance(event_invite, dict):
+            for name in field_names:
+                v = event_invite.get(name)
+                if v is not None and str(v).strip():
+                    return str(v).strip()
+
+        for name in field_names:
+            v = invite.get(name)
+            if v is not None and str(v).strip():
+                return str(v).strip()
+
+        attributes = invite.get("attributes")
+        if isinstance(attributes, dict):
+            for name in field_names:
+                for variant in (name, name.replace("_", "-")):
+                    v = attributes.get(variant)
+                    if v is not None and str(v).strip():
+                        return str(v).strip()
+
+        relationships = invite.get("relationships")
+        if isinstance(relationships, dict):
+            for name in field_names:
+                rel_key = name.replace("_id", "")
+                rel = relationships.get(rel_key) or relationships.get(rel_key.replace("_", "-"))
+                if isinstance(rel, dict):
+                    data = rel.get("data")
+                    if isinstance(data, dict) and data.get("id"):
+                        return str(data["id"]).strip()
+
+        return ""
+
+    def _refresh_display(self):
+        import api
+
+        for iid in self.tree.get_children():
+            self.tree.delete(iid)
+
+        group_name_map = {v: k for k, v in api.BRELLA_ATTENDEE_GROUP_IDS.items()}
+        missing_count = 0
+        total_count = 0
+
+        filter_missing = self.filter_missing_only.get()
+        search_q = self.search_var.get().strip().lower()
+
+        for invite in self._invites:
+            if not isinstance(invite, dict):
+                continue
+
+            first = self._invite_field(invite, "external_first_name")
+            last = self._invite_field(invite, "external_last_name")
+            name = " ".join(p for p in (first, last) if p and p != ".") or "—"
+            email = self._invite_field(invite, "external_email", "email").lower()
+
+            group_id = self._invite_field(invite, "attendee_group_id")
+            if group_id:
+                group_name = group_name_map.get(group_id, f"id={group_id}")
+            else:
+                group_name = "—"
+
+            qr = self._invite_field(
+                invite,
+                "external_qr_string", "external_qr", "qr_string", "qr",
+            )
+            external_id = self._invite_field(invite, "external_id")
+
+            qr_missing = (not qr) or qr.startswith(self.BRELLA_FALLBACK_PREFIX)
+
+            if qr_missing:
+                tag = "missing"
+                missing_count += 1
+            else:
+                # Zebra stripe OK rows for readability.
+                tag = "ok_alt" if (total_count % 2) else "ok"
+
+            total_count += 1
+
+            ticket = self._csv_ticket_map.get(email, "—")
+
+            if filter_missing and not qr_missing:
+                continue
+            if search_q:
+                haystack = f"{name} {email} {group_name} {ticket} {qr}".lower()
+                if search_q not in haystack:
+                    continue
+
+            invite_id = str(invite.get("id", "")).strip()
+            if not invite_id:
+                continue
+
+            qr_display = qr if len(qr) <= 32 else qr[:29] + "..."
+            self.tree.insert(
+                "", "end", iid=invite_id,
+                values=(
+                    email or "—",
+                    ticket or "—",
+                    group_name,
+                    qr_display or "—",
+                    invite_id,
+                ),
+                tags=(tag,),
+            )
+
+        self.total_var.set(f"{total_count} invites")
+        self.missing_var.set(f"{missing_count} missing")
+        self._missing_label.config(fg=WARN if missing_count else TEXT_TER)
+
+        # Redraw column separators on top of the refreshed content.
+        self.tree.after_idle(self._draw_column_separators)
+
+        # Clear selection-dependent buttons since the tree was rebuilt.
+        self._update_action_buttons()
+
+    def _on_select(self, _event=None):
+        self._update_action_buttons()
+
+    def _update_action_buttons(self):
+        invite = self._selected_invite()
+        if not invite:
+            self.fix_btn.config(state="disabled")
+            return
+
+        email = self._invite_field(invite, "external_email", "email").lower()
+        if email and email in self._csv_qr_map:
+            self.fix_btn.config(state="normal")
+        else:
+            self.fix_btn.config(state="disabled")
+
+    def _selected_invite(self):
+        sel = self.tree.selection()
+        if not sel:
+            return None
+        invite_id = sel[0]
+        for invite in self._invites:
+            if str(invite.get("id", "")).strip() == invite_id:
+                return invite
+        return None
+
+    # --- Patch actions ---
+
+    def _fix_from_csv(self):
+        invite = self._selected_invite()
+        if not invite:
+            return
+        email = self._invite_field(invite, "external_email", "email").lower()
+        expected_qr = self._csv_qr_map.get(email)
+        if not expected_qr:
+            self._log(f"[WARN] No 3cket CSV row for {email or '(no email)'} — use 'Edit QR...' instead.")
+            return
+
+        invite_id = str(invite.get("id")).strip()
+        name = self._invite_label(invite)
+        self._log(f"[INFO] Fixing QR for {name} (invite {invite_id}) -> {expected_qr[:48]}")
+        self._patch_qr(invite_id, expected_qr)
+
+    def _edit_qr_dialog(self):
+        invite = self._selected_invite()
+        if not invite:
+            return
+
+        current_qr = self._invite_field(invite, "external_qr_string")
+        email = self._invite_field(invite, "external_email", "email").lower()
+        invite_id = str(invite.get("id")).strip()
+        expected = self._csv_qr_map.get(email, "")
+
+        dlg = tk.Toplevel(self.frame)
+        dlg.title(f"Edit QR — invite {invite_id}")
+        dlg.configure(bg=BG)
+        dlg.transient(self.frame.winfo_toplevel())
+        dlg.grab_set()
+        _apply_dark_title_bar(dlg)
+
+        pad = 12
+        wrap = tk.Frame(dlg, bg=BG)
+        wrap.pack(fill="both", expand=True, padx=pad, pady=pad)
+
+        tk.Label(wrap, text=self._invite_label(invite),
+                 font=FONT_BOLD, fg=TEXT, bg=BG, anchor="w").pack(fill="x")
+        tk.Label(wrap, text=f"Invite id {invite_id} · {email or 'no email'}",
+                 font=FONT_SMALL, fg=TEXT_TER, bg=BG, anchor="w").pack(fill="x", pady=(0, 8))
+
+        tk.Label(wrap, text="Current QR string", font=FONT_SMALL,
+                 fg=TEXT_SEC, bg=BG, anchor="w").pack(fill="x")
+        cur_var = tk.StringVar(value=current_qr or "(empty)")
+        tk.Entry(wrap, textvariable=cur_var, font=FONT_MONO, bg=BG, fg=TEXT_TER,
+                 insertbackground=TEXT,
+                 relief="flat", bd=SP_MD,
+                 highlightthickness=1, highlightbackground=SURFACE_RAISED,
+                 state="readonly", readonlybackground=BG
+                 ).pack(fill="x", ipady=SP_SM, pady=(1, SP_MD))
+
+        tk.Label(wrap, text="New QR string", font=FONT_SMALL,
+                 fg=TEXT_SEC, bg=BG, anchor="w").pack(fill="x")
+        new_var = tk.StringVar(value=expected or current_qr)
+        entry = tk.Entry(wrap, textvariable=new_var, font=FONT_MONO, bg=BG, fg=TEXT,
+                         insertbackground=TEXT,
+                         relief="flat", bd=SP_MD,
+                         highlightthickness=1, highlightbackground=SURFACE_RAISED,
+                         highlightcolor=ACCENT, width=60)
+        entry.pack(fill="x", ipady=SP_SM, pady=(1, SP_MD))
+        entry.focus_set()
+        entry.icursor("end")
+
+        if expected:
+            tk.Label(wrap,
+                     text=f"Tip: 3cket CSV expects '{expected[:40]}{'...' if len(expected) > 40 else ''}'",
+                     font=FONT_SMALL, fg=TEXT_TER, bg=BG, anchor="w"
+                     ).pack(fill="x", pady=(0, 8))
+
+        btn_row = tk.Frame(wrap, bg=BG)
+        btn_row.pack(fill="x", pady=(4, 0))
+
+        def do_save():
+            value = new_var.get().strip()
+            if not value:
+                self._log("[WARN] QR string is empty — aborting.")
+                return
+            dlg.destroy()
+            self._patch_qr(invite_id, value)
+
+        save_btn = make_button(btn_row, "Save", command=do_save)
+        save_btn.pack(side="right")
+        cancel_btn = make_button(btn_row, "Cancel", command=dlg.destroy)
+        cancel_btn.pack(side="right", padx=(0, ACTION_BTN_GAP))
+
+        entry.bind("<Return>", lambda e: do_save())
+        dlg.bind("<Escape>", lambda e: dlg.destroy())
+
+    def _patch_qr(self, invite_id, new_qr):
+        if self._loading:
+            return
+
+        def _thread():
+            try:
+                import api
+                api.API_KEY = os.environ.get("BRELLA_API_KEY", api.API_KEY)
+                api.ORG_ID = os.environ.get("BRELLA_ORG_ID", api.ORG_ID)
+                api.EVENT_ID = os.environ.get("BRELLA_EVENT_ID", api.EVENT_ID)
+                headers = api.build_request_headers()
+                payload = {"event_invite": {"external_qr_string": new_qr}}
+                status, resp = api.update_invite(
+                    api.build_update_url(invite_id), headers, payload,
+                )
+                if status in (200, 201):
+                    self._log(f"[OK] PATCH invite {invite_id} -> QR set ({status}).")
+                    self._update_cached_qr(invite_id, new_qr)
+                    self.frame.after(0, self._refresh_display)
+                else:
+                    self._log(
+                        f"[ERROR] PATCH {invite_id} failed: {status} — {resp[:200]}"
+                    )
+            except Exception as exc:
+                self._log(f"[ERROR] PATCH {invite_id} exception: {exc}")
+
+        threading.Thread(target=_thread, daemon=True).start()
+
+    def _update_cached_qr(self, invite_id, new_qr):
+        for invite in self._invites:
+            if str(invite.get("id", "")).strip() != invite_id:
+                continue
+            event_invite = invite.get("event_invite")
+            if isinstance(event_invite, dict):
+                event_invite["external_qr_string"] = new_qr
+            attributes = invite.get("attributes")
+            if isinstance(attributes, dict):
+                # Write back to whichever key variant exists so UI reflects the change.
+                if "external-qr-string" in attributes:
+                    attributes["external-qr-string"] = new_qr
+                if "external_qr_string" in attributes:
+                    attributes["external_qr_string"] = new_qr
+                if "external-qr-string" not in attributes and "external_qr_string" not in attributes:
+                    attributes["external_qr_string"] = new_qr
+            if "external_qr_string" in invite:
+                invite["external_qr_string"] = new_qr
+            return
+
+    # --- Helpers ---
+
+    def _invite_label(self, invite):
+        first = self._invite_field(invite, "external_first_name")
+        last = self._invite_field(invite, "external_last_name")
+        name = " ".join(p for p in (first, last) if p and p != ".")
+        email = self._invite_field(invite, "external_email", "email").lower()
+        if name and email:
+            return f"{name} <{email}>"
+        if name:
+            return name
+        if email:
+            return email
+        return f"invite {invite.get('id', '?')}"
+
+    def _set_busy(self, busy):
+        state = "disabled" if busy else "normal"
+        self.refresh_btn.config(state=state)
+        self.browse_btn.config(state=state)
+        if busy:
+            self.fix_btn.config(state="disabled")
+        else:
+            self._update_action_buttons()
+
+    def _log(self, msg):
+        if self._log_callback:
+            self.frame.after(0, lambda: self._log_callback(msg))
+        else:
+            print(msg)
 
 
 # --- App ---
@@ -1027,33 +1840,26 @@ class App:
         # Log panel (inside sidebar — packed after nav items below)
         self._log_frame = tk.Frame(sidebar, bg=SURFACE)
 
-        # Log header
-        log_header = tk.Frame(self._log_frame, bg=SURFACE)
-        log_header.pack(fill="x")
+        # Log text — smaller, muted body; only the [label] carries color.
+        _configure_ttk_styles()
+        log_wrap = tk.Frame(self._log_frame, bg=SURFACE)
+        log_wrap.pack(fill="both", expand=True, padx=SP_SM, pady=(SP_SM, SP_XS))
+        log_wrap.rowconfigure(0, weight=1)
+        log_wrap.columnconfigure(0, weight=1)
 
-        log_title_row = tk.Frame(log_header, bg=SURFACE)
-        log_title_row.pack(fill="x", padx=CARD_PAD_X, pady=(6, 0))
+        log_font = ("Poppins", 8)
+        self.log_text = tk.Text(log_wrap, font=log_font,
+                                bg="#0c0c12", fg=TEXT_TER,
+                                relief="flat", wrap="word",
+                                insertbackground=ACCENT_LIGHT,
+                                state="disabled", padx=SP_MD, pady=SP_MD)
+        self.log_text.grid(row=0, column=0, sticky="nsew")
 
-        tk.Label(log_title_row, text="LOG", font=("Poppins", 8, "bold"),
-             fg=TEXT_TER, bg=SURFACE, anchor="w").pack(side="left")
-
-        clear_btn = tk.Button(log_title_row, text="Clear", font=("Poppins", 8),
-                              bg=SURFACE, fg=TEXT_TER,
-                              activebackground=SURFACE_RAISED, activeforeground=TEXT,
-                              relief="flat", cursor="hand2", bd=0,
-                              command=self._clear_log)
-        clear_btn.pack(side="right")
-        clear_btn.bind("<Enter>", lambda e: clear_btn.config(fg=TEXT_SEC))
-        clear_btn.bind("<Leave>", lambda e: clear_btn.config(fg=TEXT_TER))
-
-        log_sep = tk.Frame(log_header, bg=SURFACE_RAISED, height=1)
-        log_sep.pack(fill="x", padx=CARD_PAD_X, pady=(GAP, 0))
-
-        # Log text
-        self.log_text = tk.Text(self._log_frame, font=("Poppins", 8), bg="#0c0c12", fg=TEXT_SEC,
-                                relief="flat", wrap="word", insertbackground=ACCENT_LIGHT,
-                                state="disabled", padx=6, pady=6)
-        self.log_text.pack(fill="both", expand=True, padx=4, pady=(GAP, 2))
+        log_vsb = ttk.Scrollbar(log_wrap, orient="vertical",
+                                style="Dark.Vertical.TScrollbar",
+                                command=self.log_text.yview)
+        self.log_text.configure(yscrollcommand=log_vsb.set)
+        log_vsb.grid(row=0, column=1, sticky="ns")
 
         # Shared host for per-page floating actions inside log panel.
         self._log_action_host = tk.Frame(self._log_frame, bg=SURFACE)
@@ -1071,7 +1877,7 @@ class App:
         self._log_status_label = tk.Label(
             self._log_status_row,
             textvariable=self._log_status_var,
-            font=("Poppins", 8, "bold"),
+            font=FONT_BOLD,
             fg=TEXT_SEC,
             bg=SURFACE,
             anchor="w",
@@ -1080,14 +1886,19 @@ class App:
 
         self._panel_action_rows = {}
 
-        # Configure log text tags
-        self.log_text.tag_configure("timestamp", foreground=TEXT_TER)
-        self.log_text.tag_configure("msg_default", foreground=TEXT_SEC)
-        self.log_text.tag_configure("msg_ok", foreground=SUCCESS)
-        self.log_text.tag_configure("msg_error", foreground=DANGER)
-        self.log_text.tag_configure("msg_warn", foreground=WARN)
-        self.log_text.tag_configure("msg_preview", foreground=ACCENT)
-        self.log_text.tag_configure("msg_info", foreground=TEXT_SEC)
+        # Log tags: muted body + colored bracket labels. (No timestamps.)
+        self.log_text.tag_configure("body", foreground=TEXT_SEC)
+        self.log_text.tag_configure("highlight", foreground=ACCENT_LIGHT)
+        self.log_text.tag_configure("label_add", foreground=SUCCESS)
+        self.log_text.tag_configure("label_update", foreground=ACCENT_LIGHT)
+        self.log_text.tag_configure("label_remove", foreground=DANGER)
+        self.log_text.tag_configure("label_skip", foreground=TEXT_TER)
+        self.log_text.tag_configure("label_missing", foreground=WARN)
+        self.log_text.tag_configure("label_ok", foreground=SUCCESS)
+        self.log_text.tag_configure("label_error", foreground=DANGER)
+        self.log_text.tag_configure("label_warn", foreground=WARN)
+        self.log_text.tag_configure("label_info", foreground=TEXT_SEC)
+        self.log_text.tag_configure("label_preview", foreground=ACCENT_LIGHT)
 
         # --- Setup tab ---
         self._add_nav(sidebar, "Setup")
@@ -1097,10 +1908,16 @@ class App:
         if getattr(setup, "action_row", None) is not None:
             self._panel_action_rows["Setup"] = setup.action_row
 
+        # --- Debug tab (right below Setup, no separator) ---
+        self._add_nav(sidebar, "Debug")
+        debug = DebugTab(self.content, app=self, log_callback=self.log)
+        self._debug_tab = debug
+        self.panels["Debug"] = debug.frame
+        if getattr(debug, "action_row", None) is not None:
+            self._panel_action_rows["Debug"] = debug.action_row
+
         nav_sep = tk.Frame(sidebar, bg=SURFACE_RAISED, height=1)
         nav_sep.pack(fill="x", padx=16, pady=(6, 6))
-        tk.Label(sidebar, text="SYNC", font=("Poppins", 7, "bold"),
-                 fg=TEXT_TER, bg=SURFACE).pack(fill="x", padx=18, pady=(0, 4))
 
         # --- Sync tabs ---
         _default_csvs = {
@@ -1109,12 +1926,11 @@ class App:
             "Schedule": BASE_DIR / "data" / "schedule.csv",
         }
 
-        for name, desc, prune, cookie, func, en, fields in [
+        for name, desc, prune, staff_only, func, en, fields in [
             (
                 "Participants",
                 "Sync 3cket participants to Brella.",
-                True,
-                True,
+                True, True,
                 self._run_participants,
                 True,
                 [
@@ -1129,8 +1945,7 @@ class App:
             (
                 "Speakers",
                 "Sync published speakers to Brella.",
-                False,
-                False,
+                True, False,
                 self._run_speakers,
                 True,
                 [
@@ -1146,30 +1961,21 @@ class App:
                 ],
             ),
             (
-                "Sponsors",
-                "Sync sponsor data to Brella.",
-                False,
-                False,
-                None,
-                False,
-                [],
-            ),
-            (
                 "Schedule",
                 "Sync event sessions to Brella.",
-                False,
-                False,
+                True, False,
                 self._run_schedule,
                 True,
                 [
                     ("date", True), ("start_time", True), ("duration", True),
                     ("title", True), ("content", False), ("track", True),
-                    ("location", False), ("speakers", False),
+                    ("speakers", False),
                 ],
             ),
         ]:
             self._add_nav(sidebar, name)
-            tab = SyncTab(self.content, name, desc, has_prune=prune, has_cookie=cookie,
+            tab = SyncTab(self.content, name, desc, has_prune=prune,
+                          has_staff_only=staff_only,
                           run_func=func, enabled=en, app=self,
                           csv_header_fields=fields)
             tab._log_callback = self.log
@@ -1196,7 +2002,8 @@ class App:
             total_width = self._outer.winfo_width()
         if total_width <= 1:
             return
-        target_width = max(1, int(total_width * SIDEBAR_WIDTH_RATIO))
+        ratio_width = int(total_width * SIDEBAR_WIDTH_RATIO)
+        target_width = max(SIDEBAR_W, min(SIDEBAR_MAX_W, ratio_width))
         current_width = int(self._sidebar.cget("width"))
         if current_width != target_width:
             self._sidebar.config(width=target_width)
@@ -1308,68 +2115,85 @@ class App:
         if active_row is not None:
             active_row.pack(side="left", padx=(4, 0), pady=4)
 
+    # Parsers for the backend's log prefixes. Both English (canonical) and
+    # legacy Portuguese phrasings are matched so older messages still render
+    # as clean labels. Order matters — more specific patterns first.
+    _LOG_PATTERNS = [
+        # --- preview ---
+        (r'^\[PREVIEW\]\s*line\s*\d+:\s*would add\s*(.*)$', 'add'),
+        (r'^\[PREVIEW\]\s*line\s*\d+:\s*would update\s*(.*)$', 'update'),
+        (r'^\[PREVIEW\]\s*would remove\s*(.*)$', 'remove'),
+        (r'^\[PREVIEW\]\s*linha\s*\d+:\s*ADICIONARIA\s*(.*)$', 'add'),
+        (r'^\[PREVIEW\]\s*linha\s*\d+:\s*ATUALIZARIA\s*(.*)$', 'update'),
+        (r'^\[PREVIEW\]\s*REMOVERIA\s*(.*)$', 'remove'),
+        # --- skip (skip-existing mode, preview or real) ---
+        (r'^\[INFO\]\s*skip(?:ped|ping| )? \(already exists\):\s*(.*)$', 'skip'),
+        (r'^\[INFO\]\s*would skip \(already exists\):\s*(.*)$', 'skip'),
+        (r'^\[INFO\]\s*IGNORA\w*\s*\(ja existe\):\s*(.*)$', 'skip'),
+        # --- missing info (no email / no id) ---
+        (r'^\[SKIPPED\]\s*line\s*\d+:\s*(.*)$', 'missing'),
+        (r'^\[IGNORADO\]\s*linha\s*\d+:\s*participante sem email\s*-\s*(.*)$', 'missing'),
+        (r'^\[IGNORADO\]\s*linha\s*\d+:\s*participante sem ID 3cket\s*-\s*(.*)$', 'missing'),
+        (r'^\[IGNORADO\]\s*linha\s*\d+:\s*(.*)$', 'missing'),
+        # --- real sync confirmations ---
+        (r'^\[OK(?:\s+\d+)?\]\s*ADDED:\s*(.*)$', 'add'),
+        (r'^\[OK(?:\s+\d+)?\]\s*UPDATED:\s*(.*)$', 'update'),
+        (r'^\[OK(?:\s+\d+)?\]\s*REMOVED:\s*(.*)$', 'remove'),
+        (r'^\[OK(?:\s+\d+)?\]\s*ADICIONADO:\s*(.*)$', 'add'),
+        (r'^\[OK(?:\s+\d+)?\]\s*ATUALIZADO:\s*(.*)$', 'update'),
+        (r'^\[OK(?:\s+\d+)?\]\s*REMOVIDO:\s*(.*)$', 'remove'),
+        (r'^\[OK(?:\s+\d+)?\]\s*(.*)$', 'ok'),
+        # --- errors / warnings / info ---
+        (r'^\[ERROR\]\s*line\s*\d+\s*(.*)$', 'error'),
+        (r'^\[ERROR\]\s*(.*)$', 'error'),
+        (r'^\[ERRO\]\s*(.*)$', 'error'),
+        (r'^\[WARN\]\s*(.*)$', 'warn'),
+        (r'^\[AVISO\]\s*(.*)$', 'warn'),
+        (r'^\[INFO\]\s*(.*)$', 'info'),
+        (r'^\[SIMULACAO\]\s*linha\s*\d+:\s*(.*)$', 'preview'),
+        (r'^\[SIMULATION\]\s*line\s*\d+:\s*(.*)$', 'preview'),
+        # case-insensitive tag variants
+        (r'^\[add\]\s*(.*)$', 'add'),
+        (r'^\[update\]\s*(.*)$', 'update'),
+        (r'^\[remove\]\s*(.*)$', 'remove'),
+        (r'^\[skip\]\s*(.*)$', 'skip'),
+        (r'^\[missing\]\s*(.*)$', 'missing'),
+        (r'^\[ok\]\s*(.*)$', 'ok'),
+        (r'^\[error\]\s*(.*)$', 'error'),
+        (r'^\[warn\]\s*(.*)$', 'warn'),
+        (r'^\[info\]\s*(.*)$', 'info'),
+    ]
+
+    def _parse_log(self, msg):
+        """Return (label, body). label is 'add'/'update'/'remove'/'skip'/
+        'missing'/'ok'/'error'/'warn'/'info'/'preview' or '' for untagged."""
+        import re
+        stripped = msg.strip()
+        if not stripped:
+            return "", ""
+        for pattern, label in self._LOG_PATTERNS:
+            m = re.match(pattern, stripped)
+            if m:
+                return label, m.group(1).strip()
+        return "", stripped
+
     def log(self, msg):
-        ts = datetime.datetime.now().strftime("%H:%M:%S")
-        msg_upper = msg.upper()
-        if "[OK]" in msg_upper or "complete" in msg.lower() or "success" in msg.lower():
-            msg_tag = "msg_ok"
-        elif "[ERROR]" in msg_upper or "failed" in msg.lower():
-            msg_tag = "msg_error"
-        elif "[WARN]" in msg_upper or "warning" in msg.lower():
-            msg_tag = "msg_warn"
-        elif "[PREVIEW]" in msg_upper or "preview" in msg.lower() or "dry" in msg.lower():
-            msg_tag = "msg_preview"
-        elif "[INFO]" in msg_upper:
-            msg_tag = "msg_info"
-        else:
-            msg_tag = "msg_default"
-
-        tag_info = self.log_text.tag_cget(msg_tag, "foreground")
-        target_color = tag_info if tag_info else TEXT_SEC
-
-        self._log_fade_counter += 1
-        fade_ts_tag = f"_fade_ts_{self._log_fade_counter}"
-        fade_msg_tag = f"_fade_msg_{self._log_fade_counter}"
-
-        ts_target = TEXT_TER
-        ts_bright = _lerp_color(ts_target, TEXT, 0.7)
-        msg_bright = _lerp_color(target_color, TEXT, 0.5)
-
-        self.log_text.tag_configure(fade_ts_tag, foreground=ts_bright)
-        self.log_text.tag_configure(fade_msg_tag, foreground=msg_bright)
+        import re
+        label, body = self._parse_log(msg)
 
         self.log_text.config(state="normal")
-        self.log_text.insert("end", f"{ts}  ", (fade_ts_tag,))
-        self.log_text.insert("end", f"{msg}\n", (fade_msg_tag,))
+        if label:
+            self.log_text.insert("end", f"[{label}] ", (f"label_{label}",))
+        if body:
+            # Split body on «highlighted» portions so we can tag them pink.
+            for piece in re.split(r'(«[^»]*»)', body):
+                if piece.startswith("«") and piece.endswith("»") and len(piece) >= 2:
+                    self.log_text.insert("end", piece[1:-1], ("highlight",))
+                else:
+                    self.log_text.insert("end", piece, ("body",))
+        self.log_text.insert("end", "\n")
         self.log_text.see("end")
         self.log_text.config(state="disabled")
-
-        step = [0]
-        def fade_tick():
-            step[0] += 1
-            t = min(step[0] / LOG_FADE_STEPS, 1.0)
-            ts_color = _lerp_color(ts_bright, ts_target, t)
-            msg_color = _lerp_color(msg_bright, target_color, t)
-            try:
-                self.log_text.tag_configure(fade_ts_tag, foreground=ts_color)
-                self.log_text.tag_configure(fade_msg_tag, foreground=msg_color)
-            except Exception:
-                return
-            if step[0] < LOG_FADE_STEPS:
-                self.root.after(LOG_FADE_INTERVAL, fade_tick)
-            else:
-                try:
-                    ts_ranges = self.log_text.tag_ranges(fade_ts_tag)
-                    msg_ranges = self.log_text.tag_ranges(fade_msg_tag)
-                    if ts_ranges:
-                        self.log_text.tag_add("timestamp", ts_ranges[0], ts_ranges[1])
-                    if msg_ranges:
-                        self.log_text.tag_add(msg_tag, msg_ranges[0], msg_ranges[1])
-                    self.log_text.tag_delete(fade_ts_tag)
-                    self.log_text.tag_delete(fade_msg_tag)
-                except Exception:
-                    pass
-        self.root.after(LOG_FADE_INTERVAL, fade_tick)
 
     def _clear_log(self):
         self.log_text.config(state="normal")
@@ -1390,23 +2214,35 @@ class App:
         api.API_KEY = os.environ.get("BRELLA_API_KEY", "")
         api.ORG_ID = os.environ.get("BRELLA_ORG_ID", "1218")
         api.EVENT_ID = os.environ.get("BRELLA_EVENT_ID", "10672")
-        downloading = tab.download_from_3cket.get()
-        if downloading:
-            csv_path = BASE_DIR / "data" / "participants.csv"
+        csv_path = Path(tab.csv_path.get())
+        api.prepare_csv(csv_path, download_csv=False, log_callback=self.log)
+        if tab.dry_run.get():
+            result = api.preview_sync_v4(
+                csv_path,
+                prune_missing=tab.prune.get(),
+                update_existing=tab.update_existing.get(),
+                staff_only=tab.staff_only.get(),
+                log_callback=self.log,
+            )
         else:
-            csv_path = Path(tab.csv_path.get())
-        api.prepare_csv(csv_path, download_csv=downloading, log_callback=self.log)
-        result = api.run_sync_v4(
-            csv_path, dry_run=tab.dry_run.get(),
-            prune_missing=tab.prune.get(), log_callback=self.log,
-        )
+            result = api.run_sync_v4(
+                csv_path, dry_run=False,
+                prune_missing=tab.prune.get(),
+                update_existing=tab.update_existing.get(),
+                staff_only=tab.staff_only.get(),
+                log_callback=self.log,
+            )
         if result:
             added_list = result.get("added_participants", [])
             updated_list = result.get("updated_participants", [])
+            skipped_list = result.get("skipped_participants", [])
             removed_list = result.get("removed_participants", [])
             missing_list = result.get("missing_email_participants", [])
-            added = result.get("processed", 0) if tab.dry_run.get() else len(added_list)
-            tab.update_summary(added=added, updated=len(updated_list),
+            # If "skip existing" is on, roll the skipped count into the
+            # "Updated" slot as a secondary signal (we didn't touch them).
+            if skipped_list:
+                self.log(f"[info] skipped {len(skipped_list)} already in Brella")
+            tab.update_summary(added=len(added_list), updated=len(updated_list),
                                removed=len(removed_list), missing=len(missing_list))
             tab.update_details(added=added_list, updated=updated_list,
                                removed=removed_list, missing=missing_list)
@@ -1416,15 +2252,19 @@ class App:
         csv_path = Path(tab.csv_path.get())
         result = run_speakers_sync(
             csv_path, dry_run=tab.dry_run.get(),
-            prune_missing=tab.prune.get(), log_callback=self.log,
+            prune_missing=tab.prune.get(),
+            update_existing=tab.update_existing.get(),
+            log_callback=self.log,
         )
         if result:
             added_list = result.get("added_participants", [])
             updated_list = result.get("updated_participants", [])
+            skipped_list = result.get("skipped_participants", [])
             removed_list = result.get("removed_participants", [])
             missing_list = result.get("missing_email_participants", [])
-            added = result.get("processed", 0) if tab.dry_run.get() else len(added_list)
-            tab.update_summary(added=added, updated=len(updated_list),
+            if skipped_list:
+                self.log(f"[info] skipped {len(skipped_list)} already in Brella")
+            tab.update_summary(added=len(added_list), updated=len(updated_list),
                                removed=len(removed_list), missing=len(missing_list))
             tab.update_details(added=added_list, updated=updated_list,
                                removed=removed_list, missing=missing_list)
@@ -1434,15 +2274,19 @@ class App:
         csv_path = Path(tab.csv_path.get())
         result = run_schedule_sync(
             csv_path, dry_run=tab.dry_run.get(),
-            prune_missing=tab.prune.get(), log_callback=self.log,
+            prune_missing=tab.prune.get(),
+            update_existing=tab.update_existing.get(),
+            log_callback=self.log,
         )
         if result:
             added_list = result.get("added_participants", [])
             updated_list = result.get("updated_participants", [])
+            skipped_list = result.get("skipped_participants", [])
             removed_list = result.get("removed_participants", [])
             missing_list = result.get("unmatched_speakers", [])
-            added = result.get("processed", 0) if tab.dry_run.get() else len(added_list)
-            tab.update_summary(added=added, updated=len(updated_list),
+            if skipped_list:
+                self.log(f"[info] skipped {len(skipped_list)} already in Brella")
+            tab.update_summary(added=len(added_list), updated=len(updated_list),
                                removed=len(removed_list), missing=len(missing_list))
             tab.update_details(added=added_list, updated=updated_list,
                                removed=removed_list, missing=missing_list)

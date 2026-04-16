@@ -24,15 +24,8 @@ from urllib import request as url_request, error as url_error
 
 from api import (
     build_request_headers, emit,
-    build_url, build_update_url,
-    create_invite, update_invite,
-    find_invite_by_external_id,
     REQUEST_DELAY_SECONDS,
-    INVITES_URL_TEMPLATE,
-    BRELLA_ATTENDEE_GROUP_IDS,
 )
-
-SPEAKERS_GROUP_ID = BRELLA_ATTENDEE_GROUP_IDS.get("speakers", "36334")
 
 # CSV column indices (Typeform export layout)
 COL_FIRST_NAME = 0
@@ -341,25 +334,8 @@ def parse_speakers_csv(csv_path, log_callback=None):
     return records, missing_info
 
 
-def _build_invite_payload(speaker_data, email, ext_id, token=""):
-    """Build a Brella invite payload for the speaker (participant entry)."""
-    return {
-        "event_invite": {
-            "external_email": email,
-            "external_id": ext_id,
-            "external_first_name": speaker_data["first_name"],
-            "external_last_name": speaker_data["last_name"],
-            "seats": 1,
-            "external_company": speaker_data.get("company_name", ""),
-            "external_qr_string": token or ext_id,
-            "attendee_group_id": SPEAKERS_GROUP_ID,
-        },
-        "import_interest_selections": False,
-        "import_identity_selections": False,
-    }
-
-
-def run_speakers_sync(csv_path, dry_run=False, prune_missing=False, log_callback=None):
+def run_speakers_sync(csv_path, dry_run=False, prune_missing=False,
+                       update_existing=False, log_callback=None):
     # Reload config
     import api
     api.API_KEY = os.environ.get("BRELLA_API_KEY", "")
@@ -367,10 +343,7 @@ def run_speakers_sync(csv_path, dry_run=False, prune_missing=False, log_callback
     api.EVENT_ID = os.environ.get("BRELLA_EVENT_ID", "10672")
 
     headers = build_request_headers()
-    invite_headers = dict(headers)
     headers["Content-Type"] = "application/json"
-
-    invites_url = build_url(INVITES_URL_TEMPLATE)
 
     records, missing_info = parse_speakers_csv(csv_path, log_callback=log_callback)
 
@@ -388,6 +361,7 @@ def run_speakers_sync(csv_path, dry_run=False, prune_missing=False, log_callback
     desired_external_ids = set()
     added = []
     updated = []
+    skipped = []
     removed = []
     failed = 0
 
@@ -396,24 +370,35 @@ def run_speakers_sync(csv_path, dry_run=False, prune_missing=False, log_callback
         desired_external_ids.add(ext_id)
 
         if dry_run:
-            action = "UPDATE" if ext_id in existing_map else "CREATE"
-            emit(f"[PREVIEW] line {line_num}: {action} {name} <{email}> (speaker + participant)",
-                 log_callback=log_callback)
-            if action == "CREATE":
-                added.append(name)
-            else:
+            already = ext_id in existing_map
+            if already and not update_existing:
+                skipped.append(name)
+                emit(f"[INFO] would skip (already exists): {name} <{email}>",
+                     log_callback=log_callback)
+            elif already:
                 updated.append(name)
+                emit(f"[PREVIEW] line {line_num}: would update {name} <{email}>",
+                     log_callback=log_callback)
+            else:
+                added.append(name)
+                emit(f"[PREVIEW] line {line_num}: would add {name} <{email}>",
+                     log_callback=log_callback)
             continue
 
         try:
             # --- Speaker profile ---
             sp_id = None
+            if ext_id in existing_map and not update_existing:
+                skipped.append(name)
+                emit(f"[INFO] skipped (already exists): {name}",
+                     log_callback=log_callback)
+                continue
             if ext_id in existing_map:
                 sp_id = existing_map[ext_id]["id"]
                 status, resp = update_speaker(headers, sp_id, speaker_data)
                 if status in (200, 201, 204):
                     updated.append(name)
-                    emit(f"[OK] Speaker updated: {name}", log_callback=log_callback)
+                    emit(f"[OK] UPDATED: {name}", log_callback=log_callback)
                 else:
                     failed += 1
                     emit(f"[ERROR] line {line_num} speaker update: {status}",
@@ -434,24 +419,6 @@ def run_speakers_sync(csv_path, dry_run=False, prune_missing=False, log_callback
                 sc = _upload_speaker_photo(sp_id, photo_url, log_callback=log_callback)
                 if sc and sc in (200, 201, 204):
                     emit(f"[OK] Photo uploaded: {name}", log_callback=log_callback)
-
-            time.sleep(REQUEST_DELAY_SECONDS)
-
-            # --- Participant invite ---
-            invite_payload = _build_invite_payload(speaker_data, email, ext_id, token)
-            invite_id = find_invite_by_external_id(invite_headers, ext_id)
-            if invite_id:
-                sc, _ = update_invite(build_update_url(invite_id), invite_headers, invite_payload)
-                if sc in (200, 201, 204):
-                    emit(f"[OK] Participant updated: {name} <{email}>", log_callback=log_callback)
-                else:
-                    emit(f"[WARN] Participant update {email}: {sc}", log_callback=log_callback)
-            else:
-                sc, _ = create_invite(invites_url, invite_headers, invite_payload)
-                if sc in (200, 201, 204):
-                    emit(f"[OK] Participant created: {name} <{email}>", log_callback=log_callback)
-                else:
-                    emit(f"[WARN] Participant create {email}: {sc}", log_callback=log_callback)
 
             time.sleep(REQUEST_DELAY_SECONDS)
 
@@ -493,6 +460,7 @@ def run_speakers_sync(csv_path, dry_run=False, prune_missing=False, log_callback
         "processed": processed,
         "added_participants": added,
         "updated_participants": updated,
+        "skipped_participants": skipped,
         "removed_participants": removed,
         "missing_email_participants": missing_info,
         "failed": failed,

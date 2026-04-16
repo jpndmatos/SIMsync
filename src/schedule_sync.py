@@ -2,7 +2,7 @@
 Schedule sync — import sessions from CSV into Brella's schedule.
 
 CSV format: comma-delimited with headers:
-    date,start_time,duration,title,content,track,location,speakers
+    date,start_time,duration,title,content,track,speakers
 
 Speaker assignment matches names against Brella speaker profiles.
 Run speakers sync first to ensure all speakers exist in Brella.
@@ -14,7 +14,6 @@ import json
 import os
 import re
 import time
-import unicodedata
 import zlib
 from pathlib import Path
 from urllib import request as url_request, error as url_error
@@ -238,235 +237,6 @@ def _build_stage_name_map(stages):
     return stage_map
 
 
-def list_locations(org, event, log_callback=None):
-    """Fetch locations from Brella admin panel API with endpoint fallbacks."""
-    admin_hdrs = _admin_headers()
-    if not admin_hdrs:
-        return []
-
-    primary_template = os.environ.get(
-        "BRELLA_LOCATIONS_URL",
-        "https://api.brella.io/api/admin_panel/events/{event_id}/locations",
-    )
-
-    templates = []
-    for tmpl in (
-        primary_template,
-        "https://api.brella.io/api/admin_panel/organizations/{org_id}/events/{event_id}/locations",
-        "https://api.brella.io/api/admin_panel/events/{event_id}/schedule/locations",
-        "https://api.brella.io/api/admin_panel/organizations/{org_id}/events/{event_id}/schedule/locations",
-        "https://manager.brella.io/api/admin_panel/events/{event_id}/schedule/locations",
-        "https://manager.brella.io/api/admin_panel/organizations/{org_id}/events/{event_id}/schedule/locations",
-        "https://api.brella.io/api/admin_panel/events/{event_id}/schedule_locations",
-        "https://api.brella.io/api/admin_panel/organizations/{org_id}/events/{event_id}/schedule_locations",
-        "https://api.brella.io/api/admin_panel/events/{event_id}/event_locations",
-        "https://api.brella.io/api/admin_panel/organizations/{org_id}/events/{event_id}/event_locations",
-        "https://api.brella.io/api/admin_panel/events/{event_id}/venues",
-        "https://api.brella.io/api/admin_panel/organizations/{org_id}/events/{event_id}/venues",
-        "https://api.brella.io/api/admin_panel/events/{event_id}/places",
-        "https://api.brella.io/api/admin_panel/organizations/{org_id}/events/{event_id}/places",
-    ):
-        if tmpl and tmpl not in templates:
-            templates.append(tmpl)
-
-    attempts = []
-    for tmpl in templates:
-        try:
-            url = tmpl.format(event_id=event, org_id=org)
-        except KeyError:
-            continue
-        status, data = _api_call(url, admin_hdrs)
-        attempts.append((url, status, data))
-        if status != 200:
-            continue
-
-        items = _extract_items_from_response(data)
-        if not items and isinstance(data, dict):
-            # Last resort: pick a likely location list key.
-            for key, value in data.items():
-                if not isinstance(value, list) or not value:
-                    continue
-                key_norm = str(key).lower()
-                if any(token in key_norm for token in ("location", "venue", "place", "schedule")):
-                    items = value
-                    break
-
-        if items:
-            if tmpl != primary_template:
-                _emit_log(
-                    f"[INFO] Locations resolved using fallback endpoint: {url}",
-                    log_callback=log_callback,
-                    verbose_only=True,
-                )
-            return items
-
-    status_info = ", ".join(f"{sc} {url}" for url, sc, _ in attempts)
-    if _is_verbose_logging():
-        emit(
-            f"[WARN] Locations lookup returned no usable items (attempts: {status_info}). "
-            "Set BRELLA_LOCATIONS_URL if your endpoint differs.",
-            log_callback=log_callback,
-        )
-    else:
-        statuses = sorted({str(sc) for _, sc, _ in attempts})
-        emit(
-            "[WARN] Locations lookup returned no usable items. "
-            f"Endpoint statuses: {', '.join(statuses) if statuses else 'none'}. "
-            "Set BRELLA_LOCATIONS_URL if your endpoint differs. "
-            "Set SIMSYNC_VERBOSE_LOGS=1 for per-URL details.",
-            log_callback=log_callback,
-        )
-    return []
-
-
-def _build_location_name_map(locations):
-    """Build normalized name -> location dict from Brella locations list."""
-    location_map = {}
-
-    for loc in locations:
-        if isinstance(loc, dict):
-            attrs = loc.get("attributes", {}) if isinstance(loc.get("attributes"), dict) else {}
-            candidates = [
-                attrs.get("name"),
-                attrs.get("title"),
-                attrs.get("label"),
-                attrs.get("location-name"),
-                attrs.get("location_name"),
-                loc.get("name"),
-                loc.get("title"),
-                loc.get("label"),
-                loc.get("location-name"),
-                loc.get("location_name"),
-            ]
-            for candidate in candidates:
-                if not candidate:
-                    continue
-                norm = _normalize_name_key(candidate)
-                if norm:
-                    location_map[norm] = loc
-                    break
-    return location_map
-
-
-def _extract_location_id(location_obj):
-    """Extract location ID from multiple possible payload shapes."""
-    if not isinstance(location_obj, dict):
-        return None
-
-    candidates = [
-        location_obj.get("id"),
-        location_obj.get("location_id"),
-        location_obj.get("location-id"),
-        location_obj.get("event_location_id"),
-        location_obj.get("event-location-id"),
-        location_obj.get("schedule_location_id"),
-        location_obj.get("schedule-location-id"),
-        location_obj.get("venue_id"),
-        location_obj.get("venue-id"),
-        location_obj.get("place_id"),
-        location_obj.get("place-id"),
-    ]
-
-    attrs = location_obj.get("attributes", {})
-    if isinstance(attrs, dict):
-        candidates.extend([
-            attrs.get("id"),
-            attrs.get("location_id"),
-            attrs.get("location-id"),
-            attrs.get("event_location_id"),
-            attrs.get("event-location-id"),
-            attrs.get("schedule_location_id"),
-            attrs.get("schedule-location-id"),
-            attrs.get("venue_id"),
-            attrs.get("venue-id"),
-            attrs.get("place_id"),
-            attrs.get("place-id"),
-        ])
-
-    for candidate in candidates:
-        if candidate is None:
-            continue
-        value = str(candidate).strip()
-        if value:
-            return value
-
-    return None
-
-
-def _build_location_name_id_map_from_timeslots(existing_timeslots):
-    """Infer location name -> location_id mapping from existing timeslot attributes."""
-    mapping = {}
-
-    for ts in existing_timeslots:
-        if not isinstance(ts, dict):
-            continue
-
-        attrs = ts.get("attributes", {})
-        if not isinstance(attrs, dict):
-            continue
-
-        location_candidates = []
-        for key in ("location", "location-name", "location_name", "venue", "venue_name", "place"):
-            value = attrs.get(key)
-            if isinstance(value, str) and value.strip():
-                location_candidates.append(value)
-
-        nested_location_obj = None
-        for key in ("location", "event-location", "event_location", "schedule_location", "venue", "place"):
-            value = attrs.get(key)
-            if isinstance(value, dict):
-                nested_location_obj = value
-                for nested_key in ("name", "title", "label", "location-name", "location_name"):
-                    nested_name = value.get(nested_key)
-                    if isinstance(nested_name, str) and nested_name.strip():
-                        location_candidates.append(nested_name)
-
-        direct_id_candidates = [
-            attrs.get("location-id"),
-            attrs.get("location_id"),
-            attrs.get("event-location-id"),
-            attrs.get("event_location_id"),
-            attrs.get("schedule-location-id"),
-            attrs.get("schedule_location_id"),
-            attrs.get("venue-id"),
-            attrs.get("venue_id"),
-            attrs.get("place-id"),
-            attrs.get("place_id"),
-        ]
-
-        location_id = None
-        for candidate in direct_id_candidates:
-            if candidate is None:
-                continue
-            value = str(candidate).strip()
-            if value:
-                location_id = value
-                break
-
-        if not location_id and nested_location_obj:
-            location_id = _extract_location_id(nested_location_obj)
-
-        if not location_id:
-            rel = ts.get("relationships", {})
-            if isinstance(rel, dict):
-                rel_locations = rel.get("locations", {})
-                rel_data = rel_locations.get("data", []) if isinstance(rel_locations, dict) else []
-                if isinstance(rel_data, list) and rel_data:
-                    first_rel = rel_data[0]
-                    if isinstance(first_rel, dict):
-                        location_id = _extract_location_id(first_rel)
-
-        if not location_id:
-            continue
-
-        for location_name in location_candidates:
-            norm = _normalize_name_key(location_name)
-            if norm:
-                mapping[norm] = location_id
-
-    return mapping
-
-
 def _normalize_timeslot_datetime(value):
     """Normalize API datetime variants to 'YYYY-MM-DD HH:MM:SS'."""
     from datetime import datetime, timezone
@@ -500,6 +270,59 @@ def _timeslot_match_key(title, start_time):
     if not title_key or not start_key:
         return ""
     return f"{title_key}|{start_key}"
+
+
+def _diff_timeslot(rec_title, start_time, end_time, duration, existing_ts):
+    """Compare a CSV-derived session against an existing Brella timeslot.
+    Returns a list of (field, old, new) tuples for fields that changed.
+    Empty list = nothing to update."""
+    if not isinstance(existing_ts, dict):
+        return []
+    attrs = existing_ts.get("attributes") or {}
+    changes = []
+
+    existing_title = str(attrs.get("title") or "").strip()
+    new_title = str(rec_title or "").strip()
+    if existing_title != new_title:
+        changes.append(("title", existing_title, new_title))
+
+    existing_start = _normalize_timeslot_datetime(
+        attrs.get("start-time") or attrs.get("start_time") or ""
+    )
+    new_start = _normalize_timeslot_datetime(start_time)
+    if existing_start != new_start:
+        changes.append(("start_time", existing_start or "-", new_start or "-"))
+
+    existing_end = _normalize_timeslot_datetime(
+        attrs.get("end-time") or attrs.get("end_time") or ""
+    )
+    new_end = _normalize_timeslot_datetime(end_time)
+    if existing_end != new_end:
+        changes.append(("end_time", existing_end or "-", new_end or "-"))
+
+    # Duration: attrs may return int or string; normalize.
+    existing_dur = attrs.get("duration")
+    try:
+        existing_dur_i = int(existing_dur) if existing_dur is not None else None
+    except (TypeError, ValueError):
+        existing_dur_i = None
+    try:
+        new_dur_i = int(duration) if duration is not None else None
+    except (TypeError, ValueError):
+        new_dur_i = None
+    if existing_dur_i != new_dur_i:
+        changes.append(("duration", str(existing_dur_i), str(new_dur_i)))
+
+    return changes
+
+
+def _format_changes(changes):
+    """Format a diff list as a human-readable string with «...» guillemets
+    around old/new values (the GUI log tags these portions pink)."""
+    parts = []
+    for field, old, new in changes:
+        parts.append(f"{field}: «{old}» → «{new}»")
+    return " · ".join(parts)
 
 
 def _build_existing_title_start_map(existing_timeslots, log_callback=None):
@@ -546,80 +369,27 @@ def _admin_patch_timeslot(event, timeslot_id, patches, log_callback=None):
     return sc, sr
 
 
-def _admin_patch_timeslot_location(event, timeslot_id, location_value, location_id=None,
-                                   log_callback=None):
-    """Patch location via admin panel API using fallback id and name field names."""
-    admin_hdrs = _admin_headers()
-    if not admin_hdrs or not (location_value or location_id):
-        return None, None, None
+def _recreate_timeslot_with_speakers(headers, org, event, timeslot_id, payload, log_callback=None):
+    """Delete and recreate a timeslot to update speaker assignments.
 
-    url = f"https://api.brella.io/api/admin_panel/events/{event}/timeslots/{timeslot_id}"
-    candidate_patches = []
-    if location_id:
-        candidate_patches.extend([
-            ("location_id", location_id),
-            ("schedule_location_id", location_id),
-            ("event_location_id", location_id),
-            ("venue_id", location_id),
-            ("place_id", location_id),
-        ])
-    if location_value:
-        candidate_patches.extend([
-            ("location", location_value),
-            ("location_name", location_value),
-            ("venue_name", location_value),
-            ("venue", location_value),
-        ])
+    The integration API only sets speaker_assignments on POST (create),
+    not on PATCH (update), so we must delete + recreate.
+    """
+    sc, _ = _api_call(_timeslots_url(org, event, timeslot_id), headers, method="DELETE")
+    if sc not in (200, 202, 204):
+        emit(f"[WARN] Could not delete timeslot {timeslot_id} for speaker update: {sc}",
+             log_callback=log_callback)
+        return None, None
 
-    last_sc, last_sr = None, None
-
-    for key, value in candidate_patches:
-        sc, sr = _api_call(
-            url,
-            admin_hdrs,
-            method="PATCH",
-            payload={"timeslot": {key: value}},
-        )
-        if sc in (200, 201, 204):
-            return key, sc, sr
-        last_sc, last_sr = sc, sr
-
-    emit(
-        f"[WARN] Location patch failed: {last_sc} {str(last_sr)[:300]}",
-        log_callback=log_callback,
-    )
-    return None, last_sc, last_sr
+    time.sleep(REQUEST_DELAY_SECONDS)
+    return _api_call(_timeslots_url(org, event), headers, method="POST",
+                     payload={"timeslot": payload})
 
 
 def delete_timeslot(headers, org, event, timeslot_id):
     return _api_call(_timeslots_url(org, event, timeslot_id), headers, method="DELETE")
 
 
-def list_timeslot_speakers(headers, org, event, timeslot_id):
-    status, data = _api_call(_timeslots_url(org, event, timeslot_id, "speakers"), headers)
-    if status != 200:
-        return []
-    return data.get("data", [])
-
-
-def assign_speaker(headers, org, event, timeslot_id, speaker_id):
-    sc, sr = _api_call(_timeslots_url(org, event, timeslot_id, "speakers"), headers,
-                       method="POST", payload={"speaker_id": speaker_id})
-    if sc not in (404, 405):
-        return sc, sr
-    sc, sr = _api_call(_timeslots_url(org, event, timeslot_id, "speakers"), headers,
-                       method="POST", payload={"timeslot_speaker": {"speaker_id": speaker_id}})
-    if sc not in (404, 405):
-        return sc, sr
-    return _api_call(_timeslots_url(org, event, timeslot_id, "speakers"), headers,
-                     method="POST", payload={"speaker_profile_id": speaker_id})
-
-
-def remove_speaker_assignment(headers, org, event, timeslot_id, assignment_id):
-    return _api_call(
-        _timeslots_url(org, event, timeslot_id, f"speakers/{assignment_id}"),
-        headers, method="DELETE",
-    )
 
 
 def _make_external_id(subtitle):
@@ -669,15 +439,6 @@ def _allowed_tracks_from_env():
         return None
     allowed = {item.strip().upper() for item in raw.split(",") if item.strip()}
     return allowed or None
-
-
-def _normalize_name_key(value):
-    """Normalize names for matching across accent/encoding variations."""
-    text = re.sub(r"\s+", " ", str(value or "").strip()).lower()
-    text = unicodedata.normalize("NFKD", text)
-    text = "".join(ch for ch in text if not unicodedata.combining(ch))
-    text = text.encode("ascii", "ignore").decode("ascii")
-    return re.sub(r"\s+", " ", text).strip()
 
 
 def parse_schedule_csv(csv_path, log_callback=None):
@@ -825,7 +586,6 @@ def parse_schedule_csv(csv_path, log_callback=None):
             "title": title,                                # session name -> Brella title
             "track": track,                                # track name -> stage mapping
             "description": normalized_row.get("content", ""),
-            "location": normalized_row.get("location", ""),  # physical venue
             "speaker_names": speaker_names,
             "external_id": _make_external_id(title),
         })
@@ -841,7 +601,8 @@ def _speakers_info(speaker_names):
     return ""
 
 
-def run_schedule_sync(csv_path, dry_run=False, prune_missing=False, log_callback=None):
+def run_schedule_sync(csv_path, dry_run=False, prune_missing=False,
+                       update_existing=False, log_callback=None):
     import api
     api.API_KEY = os.environ.get("BRELLA_API_KEY", "")
     api.ORG_ID = os.environ.get("BRELLA_ORG_ID", "1218")
@@ -865,8 +626,6 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False, log_callback
         existing_timeslots,
         log_callback=log_callback,
     )
-    timeslot_location_id_map = _build_location_name_id_map_from_timeslots(existing_timeslots)
-
     _emit_log(
         f"Found {len(existing_timeslots)} existing timeslots "
         f"({len(existing_map)} with external_id).",
@@ -878,12 +637,6 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False, log_callback
         log_callback=log_callback,
         verbose_only=True,
     )
-    if timeslot_location_id_map:
-        _emit_log(
-            f"Inferred location ids from existing timeslots: {len(timeslot_location_id_map)}",
-            log_callback=log_callback,
-            verbose_only=True,
-        )
 
     # Load Brella speakers for name matching
     from speakers import list_speakers
@@ -916,27 +669,6 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False, log_callback
              "Check BRELLA_ADMIN_ACCESS_TOKEN, BRELLA_ADMIN_CLIENT, BRELLA_ADMIN_UID in .env",
              log_callback=log_callback)
 
-    # Load Brella locations for location->location_id mapping
-    existing_locations = list_locations(org, event, log_callback=log_callback)
-    location_name_map = _build_location_name_map(existing_locations)
-    if existing_locations:
-        names = [loc_item.get("attributes", {}).get("name", loc_item.get("name", ""))
-                 for loc_item in existing_locations if isinstance(loc_item, dict)]
-        _emit_log(
-            f"Found {len(existing_locations)} locations in Brella: {', '.join(names)}",
-            log_callback=log_callback,
-            verbose_only=True,
-        )
-    elif timeslot_location_id_map:
-        _emit_log(
-            "[INFO] No locations list from admin API — using inferred location ids from existing timeslots.",
-            log_callback=log_callback,
-            verbose_only=True,
-        )
-    else:
-        emit("[WARN] No locations found from admin API — location_id mapping unavailable.",
-             log_callback=log_callback)
-
     # Timezone offset: CSV times are local, Brella stores/displays in UTC.
     from datetime import datetime, timedelta
     import api as _api_mod
@@ -949,6 +681,7 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False, log_callback
     desired_ids = set()
     added = []
     updated = []
+    skipped = []
     removed = []
     failed = 0
     unmatched_speakers = []
@@ -1012,27 +745,6 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False, log_callback
             else:
                 emit(f"[WARN] Stage not found in Brella: {rec['track']}", log_callback=log_callback)
 
-        # Resolve location name to location ID (if available)
-        location_id = None
-        if rec["location"]:
-            location_lookup = _normalize_name_key(rec["location"])
-            loc = location_name_map.get(location_lookup)
-            if loc:
-                location_id = _extract_location_id(loc) or loc.get("id")
-            if not location_id:
-                location_id = timeslot_location_id_map.get(location_lookup)
-                if location_id:
-                    _emit_log(
-                        f"[INFO] Location id inferred from existing timeslots: {rec['location']}",
-                        log_callback=log_callback,
-                        verbose_only=True,
-                    )
-            if not location_id and existing_locations:
-                emit(
-                    f"[WARN] Location not found in Brella: {rec['location']}",
-                    log_callback=log_callback,
-                )
-
         payload = {
             "title": rec["title"],
             "subtitle": "",
@@ -1040,44 +752,98 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False, log_callback
             "start_time": start_time,
             "end_time": end_time,
             "duration": rec["duration"],
-            "location": rec["location"],
             "external_id": ext_id,
             "speaker_assignments": speaker_assignments,
         }
-        if location_id:
-            payload["location_id"] = location_id
 
         if session_unmatched:
             for name in session_unmatched:
                 emit(f"[WARN] Speaker not found in Brella: {name}", log_callback=log_callback)
 
+        # Compute field-level diff for existing sessions so we only flag
+        # real changes (title / start_time / end_time / duration).
+        session_changes = (
+            _diff_timeslot(rec["title"], start_time, end_time, rec["duration"], existing_ts)
+            if existing_ts else None
+        )
+
         if dry_run:
-            action = "UPDATE" if existing_ts else "CREATE"
+            if existing_ts and not session_changes:
+                skipped.append(session_name)
+                emit(f"[INFO] no changes: {session_name}",
+                     log_callback=log_callback)
+            elif existing_ts and not update_existing:
+                skipped.append(session_name)
+                diff_str = _format_changes(session_changes)
+                emit(
+                    f"[INFO] would skip (existing, changes available): "
+                    f"{session_name} · {diff_str}",
+                    log_callback=log_callback,
+                )
+            elif existing_ts:
+                updated.append(session_name)
+                diff_str = _format_changes(session_changes)
+                emit(
+                    f"[PREVIEW] line {rec.get('line', '?')}: would update "
+                    f"{session_name} · {diff_str}",
+                    log_callback=log_callback,
+                )
+            else:
+                added.append(session_name)
+                emit(
+                    f"[PREVIEW] line {rec.get('line', '?')}: would add "
+                    f"{session_name} @ {rec['start_time']}"
+                    f"{_speakers_info(rec['speaker_names'])}",
+                    log_callback=log_callback,
+                )
+            continue
+
+        if existing_ts and not session_changes:
+            skipped.append(session_name)
+            emit(f"[INFO] no changes: {session_name}",
+                 log_callback=log_callback)
+            continue
+
+        if existing_ts and not update_existing:
+            skipped.append(session_name)
+            diff_str = _format_changes(session_changes)
             emit(
-                f"[PREVIEW] {action}: {session_name} @ {rec['start_time']}"
-                f"{_speakers_info(rec['speaker_names'])}",
+                f"[INFO] skipped (existing, changes available): "
+                f"{session_name} · {diff_str}",
                 log_callback=log_callback,
             )
-            if action == "CREATE":
-                added.append(session_name)
-            else:
-                updated.append(session_name)
             continue
 
         try:
             ts_id = None
             if existing_ts:
                 ts_id = existing_ts["id"]
-                status, resp = update_timeslot(headers, org, event, ts_id, payload)
-                if status in (200, 201, 204):
-                    updated.append(session_name)
-                    emit(f"[OK] Updated: {session_name}{_speakers_info(rec['speaker_names'])}",
-                         log_callback=log_callback)
+                if speaker_assignments:
+                    # Integration API ignores speaker_assignments on PATCH,
+                    # so delete + recreate to update speakers.
+                    status, resp = _recreate_timeslot_with_speakers(
+                        headers, org, event, ts_id, payload, log_callback=log_callback)
+                    if status in (200, 201):
+                        ts_id = resp.get("data", {}).get("id") if isinstance(resp, dict) else None
+                        updated.append(session_name)
+                        emit(f"[OK] Updated (recreated): {session_name}{_speakers_info(rec['speaker_names'])}",
+                             log_callback=log_callback)
+                    else:
+                        failed += 1
+                        emit(f"[ERROR] line {rec['line_num']} recreate: {status} {resp}",
+                             log_callback=log_callback)
+                        continue
                 else:
-                    failed += 1
-                    emit(f"[ERROR] line {rec['line_num']} update: {status} {resp}",
-                         log_callback=log_callback)
-                    continue
+                    status, resp = update_timeslot(headers, org, event, ts_id, payload)
+                    if status in (200, 201, 204):
+                        updated.append(session_name)
+                        emit(f"[OK] Updated: {session_name}",
+                             log_callback=log_callback)
+                    else:
+                        failed += 1
+                        emit(f"[ERROR] line {rec['line_num']} update: {status} {resp}",
+                             log_callback=log_callback)
+                        continue
             else:
                 status, resp = create_timeslot(headers, org, event, payload)
                 if status in (200, 201):
@@ -1092,13 +858,15 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False, log_callback
                          log_callback=log_callback)
                     continue
 
-            # Admin panel PATCH: description (DraftJS) + stage
+            # Admin panel PATCH: description (DraftJS), stage, location
             if ts_id:
                 admin_patches = {}
                 if rec["description"]:
                     admin_patches["content"] = _to_draftjs(rec["description"])
                 if stage_id:
                     admin_patches["track_id"] = stage_id
+                # Set location (preserve existing or default)
+                location_value = payload.get("location", "")
                 if admin_patches:
                     asc, asr = _admin_patch_timeslot(event, ts_id, admin_patches, log_callback=log_callback)
                     if asc in (200, 201, 204):
@@ -1109,21 +877,6 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False, log_callback
                             parts.append(f"stage: {rec['track']}")
                         _emit_log(
                             f"[OK] Admin patch — {' | '.join(parts)}",
-                            log_callback=log_callback,
-                            verbose_only=True,
-                        )
-
-                if rec["location"]:
-                    location_key, lsc, lsr = _admin_patch_timeslot_location(
-                        event,
-                        ts_id,
-                        rec["location"],
-                        location_id=location_id,
-                        log_callback=log_callback,
-                    )
-                    if location_key:
-                        _emit_log(
-                            f"[OK] Admin patch — location: {rec['location']} ({location_key})",
                             log_callback=log_callback,
                             verbose_only=True,
                         )
@@ -1171,6 +924,7 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False, log_callback
         "processed": len(records),
         "added_participants": added,
         "updated_participants": updated,
+        "skipped_participants": skipped,
         "removed_participants": removed,
         "failed": failed,
         "unmatched_speakers": unmatched_speakers,
