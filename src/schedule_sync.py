@@ -263,9 +263,25 @@ def _normalize_timeslot_datetime(value):
     return raw.replace("T", " ")[:19]
 
 
+_TITLE_CHAR_MAP = str.maketrans({
+    "\u2018": "'", "\u2019": "'",       # curly single quotes → straight
+    "\u201C": '"', "\u201D": '"',       # curly double quotes → straight
+    "\u2013": "-", "\u2014": "-",       # en/em dashes → hyphen
+    "\u200B": "", "\u200C": "", "\u200D": "",  # zero-width joiners
+    "\u00A0": " ",                      # nbsp → space
+})
+
+
+def _normalize_title(title):
+    """Normalize a session title for comparison — unifies curly quotes, dashes,
+    zero-width chars and whitespace so near-identical titles collide properly."""
+    s = str(title or "").translate(_TITLE_CHAR_MAP).strip()
+    return re.sub(r"\s+", " ", s).lower()
+
+
 def _timeslot_match_key(title, start_time):
     """Build a stable comparison key for matching existing timeslots."""
-    title_key = re.sub(r"\s+", " ", str(title or "").strip()).lower()
+    title_key = _normalize_title(title)
     start_key = _normalize_timeslot_datetime(start_time)
     if not title_key or not start_key:
         return ""
@@ -326,9 +342,27 @@ def _format_changes(changes):
 
 
 def _build_existing_title_start_map(existing_timeslots, log_callback=None):
-    """Map normalized title+start_time to existing timeslot for fallback matching."""
+    """Map normalized title+start_time to existing timeslot for fallback matching.
+    Returns (map, duplicate_labels, duplicate_ext_ids).
+
+    Two flavours of duplicate are detected:
+      1. Same title AND same exact start-time (treated as redundant).
+      2. Same title AND same day (different time) — surfaces when a session
+         was accidentally created twice on the same day with different times.
+
+    `duplicate_ext_ids` contains the external_ids of every timeslot involved
+    in a detected duplicate so the caller can exclude them from prune (we
+    never auto-delete duplicates — the user decides).
+    """
     match_map = {}
     duplicate_count = 0
+    duplicate_labels = []
+    duplicate_ext_ids = set()
+    # (title_norm, date) -> (start_norm, ext_id) of the first occurrence.
+    by_day = {}
+
+    def _ext_id_of(ts):
+        return (ts.get("attributes", {}) or {}).get("external-id") or ""
 
     for ts in existing_timeslots:
         attrs = ts.get("attributes", {}) if isinstance(ts, dict) else {}
@@ -344,17 +378,45 @@ def _build_existing_title_start_map(existing_timeslots, log_callback=None):
         key = _timeslot_match_key(title, start_time)
         if not key:
             continue
+        ext_id = _ext_id_of(ts)
         if key in match_map:
             duplicate_count += 1
+            duplicate_labels.append(f"{title} @ {start_time}")
+            if ext_id:
+                duplicate_ext_ids.add(ext_id)
+            prev_ext_id = _ext_id_of(match_map[key])
+            if prev_ext_id:
+                duplicate_ext_ids.add(prev_ext_id)
             continue
         match_map[key] = ts
+
+        # Same-day duplicate (same title, same date, different time).
+        title_norm = _normalize_title(title)
+        start_norm = _normalize_timeslot_datetime(start_time)
+        if title_norm and start_norm:
+            date_part = start_norm.split(" ")[0]
+            day_key = (title_norm, date_part)
+            prev = by_day.get(day_key)
+            if prev and prev["start"] != start_norm:
+                duplicate_labels.append(
+                    f"{title} on {date_part} — {prev['start'].split(' ')[1]} and "
+                    f"{start_norm.split(' ')[1]}"
+                )
+                if ext_id:
+                    duplicate_ext_ids.add(ext_id)
+                if prev.get("ext_id"):
+                    duplicate_ext_ids.add(prev["ext_id"])
+            else:
+                by_day[day_key] = {"start": start_norm, "ext_id": ext_id}
 
     if duplicate_count:
         emit(
             f"[WARN] Found {duplicate_count} existing duplicate(s) with same title/start_time.",
             log_callback=log_callback,
         )
-    return match_map
+    for label in duplicate_labels:
+        emit(f"[DUP] {label}", log_callback=log_callback)
+    return match_map, duplicate_labels, duplicate_ext_ids
 
 
 def _admin_patch_timeslot(event, timeslot_id, patches, log_callback=None):
@@ -622,7 +684,8 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False,
         for ts in existing_timeslots
         if ts.get("attributes", {}).get("external-id")
     }
-    existing_title_start_map = _build_existing_title_start_map(
+    (existing_title_start_map, duplicate_sessions,
+     duplicate_ext_ids) = _build_existing_title_start_map(
         existing_timeslots,
         log_callback=log_callback,
     )
@@ -770,13 +833,13 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False,
         if dry_run:
             if existing_ts and not session_changes:
                 skipped.append(session_name)
-                emit(f"[INFO] no changes: {session_name}",
+                emit(f"[SKIP] no changes: {session_name}",
                      log_callback=log_callback)
             elif existing_ts and not update_existing:
                 skipped.append(session_name)
                 diff_str = _format_changes(session_changes)
                 emit(
-                    f"[INFO] would skip (existing, changes available): "
+                    f"[SKIP] would skip (existing, changes available): "
                     f"{session_name} · {diff_str}",
                     log_callback=log_callback,
                 )
@@ -800,7 +863,7 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False,
 
         if existing_ts and not session_changes:
             skipped.append(session_name)
-            emit(f"[INFO] no changes: {session_name}",
+            emit(f"[SKIP] no changes: {session_name}",
                  log_callback=log_callback)
             continue
 
@@ -808,7 +871,7 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False,
             skipped.append(session_name)
             diff_str = _format_changes(session_changes)
             emit(
-                f"[INFO] skipped (existing, changes available): "
+                f"[SKIP] existing, changes available: "
                 f"{session_name} · {diff_str}",
                 log_callback=log_callback,
             )
@@ -892,6 +955,14 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False,
         for ext_id, ts in existing_map.items():
             if ext_id in desired_ids:
                 continue
+            # Never auto-remove duplicates — only report them in [DUP].
+            if ext_id in duplicate_ext_ids:
+                emit(
+                    f"[SKIP] duplicate — not removed: "
+                    f"{ts.get('attributes', {}).get('title', ext_id)}",
+                    log_callback=log_callback,
+                )
+                continue
             ts_id = ts["id"]
             attrs = ts.get("attributes", {})
             ts_name = attrs.get("title") or attrs.get("subtitle") or ext_id
@@ -926,6 +997,7 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False,
         "updated_participants": updated,
         "skipped_participants": skipped,
         "removed_participants": removed,
+        "duplicate_participants": duplicate_sessions,
         "failed": failed,
         "unmatched_speakers": unmatched_speakers,
     }

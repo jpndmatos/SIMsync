@@ -886,6 +886,9 @@ def build_existing_invite_id_map(headers):
     invites = list_invites(headers)
     invite_map = {}
     email_map = {}
+    seen_ext_ids = set()
+    seen_emails = set()
+    duplicates = []
 
     for invite in invites:
         if not isinstance(invite, dict):
@@ -896,38 +899,64 @@ def build_existing_invite_id_map(headers):
             continue
 
         external_id = extract_invite_external_id(invite)
+        email = extract_invite_email(invite)
+        name = extract_invite_name(invite)
+
+        # Duplicate detection: same external_id OR same email across 2+ invites.
+        dup_reason = None
+        if external_id and external_id in seen_ext_ids:
+            dup_reason = f"external_id {external_id}"
+        elif email and email in seen_emails:
+            dup_reason = f"email {email}"
+        if dup_reason:
+            label = name or email or external_id or invite_id
+            duplicates.append(f"{label} (duplicate {dup_reason}, invite {invite_id})")
+
         if external_id:
             invite_map[external_id] = invite_id
-
-        email = extract_invite_email(invite)
+            seen_ext_ids.add(external_id)
         if email:
             email_map[email] = invite_id
+            seen_emails.add(email)
 
-    return invite_map, email_map
+    return invite_map, email_map, duplicates
 
 
 def preflight_check(url, headers):
     return api_request(url, headers, "GET")
 
 
-def collect_prune_candidates(headers, desired_external_ids):
+def collect_prune_candidates(headers, desired_external_ids, desired_emails=None):
+    """Return Brella invites not present in the desired set.
+    An invite is kept if its external_id OR email is in `desired_*`.
+    Matching by email lets us prune invites that were created manually in
+    Brella (no external_id) but whose attendee is covered by the CSV."""
     existing_invites = list_invites(headers)
+    desired_emails = desired_emails or set()
     prune_candidates = []
 
     for invite in existing_invites:
         invite_id = invite.get("id") if isinstance(invite, dict) else None
-        external_id = extract_invite_external_id(invite)
-
-        if not invite_id or not external_id:
+        if not invite_id:
             continue
-        if external_id in desired_external_ids:
+
+        external_id = extract_invite_external_id(invite)
+        email = extract_invite_email(invite)
+
+        # Skip invites with no identity — too risky to prune blindly.
+        if not external_id and not email:
+            continue
+        # Covered by CSV → keep.
+        if external_id and external_id in desired_external_ids:
+            continue
+        if email and email in desired_emails:
             continue
 
         prune_candidates.append(
             {
                 "id": invite_id,
                 "external_id": external_id,
-                "email": extract_invite_email(invite),
+                "email": email,
                 "name": extract_invite_name(invite),
             }
         )
@@ -981,9 +1010,13 @@ def run_sync_v4(
 
     existing_invite_id_map = {}
     existing_email_map = {}
+    duplicate_invites = []
     if not dry_run:
         try:
-            existing_invite_id_map, existing_email_map = build_existing_invite_id_map(headers)
+            (existing_invite_id_map, existing_email_map, duplicate_invites
+             ) = build_existing_invite_id_map(headers)
+            for dup_label in duplicate_invites:
+                emit(f"[DUP] {dup_label}", log_callback=log_callback)
         except Exception as exc:
             emit(
                 "[WARN] Could not list existing invites before import. "
@@ -996,6 +1029,11 @@ def run_sync_v4(
         csv_path, limit=limit, staff_only=staff_only
     )
     desired_external_ids = {payload_external_id(payload) for _, payload in csv_records}
+    desired_emails = {
+        payload_email(payload).lower()
+        for _, payload in csv_records
+        if payload_email(payload)
+    }
     missing_email_participants = [
         invalid_row["participant"]
         for invalid_row in invalid_rows
@@ -1035,7 +1073,7 @@ def run_sync_v4(
                 participant_label = payload_participant_label(payload)
                 skipped_participants.append(participant_label)
                 emit(
-                    f"[INFO] skipped (already exists): {payload_email(payload)}",
+                    f"[SKIP] already exists: {payload_email(payload)}",
                     log_callback=log_callback,
                 )
                 time.sleep(REQUEST_DELAY_SECONDS)
@@ -1083,7 +1121,9 @@ def run_sync_v4(
             emit(f"[SKIPPED] line {line_number}: {exc}", log_callback=log_callback)
 
     if prune_missing:
-        prune_candidates = collect_prune_candidates(headers, desired_external_ids)
+        prune_candidates = collect_prune_candidates(
+            headers, desired_external_ids, desired_emails
+        )
 
         if dry_run:
             for candidate in prune_candidates:
@@ -1141,6 +1181,7 @@ def run_sync_v4(
         "updated_participants": updated_participants,
         "skipped_participants": skipped_participants,
         "removed_participants": removed_participants,
+        "duplicate_participants": duplicate_invites,
     }
 
 
@@ -1181,12 +1222,20 @@ def preview_sync_v4(
             f"URL: {preflight_url} Response: {response_text}"
         )
 
-    existing_invite_id_map, existing_email_map = build_existing_invite_id_map(headers)
+    (existing_invite_id_map, existing_email_map, duplicate_invites
+     ) = build_existing_invite_id_map(headers)
+    for dup_label in duplicate_invites:
+        emit(f"[DUP] {dup_label}", log_callback=log_callback)
 
     csv_records, invalid_rows = collect_csv_payloads(
         csv_path, limit=limit, staff_only=staff_only
     )
     desired_external_ids = {payload_external_id(payload) for _, payload in csv_records}
+    desired_emails = {
+        payload_email(payload).lower()
+        for _, payload in csv_records
+        if payload_email(payload)
+    }
 
     missing_email_participants = [
         invalid_row["participant"]
@@ -1211,7 +1260,7 @@ def preview_sync_v4(
         if invite_id and not update_existing:
             would_skip.append(participant_label)
             emit(
-                f"[INFO] would skip (already exists): {participant_label}",
+                f"[SKIP] would skip (already exists): {participant_label}",
                 log_callback=log_callback,
             )
         elif invite_id:
@@ -1228,7 +1277,9 @@ def preview_sync_v4(
             )
 
     if prune_missing:
-        prune_candidates = collect_prune_candidates(headers, desired_external_ids)
+        prune_candidates = collect_prune_candidates(
+            headers, desired_external_ids, desired_emails
+        )
         for candidate in prune_candidates:
             label = format_removed_participant_label(candidate)
             would_remove.append(label)
@@ -1259,6 +1310,7 @@ def preview_sync_v4(
         "updated_participants": would_update,
         "skipped_participants": would_skip,
         "removed_participants": would_remove,
+        "duplicate_participants": duplicate_invites,
     }
 
 

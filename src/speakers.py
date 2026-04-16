@@ -373,7 +373,7 @@ def run_speakers_sync(csv_path, dry_run=False, prune_missing=False,
             already = ext_id in existing_map
             if already and not update_existing:
                 skipped.append(name)
-                emit(f"[INFO] would skip (already exists): {name} <{email}>",
+                emit(f"[SKIP] would skip (already exists): {name} <{email}>",
                      log_callback=log_callback)
             elif already:
                 updated.append(name)
@@ -390,7 +390,7 @@ def run_speakers_sync(csv_path, dry_run=False, prune_missing=False,
             sp_id = None
             if ext_id in existing_map and not update_existing:
                 skipped.append(name)
-                emit(f"[INFO] skipped (already exists): {name}",
+                emit(f"[SKIP] already exists: {name}",
                      log_callback=log_callback)
                 continue
             if ext_id in existing_map:
@@ -463,5 +463,6 @@ def run_speakers_sync(csv_path, dry_run=False, prune_missing=False,
         "skipped_participants": skipped,
         "removed_participants": removed,
         "missing_email_participants": missing_info,
+        "duplicate_participants": [],
         "failed": failed,
     }

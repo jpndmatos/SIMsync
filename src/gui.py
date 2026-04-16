@@ -312,6 +312,7 @@ def make_button(parent, text, command, primary=False, danger=False):
         parent, text=text, font=FONT,
         bg=bg, fg=fg,
         activebackground=hover_bg, activeforeground=hover_fg,
+        disabledforeground=fg,
         relief="flat", cursor="hand2", borderwidth=0,
         padx=ACTION_BTN_PADX, pady=ACTION_BTN_PADY, command=command,
     )
@@ -739,7 +740,7 @@ class SetupTab:
 
 class SyncTab:
     def __init__(self, parent, name, description, has_prune=False,
-                 has_staff_only=False,
+                 has_staff_only=False, has_remove=True,
                  run_func=None, enabled=True, app=None,
                  csv_header_fields=None):
         self.name = name
@@ -809,16 +810,17 @@ class SyncTab:
         self.browse_btn = make_button(csv_row, "Browse", command=self._browse)
         self.browse_btn.config(pady=SP_MD, highlightthickness=1,
                                highlightbackground=SURFACE_RAISED)
-        # side=right first so it sits flush to the right after the entry expands.
-        self.browse_btn.pack(side="right", padx=(SP_MD, 0), fill="y")
+        # Browse on the left of the input bar.
+        self.browse_btn.pack(side="left", padx=(0, SP_MD), fill="y")
 
-        # Right-to-left packing: last packed sits furthest left in the row.
-        # Visual order (left to right): [Staff] [Update] [Remove] [Browse]
+        # Right-to-left packing for the toggles (first packed sits furthest right).
+        # Visual order (left to right): [Browse] [entry] [Staff] [Update] [Remove]
         if has_prune:
-            self.prune_cb = make_toggle(csv_row, "Remove", self.prune)
-            self.prune_cb.config(pady=SP_MD, highlightthickness=1,
-                                 highlightbackground=SURFACE_RAISED)
-            self.prune_cb.pack(side="right", padx=(SP_MD, 0), fill="y")
+            if has_remove:
+                self.prune_cb = make_toggle(csv_row, "Remove", self.prune)
+                self.prune_cb.config(pady=SP_MD, highlightthickness=1,
+                                     highlightbackground=SURFACE_RAISED)
+                self.prune_cb.pack(side="right", padx=(SP_MD, 0), fill="y")
 
             self.update_cb = make_toggle(csv_row, "Update existing",
                                          self.update_existing)
@@ -839,10 +841,11 @@ class SyncTab:
         self._notices.pack(fill="x", pady=(SP_MD, 0))
         self._notice_labels = {}
         if has_prune:
-            self._install_notice(
-                "prune", self.prune,
-                "Removing from Brella if not in CSV", WARN,
-            )
+            if has_remove:
+                self._install_notice(
+                    "prune", self.prune,
+                    "Removing from Brella if not in CSV", WARN,
+                )
             self._install_notice(
                 "update", self.update_existing,
                 "Updating existing rows in Brella (will overwrite manual edits)",
@@ -873,19 +876,26 @@ class SyncTab:
         tk.Frame(self._stat_wrap, bg=SURFACE_RAISED, height=1).pack(fill="x")
         detail_container = tk.Frame(self._stat_wrap, bg=SURFACE_RAISED)
         detail_container.pack(fill="both", expand=True, padx=0, pady=0)
-        detail_container.columnconfigure(0, weight=1, uniform="stats")
-        detail_container.columnconfigure(1, weight=1, uniform="stats")
+        for c in range(3):
+            detail_container.columnconfigure(c, weight=1, uniform="stats")
         detail_container.rowconfigure(0, weight=1)
         detail_container.rowconfigure(1, weight=1)
 
+        # Row 0: Added · Updated · Skipped
         self.card_added, self.card_added_title, self.list_added = self._make_unified_box(
             detail_container, "Added", "0", SUCCESS, row=0, col=0)
         self.card_updated, _, self.list_updated = self._make_unified_box(
             detail_container, "Updated", "0", ACCENT, row=0, col=1)
+        self.card_skipped, _, self.list_skipped = self._make_unified_box(
+            detail_container, "Skipped", "0", TEXT_TER, row=0, col=2)
+
+        # Row 1: Removed · Missing info · Duplicates
         self.card_removed, _, self.list_removed = self._make_unified_box(
             detail_container, "Removed", "0", DANGER, row=1, col=0)
         self.card_missing, _, self.list_missing = self._make_unified_box(
             detail_container, "Missing info", "0", WARN, row=1, col=1, copyable=True)
+        self.card_duplicate, _, self.list_duplicate = self._make_unified_box(
+            detail_container, "Duplicates", "0", DANGER, row=1, col=2, copyable=True)
 
         # Sync the wrapper's height to match the log panel's height so its
         # top edge aligns with where the log starts.
@@ -961,8 +971,9 @@ class SyncTab:
 
     def _make_unified_box(self, parent, title, value, color, row=0, col=0, copyable=False):
         outer = tk.Frame(parent, bg=BG)
-        # 1px separator on the right of left column and under the top row.
-        padx = (0, 1) if col == 0 else (0, 0)
+        # 1px separator between columns and rows. Rightmost column (index 2
+        # in the 3-col layout) drops the right border so it meets the edge.
+        padx = (0, 1) if col < 2 else (0, 0)
         pady = (0, 1) if row == 0 else (0, 0)
         outer.grid(row=row, column=col, sticky="nsew", padx=padx, pady=pady)
         outer.columnconfigure(0, weight=1)
@@ -1019,22 +1030,28 @@ class SyncTab:
             self.frame.clipboard_clear()
             self.frame.clipboard_append("\n".join(items))
 
-    def update_summary(self, added=0, updated=0, removed=0, missing=0):
+    def update_summary(self, added=0, updated=0, skipped=0,
+                        removed=0, missing=0, duplicate=0):
         def _update():
             self.card_added.config(text=str(added))
             self.card_added_title.config(text="To add" if self.dry_run.get() else "Added")
             self.card_updated.config(text=str(updated))
+            self.card_skipped.config(text=str(skipped))
             self.card_removed.config(text=str(removed))
             self.card_missing.config(text=str(missing))
+            self.card_duplicate.config(text=str(duplicate))
         self.frame.after(0, _update)
 
-    def update_details(self, added=None, updated=None, removed=None, missing=None):
+    def update_details(self, added=None, updated=None, skipped=None,
+                        removed=None, missing=None, duplicate=None):
         def _update():
             for lb, items in [
                 (self.list_added, added or []),
                 (self.list_updated, updated or []),
+                (self.list_skipped, skipped or []),
                 (self.list_removed, removed or []),
                 (self.list_missing, missing or []),
+                (self.list_duplicate, duplicate or []),
             ]:
                 lb.delete(0, "end")
                 if items:
@@ -1151,7 +1168,7 @@ class DebugTab:
         self.browse_btn = make_button(csv_row, "Browse", command=self._browse_csv)
         self.browse_btn.config(pady=SP_MD, highlightthickness=1,
                                highlightbackground=SURFACE_RAISED)
-        self.browse_btn.pack(side="right", padx=(SP_MD, 0), fill="y")
+        self.browse_btn.pack(side="left", padx=(0, SP_MD), fill="y")
 
         self.csv_entry = tk.Entry(
             csv_row, textvariable=self.csv_path, font=FONT,
@@ -1229,8 +1246,18 @@ class DebugTab:
         # tree at column boundaries. Redrawn whenever the tree is resized.
         self._column_separators = []
         self._tree_wrap = tree_wrap
-        self.tree.bind("<Configure>", self._draw_column_separators, add="+")
-        self.tree.bind("<ButtonRelease-1>", self._draw_column_separators, add="+")
+        # Use after_idle so widths are read AFTER Tk finishes laying out
+        # stretch columns for the new tree size.
+        self.tree.bind(
+            "<Configure>",
+            lambda _e: self.tree.after_idle(self._draw_column_separators),
+            add="+",
+        )
+        self.tree.bind(
+            "<ButtonRelease-1>",
+            lambda _e: self.tree.after_idle(self._draw_column_separators),
+            add="+",
+        )
 
         self.tree.tag_configure("missing", background="#2a1f0a", foreground=WARN)
         self.tree.tag_configure("ok", background=BG, foreground=TEXT)
@@ -1238,6 +1265,10 @@ class DebugTab:
 
         self.tree.bind("<<TreeviewSelect>>", self._on_select)
         self.tree.bind("<Double-1>", lambda e: self._edit_qr_dialog())
+
+        # First-paint separators after Tk settles the tree's stretch columns.
+        self.tree.after(100, self._draw_column_separators)
+        self.tree.after(400, self._draw_column_separators)
 
         # === Action buttons (hosted in log panel like other tabs) ===
         if self._app and hasattr(self._app, "_log_action_host"):
@@ -1893,6 +1924,7 @@ class App:
         self.log_text.tag_configure("label_update", foreground=ACCENT_LIGHT)
         self.log_text.tag_configure("label_remove", foreground=DANGER)
         self.log_text.tag_configure("label_skip", foreground=TEXT_TER)
+        self.log_text.tag_configure("label_dup", foreground=DANGER)
         self.log_text.tag_configure("label_missing", foreground=WARN)
         self.log_text.tag_configure("label_ok", foreground=SUCCESS)
         self.log_text.tag_configure("label_error", foreground=DANGER)
@@ -1926,11 +1958,11 @@ class App:
             "Schedule": BASE_DIR / "data" / "schedule.csv",
         }
 
-        for name, desc, prune, staff_only, func, en, fields in [
+        for name, desc, prune, staff_only, remove, func, en, fields in [
             (
                 "Participants",
                 "Sync 3cket participants to Brella.",
-                True, True,
+                True, True, True,
                 self._run_participants,
                 True,
                 [
@@ -1945,7 +1977,7 @@ class App:
             (
                 "Speakers",
                 "Sync published speakers to Brella.",
-                True, False,
+                True, False, True,
                 self._run_speakers,
                 True,
                 [
@@ -1963,7 +1995,7 @@ class App:
             (
                 "Schedule",
                 "Sync event sessions to Brella.",
-                True, False,
+                True, False, False,  # Remove toggle hidden — never prune sessions.
                 self._run_schedule,
                 True,
                 [
@@ -1975,7 +2007,7 @@ class App:
         ]:
             self._add_nav(sidebar, name)
             tab = SyncTab(self.content, name, desc, has_prune=prune,
-                          has_staff_only=staff_only,
+                          has_staff_only=staff_only, has_remove=remove,
                           run_func=func, enabled=en, app=self,
                           csv_header_fields=fields)
             tab._log_callback = self.log
@@ -2126,10 +2158,16 @@ class App:
         (r'^\[PREVIEW\]\s*linha\s*\d+:\s*ADICIONARIA\s*(.*)$', 'add'),
         (r'^\[PREVIEW\]\s*linha\s*\d+:\s*ATUALIZARIA\s*(.*)$', 'update'),
         (r'^\[PREVIEW\]\s*REMOVERIA\s*(.*)$', 'remove'),
-        # --- skip (skip-existing mode, preview or real) ---
+        # --- skip (skip-existing mode, no-changes, preview or real) ---
+        (r'^\[SKIP\]\s*(.*)$', 'skip'),
         (r'^\[INFO\]\s*skip(?:ped|ping| )? \(already exists\):\s*(.*)$', 'skip'),
         (r'^\[INFO\]\s*would skip \(already exists\):\s*(.*)$', 'skip'),
+        (r'^\[INFO\]\s*would skip \(existing, changes available\):\s*(.*)$', 'skip'),
+        (r'^\[INFO\]\s*skipped \(existing, changes available\):\s*(.*)$', 'skip'),
+        (r'^\[INFO\]\s*no changes:\s*(.*)$', 'skip'),
         (r'^\[INFO\]\s*IGNORA\w*\s*\(ja existe\):\s*(.*)$', 'skip'),
+        # --- duplicate ---
+        (r'^\[DUP\]\s*(.*)$', 'dup'),
         # --- missing info (no email / no id) ---
         (r'^\[SKIPPED\]\s*line\s*\d+:\s*(.*)$', 'missing'),
         (r'^\[IGNORADO\]\s*linha\s*\d+:\s*participante sem email\s*-\s*(.*)$', 'missing'),
@@ -2158,6 +2196,7 @@ class App:
         (r'^\[remove\]\s*(.*)$', 'remove'),
         (r'^\[skip\]\s*(.*)$', 'skip'),
         (r'^\[missing\]\s*(.*)$', 'missing'),
+        (r'^\[dup\]\s*(.*)$', 'dup'),
         (r'^\[ok\]\s*(.*)$', 'ok'),
         (r'^\[error\]\s*(.*)$', 'error'),
         (r'^\[warn\]\s*(.*)$', 'warn'),
@@ -2233,19 +2272,7 @@ class App:
                 log_callback=self.log,
             )
         if result:
-            added_list = result.get("added_participants", [])
-            updated_list = result.get("updated_participants", [])
-            skipped_list = result.get("skipped_participants", [])
-            removed_list = result.get("removed_participants", [])
-            missing_list = result.get("missing_email_participants", [])
-            # If "skip existing" is on, roll the skipped count into the
-            # "Updated" slot as a secondary signal (we didn't touch them).
-            if skipped_list:
-                self.log(f"[info] skipped {len(skipped_list)} already in Brella")
-            tab.update_summary(added=len(added_list), updated=len(updated_list),
-                               removed=len(removed_list), missing=len(missing_list))
-            tab.update_details(added=added_list, updated=updated_list,
-                               removed=removed_list, missing=missing_list)
+            self._apply_sync_result(tab, result, missing_key="missing_email_participants")
 
     def _run_speakers(self, tab):
         from speakers import run_speakers_sync
@@ -2257,17 +2284,7 @@ class App:
             log_callback=self.log,
         )
         if result:
-            added_list = result.get("added_participants", [])
-            updated_list = result.get("updated_participants", [])
-            skipped_list = result.get("skipped_participants", [])
-            removed_list = result.get("removed_participants", [])
-            missing_list = result.get("missing_email_participants", [])
-            if skipped_list:
-                self.log(f"[info] skipped {len(skipped_list)} already in Brella")
-            tab.update_summary(added=len(added_list), updated=len(updated_list),
-                               removed=len(removed_list), missing=len(missing_list))
-            tab.update_details(added=added_list, updated=updated_list,
-                               removed=removed_list, missing=missing_list)
+            self._apply_sync_result(tab, result, missing_key="missing_email_participants")
 
     def _run_schedule(self, tab):
         from schedule_sync import run_schedule_sync
@@ -2279,17 +2296,24 @@ class App:
             log_callback=self.log,
         )
         if result:
-            added_list = result.get("added_participants", [])
-            updated_list = result.get("updated_participants", [])
-            skipped_list = result.get("skipped_participants", [])
-            removed_list = result.get("removed_participants", [])
-            missing_list = result.get("unmatched_speakers", [])
-            if skipped_list:
-                self.log(f"[info] skipped {len(skipped_list)} already in Brella")
-            tab.update_summary(added=len(added_list), updated=len(updated_list),
-                               removed=len(removed_list), missing=len(missing_list))
-            tab.update_details(added=added_list, updated=updated_list,
-                               removed=removed_list, missing=missing_list)
+            self._apply_sync_result(tab, result, missing_key="unmatched_speakers")
+
+    def _apply_sync_result(self, tab, result, missing_key):
+        added_list = result.get("added_participants", []) or []
+        updated_list = result.get("updated_participants", []) or []
+        skipped_list = result.get("skipped_participants", []) or []
+        removed_list = result.get("removed_participants", []) or []
+        missing_list = result.get(missing_key, []) or []
+        duplicate_list = result.get("duplicate_participants", []) or []
+        tab.update_summary(
+            added=len(added_list), updated=len(updated_list),
+            skipped=len(skipped_list), removed=len(removed_list),
+            missing=len(missing_list), duplicate=len(duplicate_list),
+        )
+        tab.update_details(
+            added=added_list, updated=updated_list, skipped=skipped_list,
+            removed=removed_list, missing=missing_list, duplicate=duplicate_list,
+        )
 
     def run(self):
         self.root.mainloop()
