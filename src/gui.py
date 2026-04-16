@@ -991,12 +991,13 @@ class SyncTab:
                        fg=color, bg=BG, anchor="w")
         count_label.pack(side="left")
 
-        title_label = tk.Label(title_row, text=title, font=FONT_BOLD,
+        card_title_font = ("Poppins", 8)
+        title_label = tk.Label(title_row, text=title, font=card_title_font,
                                fg=TEXT_TER, bg=BG, anchor="w")
         title_label.pack(side="left", padx=(SP_MD, 0), pady=(SP_SM, 0))
 
         if copyable:
-            copy_btn = tk.Button(title_row, text="Copy", font=FONT,
+            copy_btn = tk.Button(title_row, text="Copy", font=card_title_font,
                                  bg=BG, fg=TEXT_TER,
                                  activebackground=SURFACE_RAISED, activeforeground=TEXT,
                                  relief="flat", cursor="hand2", bd=0,
@@ -1014,7 +1015,7 @@ class SyncTab:
         list_frame.rowconfigure(0, weight=1)
         list_frame.columnconfigure(0, weight=1)
 
-        lb = tk.Listbox(list_frame, font=FONT, bg=BG, fg=TEXT_SEC,
+        lb = tk.Listbox(list_frame, font=("Poppins", 8), bg=BG, fg=TEXT_SEC,
                         selectbackground=SURFACE_RAISED, selectforeground=TEXT,
                         relief="flat", borderwidth=0, highlightthickness=0,
                         activestyle="none")
@@ -1085,6 +1086,10 @@ class SyncTab:
         self._set_status(f"Running {mode}...", ACCENT_LIGHT)
         if self._app:
             self._app._log_status_pulse.start(ACCENT_LIGHT)
+        # Visual start marker for this run in the log.
+        self._log(f"[preview] --- {self.name} {mode} started ---"
+                  if dry_run else
+                  f"[info] --- {self.name} sync started ---")
         threading.Thread(target=self._run_thread, daemon=True).start()
 
     def _run_thread(self):
@@ -1094,6 +1099,9 @@ class SyncTab:
             else:
                 self._log(f"[{self.name}] Not implemented yet.")
             mode = "Preview" if self.dry_run.get() else "Sync"
+            # Visual end marker for this run in the log.
+            tag = "preview" if self.dry_run.get() else "info"
+            self._log(f"[{tag}] --- {self.name} {mode.lower()} complete ---")
             self._set_status(f"{mode} complete.", SUCCESS)
         except Exception as exc:
             self._log(f"[ERROR] {exc}")
@@ -2151,9 +2159,10 @@ class App:
     # legacy Portuguese phrasings are matched so older messages still render
     # as clean labels. Order matters — more specific patterns first.
     _LOG_PATTERNS = [
-        # --- preview ---
-        (r'^\[PREVIEW\]\s*line\s*\d+:\s*would add\s*(.*)$', 'add'),
-        (r'^\[PREVIEW\]\s*line\s*\d+:\s*would update\s*(.*)$', 'update'),
+        # --- preview (line-ref may be a number or '?' when not tracked) ---
+        (r'^\[PREVIEW\]\s*line\s*[\d\?]+:\s*would add\s*(.*)$', 'add'),
+        (r'^\[PREVIEW\]\s*line\s*[\d\?]+:\s*would update\s*(.*)$', 'update'),
+        (r'^\[PREVIEW\]\s*Would remove:\s*(.*)$', 'remove'),
         (r'^\[PREVIEW\]\s*would remove\s*(.*)$', 'remove'),
         (r'^\[PREVIEW\]\s*linha\s*\d+:\s*ADICIONARIA\s*(.*)$', 'add'),
         (r'^\[PREVIEW\]\s*linha\s*\d+:\s*ATUALIZARIA\s*(.*)$', 'update'),
@@ -2182,7 +2191,7 @@ class App:
         (r'^\[OK(?:\s+\d+)?\]\s*REMOVIDO:\s*(.*)$', 'remove'),
         (r'^\[OK(?:\s+\d+)?\]\s*(.*)$', 'ok'),
         # --- errors / warnings / info ---
-        (r'^\[ERROR\]\s*line\s*\d+\s*(.*)$', 'error'),
+        (r'^\[ERROR\]\s*line\s*[\d\?]+\s*(.*)$', 'error'),
         (r'^\[ERROR\]\s*(.*)$', 'error'),
         (r'^\[ERRO\]\s*(.*)$', 'error'),
         (r'^\[WARN\]\s*(.*)$', 'warn'),
@@ -2201,6 +2210,7 @@ class App:
         (r'^\[error\]\s*(.*)$', 'error'),
         (r'^\[warn\]\s*(.*)$', 'warn'),
         (r'^\[info\]\s*(.*)$', 'info'),
+        (r'^\[preview\]\s*(.*)$', 'preview'),
     ]
 
     def _parse_log(self, msg):
