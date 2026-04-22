@@ -742,10 +742,12 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False,
              log_callback=log_callback)
 
     desired_ids = set()
+    matched_brella_ids = set()
     added = []
     updated = []
     skipped = []
     removed = []
+    only_in_brella = []
     failed = 0
     unmatched_speakers = []
 
@@ -781,6 +783,9 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False,
                     log_callback=log_callback,
                     verbose_only=True,
                 )
+
+        if existing_ts:
+            matched_brella_ids.add(existing_ts["id"])
 
         # Resolve speaker IDs from name map; track unmatched ones
         speaker_ids = []
@@ -980,8 +985,22 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False,
                     emit(f"[ERROR] Remove {ext_id}: {status}", log_callback=log_callback)
                 time.sleep(REQUEST_DELAY_SECONDS)
 
+    # Detect sessions in Brella that are not present in the CSV.
+    for ts in existing_timeslots:
+        if ts["id"] in matched_brella_ids:
+            continue
+        attrs = ts.get("attributes", {})
+        ts_name = attrs.get("title") or attrs.get("subtitle") or ts["id"]
+        only_in_brella.append(ts_name)
+    if only_in_brella:
+        emit(f"[WARN] {len(only_in_brella)} session(s) in Brella but not in CSV:",
+             log_callback=log_callback)
+        for name in only_in_brella:
+            emit(f"  - {name}", log_callback=log_callback)
+
     emit(
         f"Done. Created: {len(added)}, Updated: {len(updated)}, Removed: {len(removed)}, "
+        f"Only in Brella: {len(only_in_brella)}, "
         f"Failed: {failed}, Unmatched speakers: {len(unmatched_speakers)}",
         log_callback=log_callback,
     )
@@ -997,6 +1016,7 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False,
         "updated_participants": updated,
         "skipped_participants": skipped,
         "removed_participants": removed,
+        "only_in_brella": only_in_brella,
         "duplicate_participants": duplicate_sessions,
         "failed": failed,
         "unmatched_speakers": unmatched_speakers,

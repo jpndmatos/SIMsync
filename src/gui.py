@@ -890,7 +890,7 @@ class SyncTab:
             detail_container, "Skipped", "0", TEXT_TER, row=0, col=2)
 
         # Row 1: Removed · Missing info · Duplicates
-        self.card_removed, _, self.list_removed = self._make_unified_box(
+        self.card_removed, self.card_removed_title, self.list_removed = self._make_unified_box(
             detail_container, "Removed", "0", DANGER, row=1, col=0)
         self.card_missing, _, self.list_missing = self._make_unified_box(
             detail_container, "Missing info", "0", WARN, row=1, col=1, copyable=True)
@@ -2306,6 +2306,10 @@ class App:
             log_callback=self.log,
         )
         if result:
+            # Show "Only in Brella" sessions in the Removed card.
+            only_in_brella = result.get("only_in_brella", []) or []
+            result["removed_participants"] = only_in_brella
+            tab.card_removed_title.config(text="Only in Brella")
             self._apply_sync_result(tab, result, missing_key="unmatched_speakers")
 
     def _apply_sync_result(self, tab, result, missing_key):
