@@ -998,6 +998,7 @@ def run_sync_v4(
     reverse_csv=False,
     suppress_skip_logs=False,
     stop_after_first_existing=False,
+    stop_after_existing_skips=0,
 ):
     if prune_missing and limit:
         raise RuntimeError("--limit nao pode ser usado com prune ativo. Usa --no-prune-missing com --limit.")
@@ -1040,8 +1041,9 @@ def run_sync_v4(
         try:
             (existing_invite_id_map, existing_email_map, duplicate_invites
              ) = build_existing_invite_id_map(headers)
-            for dup_label in duplicate_invites:
-                emit(f"[DUP] {dup_label}", log_callback=log_callback)
+            if not suppress_skip_logs:
+                for dup_label in duplicate_invites:
+                    emit(f"[DUP] {dup_label}", log_callback=log_callback)
         except Exception as exc:
             emit(
                 "[WARN] Could not list existing invites before import. "
@@ -1091,6 +1093,8 @@ def run_sync_v4(
     if not suppress_skip_logs:
         print_invalid_rows(invalid_rows, log_callback=log_callback)
 
+    existing_skip_streak = 0
+
     for line_number, payload in csv_records:
         processed += 1
         try:
@@ -1112,6 +1116,7 @@ def run_sync_v4(
                 invite_id = find_invite_by_external_id(headers, external_id)
 
             if invite_id and not update_existing:
+                existing_skip_streak += 1
                 participant_label = payload_participant_label(payload)
                 if not suppress_skip_logs:
                     skipped_participants.append(participant_label)
@@ -1120,15 +1125,27 @@ def run_sync_v4(
                         log_callback=log_callback,
                     )
 
-                if stop_after_first_existing:
-                    emit(
-                        "[INFO] Quick add complete: reached an attendee that already exists in Brella.",
-                        log_callback=log_callback,
-                    )
+                stop_on_existing = stop_after_first_existing or (
+                    stop_after_existing_skips
+                    and existing_skip_streak >= stop_after_existing_skips
+                )
+                if stop_on_existing:
+                    if stop_after_existing_skips:
+                        emit(
+                            f"[INFO] Quick add complete: reached {stop_after_existing_skips} consecutive attendees that already exist in Brella.",
+                            log_callback=log_callback,
+                        )
+                    else:
+                        emit(
+                            "[INFO] Quick add complete: reached an attendee that already exists in Brella.",
+                            log_callback=log_callback,
+                        )
                     break
 
                 time.sleep(REQUEST_DELAY_SECONDS)
                 continue
+
+            existing_skip_streak = 0
 
             if invite_id:
                 status_code, response_text = update_invite(
@@ -1236,7 +1253,7 @@ def run_sync_v4(
         "updated_participants": updated_participants,
         "skipped_participants": skipped_participants,
         "removed_participants": removed_participants,
-        "duplicate_participants": duplicate_invites,
+        "duplicate_participants": [] if suppress_skip_logs else duplicate_invites,
     }
 
 
@@ -1251,6 +1268,7 @@ def preview_sync_v4(
     reverse_csv=False,
     suppress_skip_logs=False,
     stop_after_first_existing=False,
+    stop_after_existing_skips=0,
 ):
     preflight_url = build_url(PREFLIGHT_URL_TEMPLATE)
     headers = build_request_headers()
@@ -1282,8 +1300,9 @@ def preview_sync_v4(
 
     (existing_invite_id_map, existing_email_map, duplicate_invites
      ) = build_existing_invite_id_map(headers)
-    for dup_label in duplicate_invites:
-        emit(f"[DUP] {dup_label}", log_callback=log_callback)
+    if not suppress_skip_logs:
+        for dup_label in duplicate_invites:
+            emit(f"[DUP] {dup_label}", log_callback=log_callback)
 
     csv_records, invalid_rows = collect_csv_payloads(
         csv_path,
@@ -1310,6 +1329,7 @@ def preview_sync_v4(
 
     total_valid_rows = len(csv_records)
     processed = 0
+    existing_skip_streak = 0
 
     if reverse_csv:
         emit(
@@ -1335,6 +1355,7 @@ def preview_sync_v4(
         participant_label = payload_participant_label(payload)
 
         if invite_id and not update_existing:
+            existing_skip_streak += 1
             if not suppress_skip_logs:
                 would_skip.append(participant_label)
                 emit(
@@ -1342,19 +1363,31 @@ def preview_sync_v4(
                     log_callback=log_callback,
                 )
 
-            if stop_after_first_existing:
-                emit(
-                    "[INFO] Quick preview complete: reached an attendee that already exists in Brella.",
-                    log_callback=log_callback,
-                )
+            stop_on_existing = stop_after_first_existing or (
+                stop_after_existing_skips
+                and existing_skip_streak >= stop_after_existing_skips
+            )
+            if stop_on_existing:
+                if stop_after_existing_skips:
+                    emit(
+                        f"[INFO] Quick preview complete: reached {stop_after_existing_skips} consecutive attendees that already exist in Brella.",
+                        log_callback=log_callback,
+                    )
+                else:
+                    emit(
+                        "[INFO] Quick preview complete: reached an attendee that already exists in Brella.",
+                        log_callback=log_callback,
+                    )
                 break
         elif invite_id:
+            existing_skip_streak = 0
             would_update.append(participant_label)
             emit(
                 f"[PREVIEW] line {line_number}: would update {participant_label}",
                 log_callback=log_callback,
             )
         else:
+            existing_skip_streak = 0
             would_add.append(participant_label)
             emit(
                 f"[PREVIEW] line {line_number}: would add {participant_label}",
@@ -1399,7 +1432,7 @@ def preview_sync_v4(
         "updated_participants": would_update,
         "skipped_participants": would_skip,
         "removed_participants": would_remove,
-        "duplicate_participants": duplicate_invites,
+        "duplicate_participants": [] if suppress_skip_logs else duplicate_invites,
     }
 
 

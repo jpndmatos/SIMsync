@@ -587,9 +587,6 @@ def _recreate_timeslot_with_speakers(headers, org, event, timeslot_id, payload, 
 def delete_timeslot(headers, org, event, timeslot_id):
     return _api_call(_timeslots_url(org, event, timeslot_id), headers, method="DELETE")
 
-
-
-
 def _make_external_id(subtitle):
     slug = subtitle.lower().strip()
     slug = re.sub(r"[^\w\s-]", "", slug)
@@ -597,17 +594,14 @@ def _make_external_id(subtitle):
     slug = re.sub(r"-+", "-", slug).strip("-")
     return slug[:100]
 
-
 def _build_start_time(date_str, time_str):
     return f"{date_str} {time_str.strip()}"
-
 
 def _build_end_time(start_time_str, duration_minutes):
     from datetime import datetime, timedelta
     dt = datetime.strptime(start_time_str, "%Y-%m-%d %H:%M:%S")
     dt_end = dt + timedelta(minutes=duration_minutes)
     return dt_end.strftime("%Y-%m-%d %H:%M:%S")
-
 
 def _build_speaker_name_map(existing_speakers):
     """Build normalized 'first last' -> speaker dict from Brella speakers list."""
@@ -621,14 +615,12 @@ def _build_speaker_name_map(existing_speakers):
             name_map[full] = sp
     return name_map
 
-
 def _normalize_csv_header(name):
     """Map headers like 'date [YYYY-MM-DD]' to canonical keys like 'date'."""
     key = (name or "").strip().lower()
     key = re.sub(r"\s*\[[^\]]+\]\s*$", "", key)
     key = key.replace(" ", "_")
     return key
-
 
 def _allowed_tracks_from_env():
     """Optional strict track whitelist via BRELLA_ALLOWED_TRACKS."""
@@ -637,7 +629,6 @@ def _allowed_tracks_from_env():
         return None
     allowed = {item.strip().upper() for item in raw.split(",") if item.strip()}
     return allowed or None
-
 
 def parse_schedule_csv(csv_path, log_callback=None):
     from datetime import datetime
@@ -791,13 +782,11 @@ def parse_schedule_csv(csv_path, log_callback=None):
     emit(f"Parsed {len(records)} sessions, {skipped} skipped.", log_callback=log_callback)
     return records
 
-
 def _speakers_info(speaker_names):
     """Format speaker names for log messages, or empty string if none."""
     if speaker_names:
         return f" | speakers: {', '.join(speaker_names)}"
     return ""
-
 
 def run_schedule_sync(csv_path, dry_run=False, prune_missing=False,
                        update_existing=False, log_callback=None):

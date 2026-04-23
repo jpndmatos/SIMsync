@@ -228,7 +228,7 @@ def make_toggle(parent, text, variable, command=None):
     def _apply():
         on = bool(variable.get())
         btn.config(
-            fg=ACCENT_LIGHT if on else TEXT_SEC,
+            fg=ACCENT_LIGHT if on else TEXT_TER,
             activeforeground="#ffffff" if on else TEXT,
         )
 
@@ -452,6 +452,9 @@ class SetupTab:
         self.admin_token = tk.StringVar(value=load_env_value("BRELLA_ADMIN_ACCESS_TOKEN"))
         self.admin_client = tk.StringVar(value=load_env_value("BRELLA_ADMIN_CLIENT"))
         self.admin_uid = tk.StringVar(value=load_env_value("BRELLA_ADMIN_UID"))
+        self.quick_add_skip_limit = tk.StringVar(
+            value=load_env_value("SIMSYNC_QUICK_ADD_STOP_AFTER_SKIPS", "10")
+        )
 
         page = make_page(self.frame)
 
@@ -513,6 +516,11 @@ class SetupTab:
         ids_right.grid(row=0, column=1, sticky="nsew", padx=(SP_SM, 0))
         make_field(ids_left, "Org ID", self.org_id)
         make_field(ids_right, "Event ID", self.event_id)
+        make_field(
+            api_col,
+            "Quick add: stop after existing skips",
+            self.quick_add_skip_limit,
+        )
 
         # --- Admin Panel card ---
         admin_wrap = tk.Frame(creds_grid, bg=BG)
@@ -649,6 +657,17 @@ class SetupTab:
         self._save_values()
 
     def _save_api(self):
+        quick_limit_raw = self.quick_add_skip_limit.get().strip() or "10"
+        try:
+            quick_limit = str(max(1, int(quick_limit_raw)))
+        except ValueError:
+            quick_limit = "10"
+            if self.log_callback:
+                self.log_callback(
+                    "[WARN] Quick add skip limit invalid; using default 10."
+                )
+        self.quick_add_skip_limit.set(quick_limit)
+
         save_env_values({
             "BRELLA_API_KEY": self.api_key.get().strip(),
             "BRELLA_ORG_ID": self.org_id.get().strip(),
@@ -656,12 +675,14 @@ class SetupTab:
             "BRELLA_ADMIN_ACCESS_TOKEN": self.admin_token.get().strip(),
             "BRELLA_ADMIN_CLIENT": self.admin_client.get().strip(),
             "BRELLA_ADMIN_UID": self.admin_uid.get().strip(),
+            "SIMSYNC_QUICK_ADD_STOP_AFTER_SKIPS": quick_limit,
         })
         for k, var in [("BRELLA_API_KEY", self.api_key), ("BRELLA_ORG_ID", self.org_id),
                        ("BRELLA_EVENT_ID", self.event_id),
                        ("BRELLA_ADMIN_ACCESS_TOKEN", self.admin_token),
                        ("BRELLA_ADMIN_CLIENT", self.admin_client),
-                       ("BRELLA_ADMIN_UID", self.admin_uid)]:
+                       ("BRELLA_ADMIN_UID", self.admin_uid),
+                       ("SIMSYNC_QUICK_ADD_STOP_AFTER_SKIPS", self.quick_add_skip_limit)]:
             os.environ[k] = var.get().strip()
 
         api_ok = bool(self.api_key.get().strip())
@@ -2315,6 +2336,14 @@ class App:
         csv_path = Path(tab.csv_path.get())
         quick_add_mode = bool(getattr(tab, "_quick_add_mode", False))
 
+        quick_limit_raw = os.environ.get("SIMSYNC_QUICK_ADD_STOP_AFTER_SKIPS", "10").strip()
+        try:
+            quick_skip_limit = max(1, int(quick_limit_raw))
+        except ValueError:
+            quick_skip_limit = 10
+            if quick_add_mode:
+                self.log("[WARN] Quick add skip limit invalid; using default 10.")
+
         prune_missing = False if quick_add_mode else tab.prune.get()
         update_existing = False if quick_add_mode else tab.update_existing.get()
 
@@ -2332,7 +2361,8 @@ class App:
                 include_final_report=not quick_add_mode,
                 reverse_csv=quick_add_mode,
                 suppress_skip_logs=quick_add_mode,
-                stop_after_first_existing=quick_add_mode,
+                stop_after_first_existing=False,
+                stop_after_existing_skips=quick_skip_limit if quick_add_mode else 0,
             )
         else:
             result = api.run_sync_v4(
@@ -2344,7 +2374,8 @@ class App:
                 include_final_report=not quick_add_mode,
                 reverse_csv=quick_add_mode,
                 suppress_skip_logs=quick_add_mode,
-                stop_after_first_existing=quick_add_mode,
+                stop_after_first_existing=False,
+                stop_after_existing_skips=quick_skip_limit if quick_add_mode else 0,
             )
 
         if quick_add_mode and result:
@@ -2352,6 +2383,7 @@ class App:
             result["updated_participants"] = []
             result["removed_participants"] = []
             result["missing_email_participants"] = []
+            result["duplicate_participants"] = []
 
         if result:
             self._apply_sync_result(tab, result, missing_key="missing_email_participants")
