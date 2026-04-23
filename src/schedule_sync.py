@@ -341,14 +341,150 @@ def _format_changes(changes):
     return " · ".join(parts)
 
 
+def _normalize_speaker_id(value):
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    try:
+        return str(int(raw))
+    except (TypeError, ValueError):
+        return raw
+
+
+def _speaker_ids_from_assignments(assignments):
+    """Extract ordered speaker IDs from a speaker_assignments list."""
+    if not isinstance(assignments, list):
+        return []
+
+    ordered = []
+    has_explicit_position = False
+    for index, item in enumerate(assignments):
+        if not isinstance(item, dict):
+            continue
+
+        speaker_id = _normalize_speaker_id(
+            item.get("speaker_id")
+            or item.get("speaker-id")
+            or item.get("speakerId")
+            or item.get("id")
+        )
+        if not speaker_id:
+            continue
+
+        try:
+            position = int(item.get("position"))
+            has_explicit_position = True
+        except (TypeError, ValueError):
+            # Keep input order when explicit position is missing.
+            position = index + 1
+
+        ordered.append((position, index, speaker_id))
+
+    if has_explicit_position:
+        ordered.sort(key=lambda row: (row[0], row[1]))
+
+    return [speaker_id for _, _, speaker_id in ordered]
+
+
+def _extract_existing_speaker_ids(existing_ts):
+    """Read speaker assignments from the timeslot response shape."""
+    if not isinstance(existing_ts, dict):
+        return []
+
+    attrs = existing_ts.get("attributes") or {}
+    assignment_candidates = [
+        attrs.get("speaker-assignments"),
+        attrs.get("speaker_assignments"),
+        existing_ts.get("speaker-assignments"),
+        existing_ts.get("speaker_assignments"),
+    ]
+
+    for candidate in assignment_candidates:
+        if isinstance(candidate, list):
+            return _speaker_ids_from_assignments(candidate)
+
+    rel_speakers = (existing_ts.get("relationships") or {}).get("speakers")
+    rel_data = rel_speakers.get("data") if isinstance(rel_speakers, dict) else None
+    if isinstance(rel_data, list):
+        speaker_ids = []
+        for item in rel_data:
+            if not isinstance(item, dict):
+                continue
+            speaker_id = _normalize_speaker_id(item.get("id"))
+            if speaker_id:
+                speaker_ids.append(speaker_id)
+        return speaker_ids
+
+    attr_speakers = attrs.get("speakers")
+    if isinstance(attr_speakers, list):
+        speaker_ids = []
+        for item in attr_speakers:
+            if isinstance(item, dict):
+                speaker_id = _normalize_speaker_id(
+                    item.get("id")
+                    or item.get("speaker_id")
+                    or item.get("speaker-id")
+                )
+            else:
+                speaker_id = _normalize_speaker_id(item)
+            if speaker_id:
+                speaker_ids.append(speaker_id)
+        return speaker_ids
+
+    return []
+
+
+def _build_speaker_id_name_map(existing_speakers):
+    """Build speaker_id -> display name map for diff logs."""
+    id_map = {}
+    for sp in existing_speakers:
+        if not isinstance(sp, dict):
+            continue
+
+        speaker_id = _normalize_speaker_id(sp.get("id"))
+        if not speaker_id:
+            continue
+
+        attrs = sp.get("attributes") or {}
+        first = str(attrs.get("first-name") or "").strip()
+        last = str(attrs.get("last-name") or "").strip()
+        display_name = f"{first} {last}".strip() or f"id:{speaker_id}"
+        id_map[speaker_id] = display_name
+
+    return id_map
+
+
+def _format_speaker_list(speaker_ids, speaker_id_name_map):
+    if not speaker_ids:
+        return "-"
+    return ", ".join(speaker_id_name_map.get(sid, f"id:{sid}") for sid in speaker_ids)
+
+
+def _diff_speaker_assignments(existing_ts, desired_assignments, speaker_id_name_map):
+    """Return a synthetic change row when speaker assignments differ."""
+    if not isinstance(existing_ts, dict):
+        return []
+
+    existing_ids = _extract_existing_speaker_ids(existing_ts)
+    desired_ids = _speaker_ids_from_assignments(desired_assignments)
+    if existing_ids == desired_ids:
+        return []
+
+    return [(
+        "speakers",
+        _format_speaker_list(existing_ids, speaker_id_name_map),
+        _format_speaker_list(desired_ids, speaker_id_name_map),
+    )]
+
+
 def _build_existing_title_start_map(existing_timeslots, log_callback=None):
     """Map normalized title+start_time to existing timeslot for fallback matching.
     Returns (map, duplicate_labels, duplicate_ext_ids).
 
     Two flavours of duplicate are detected:
-      1. Same title AND same exact start-time (treated as redundant).
-      2. Same title AND same day (different time) — surfaces when a session
-         was accidentally created twice on the same day with different times.
+    1. Same title AND same exact start-time (treated as redundant).
+    2. Same title AND same day (different time) — surfaces when a session
+        was accidentally created twice on the same day with different times.
 
     `duplicate_ext_ids` contains the external_ids of every timeslot involved
     in a detected duplicate so the caller can exclude them from prune (we
@@ -705,6 +841,7 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False,
     from speakers import list_speakers
     existing_speakers = list_speakers(headers)
     speaker_name_map = _build_speaker_name_map(existing_speakers)
+    speaker_id_name_map = _build_speaker_id_name_map(existing_speakers)
     _emit_log(
         f"Found {len(existing_speakers)} speakers in Brella.",
         log_callback=log_callback,
@@ -832,17 +969,23 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False,
         # real changes (title / start_time / end_time / duration).
         session_changes = (
             _diff_timeslot(rec["title"], start_time, end_time, rec["duration"], existing_ts)
-            if existing_ts else None
+            if existing_ts else []
         )
+        speaker_changes = (
+            _diff_speaker_assignments(existing_ts, speaker_assignments, speaker_id_name_map)
+            if existing_ts else []
+        )
+        all_changes = (session_changes or []) + (speaker_changes or [])
+        speakers_need_recreate = bool(speaker_changes)
 
         if dry_run:
-            if existing_ts and not session_changes:
+            if existing_ts and not all_changes:
                 skipped.append(session_name)
                 emit(f"[SKIP] no changes: {session_name}",
                      log_callback=log_callback)
             elif existing_ts and not update_existing:
                 skipped.append(session_name)
-                diff_str = _format_changes(session_changes)
+                diff_str = _format_changes(all_changes)
                 emit(
                     f"[SKIP] would skip (existing, changes available): "
                     f"{session_name} · {diff_str}",
@@ -850,23 +993,23 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False,
                 )
             elif existing_ts:
                 updated.append(session_name)
-                diff_str = _format_changes(session_changes)
+                diff_str = _format_changes(all_changes)
                 emit(
-                    f"[PREVIEW] line {rec.get('line', '?')}: would update "
+                    f"[PREVIEW] line {rec.get('line_num', '?')}: would update "
                     f"{session_name} · {diff_str}",
                     log_callback=log_callback,
                 )
             else:
                 added.append(session_name)
                 emit(
-                    f"[PREVIEW] line {rec.get('line', '?')}: would add "
+                    f"[PREVIEW] line {rec.get('line_num', '?')}: would add "
                     f"{session_name} @ {rec['start_time']}"
                     f"{_speakers_info(rec['speaker_names'])}",
                     log_callback=log_callback,
                 )
             continue
 
-        if existing_ts and not session_changes:
+        if existing_ts and not all_changes:
             skipped.append(session_name)
             emit(f"[SKIP] no changes: {session_name}",
                  log_callback=log_callback)
@@ -874,7 +1017,7 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False,
 
         if existing_ts and not update_existing:
             skipped.append(session_name)
-            diff_str = _format_changes(session_changes)
+            diff_str = _format_changes(all_changes)
             emit(
                 f"[SKIP] existing, changes available: "
                 f"{session_name} · {diff_str}",
@@ -886,7 +1029,7 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False,
             ts_id = None
             if existing_ts:
                 ts_id = existing_ts["id"]
-                if speaker_assignments:
+                if speakers_need_recreate:
                     # Integration API ignores speaker_assignments on PATCH,
                     # so delete + recreate to update speakers.
                     status, resp = _recreate_timeslot_with_speakers(
@@ -933,8 +1076,6 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False,
                     admin_patches["content"] = _to_draftjs(rec["description"])
                 if stage_id:
                     admin_patches["track_id"] = stage_id
-                # Set location (preserve existing or default)
-                location_value = payload.get("location", "")
                 if admin_patches:
                     asc, asr = _admin_patch_timeslot(event, ts_id, admin_patches, log_callback=log_callback)
                     if asc in (200, 201, 204):
