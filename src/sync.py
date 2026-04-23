@@ -12,7 +12,6 @@ import argparse
 import sys
 from pathlib import Path
 
-
 def cmd_participants(args):
     from api import prepare_csv, run_sync_v4
 
@@ -24,7 +23,6 @@ def cmd_participants(args):
         prune_missing=args.prune,
     )
 
-
 def cmd_speakers(args):
     from speakers import run_speakers_sync
     run_speakers_sync(
@@ -33,7 +31,6 @@ def cmd_speakers(args):
         prune_missing=getattr(args, "prune", False),
     )
 
-
 def cmd_schedule(args):
     from schedule_sync import run_schedule_sync
     run_schedule_sync(
@@ -41,7 +38,6 @@ def cmd_schedule(args):
         dry_run=args.dry_run,
         prune_missing=getattr(args, "prune", False),
     )
-
 
 def build_parser():
     parser = argparse.ArgumentParser(
@@ -77,7 +73,6 @@ def build_parser():
 
     return parser
 
-
 def main():
     parser = build_parser()
     args = parser.parse_args()
@@ -90,7 +85,6 @@ def main():
     except Exception as exc:
         print(f"\n[FATAL ERROR] {exc}")
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()
