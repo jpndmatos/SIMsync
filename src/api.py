@@ -670,9 +670,31 @@ def row_is_staff(row):
     return False
 
 
-def collect_csv_payloads(csv_path, limit=0, staff_only=False):
+def collect_csv_payloads(csv_path, limit=0, staff_only=False, reverse_order=False):
     csv_records = []
     invalid_rows = []
+
+    if reverse_order:
+        for line_number, row in iter_threecket_rows(csv_path):
+            if staff_only and not row_is_staff(row):
+                continue
+
+            try:
+                payload = build_payload(row)
+                csv_records.append((line_number, payload))
+            except ValueError as exc:
+                invalid_rows.append(
+                    {
+                        "line_number": line_number,
+                        "participant": format_participant_label(row),
+                        "reason": str(exc),
+                    }
+                )
+
+        csv_records.reverse()
+        if limit:
+            csv_records = csv_records[:limit]
+        return csv_records, invalid_rows
 
     for line_number, row in iter_threecket_rows(csv_path):
         if limit and len(csv_records) >= limit:
@@ -973,6 +995,9 @@ def run_sync_v4(
     staff_only=False,
     log_callback=None,
     include_final_report=True,
+    reverse_csv=False,
+    suppress_skip_logs=False,
+    stop_after_first_existing=False,
 ):
     if prune_missing and limit:
         raise RuntimeError("--limit nao pode ser usado com prune ativo. Usa --no-prune-missing com --limit.")
@@ -1026,7 +1051,10 @@ def run_sync_v4(
             emit(f"[WARN] detail: {exc}", log_callback=log_callback)
 
     csv_records, invalid_rows = collect_csv_payloads(
-        csv_path, limit=limit, staff_only=staff_only
+        csv_path,
+        limit=limit,
+        staff_only=staff_only,
+        reverse_order=reverse_csv,
     )
     desired_external_ids = {payload_external_id(payload) for _, payload in csv_records}
     desired_emails = {
@@ -1044,13 +1072,27 @@ def run_sync_v4(
     skipped_participants = []
     removed_participants = []
 
-    processed = len(csv_records)
+    total_valid_rows = len(csv_records)
+    processed = 0
     succeeded = 0
     failed = len(invalid_rows)
 
-    print_invalid_rows(invalid_rows, log_callback=log_callback)
+    if reverse_csv:
+        emit(
+            "[INFO] Quick add mode: processing CSV from end (latest rows first).",
+            log_callback=log_callback,
+        )
+    if suppress_skip_logs:
+        emit(
+            "[INFO] Existing attendees will be skipped silently.",
+            log_callback=log_callback,
+        )
+
+    if not suppress_skip_logs:
+        print_invalid_rows(invalid_rows, log_callback=log_callback)
 
     for line_number, payload in csv_records:
+        processed += 1
         try:
             if dry_run:
                 emit(
@@ -1071,11 +1113,20 @@ def run_sync_v4(
 
             if invite_id and not update_existing:
                 participant_label = payload_participant_label(payload)
-                skipped_participants.append(participant_label)
-                emit(
-                    f"[SKIP] already exists: {payload_email(payload)}",
-                    log_callback=log_callback,
-                )
+                if not suppress_skip_logs:
+                    skipped_participants.append(participant_label)
+                    emit(
+                        f"[SKIP] already exists: {payload_email(payload)}",
+                        log_callback=log_callback,
+                    )
+
+                if stop_after_first_existing:
+                    emit(
+                        "[INFO] Quick add complete: reached an attendee that already exists in Brella.",
+                        log_callback=log_callback,
+                    )
+                    break
+
                 time.sleep(REQUEST_DELAY_SECONDS)
                 continue
 
@@ -1159,8 +1210,12 @@ def run_sync_v4(
                 time.sleep(REQUEST_DELAY_SECONDS)
 
     if include_final_report:
+        if processed < total_valid_rows:
+            processed_msg = f"Processed {processed}/{total_valid_rows} rows"
+        else:
+            processed_msg = f"Processed {processed} rows"
         emit(
-            f"Processed {processed} rows. "
+            f"{processed_msg}. "
             f"Succeeded: {succeeded}. Failed or skipped: {failed}.",
             log_callback=log_callback,
         )
@@ -1193,6 +1248,9 @@ def preview_sync_v4(
     staff_only=False,
     log_callback=None,
     include_final_report=True,
+    reverse_csv=False,
+    suppress_skip_logs=False,
+    stop_after_first_existing=False,
 ):
     preflight_url = build_url(PREFLIGHT_URL_TEMPLATE)
     headers = build_request_headers()
@@ -1228,7 +1286,10 @@ def preview_sync_v4(
         emit(f"[DUP] {dup_label}", log_callback=log_callback)
 
     csv_records, invalid_rows = collect_csv_payloads(
-        csv_path, limit=limit, staff_only=staff_only
+        csv_path,
+        limit=limit,
+        staff_only=staff_only,
+        reverse_order=reverse_csv,
     )
     desired_external_ids = {payload_external_id(payload) for _, payload in csv_records}
     desired_emails = {
@@ -1247,9 +1308,25 @@ def preview_sync_v4(
     would_skip = []
     would_remove = []
 
-    print_invalid_rows(invalid_rows, log_callback=log_callback)
+    total_valid_rows = len(csv_records)
+    processed = 0
+
+    if reverse_csv:
+        emit(
+            "[INFO] Quick preview mode: processing CSV from end (latest rows first).",
+            log_callback=log_callback,
+        )
+    if suppress_skip_logs:
+        emit(
+            "[INFO] Existing attendees will be skipped silently.",
+            log_callback=log_callback,
+        )
+
+    if not suppress_skip_logs:
+        print_invalid_rows(invalid_rows, log_callback=log_callback)
 
     for line_number, payload in csv_records:
+        processed += 1
         external_id = payload_external_id(payload)
         email = payload_email(payload).lower()
         invite_id = existing_invite_id_map.get(external_id)
@@ -1258,11 +1335,19 @@ def preview_sync_v4(
         participant_label = payload_participant_label(payload)
 
         if invite_id and not update_existing:
-            would_skip.append(participant_label)
-            emit(
-                f"[SKIP] would skip (already exists): {participant_label}",
-                log_callback=log_callback,
-            )
+            if not suppress_skip_logs:
+                would_skip.append(participant_label)
+                emit(
+                    f"[SKIP] would skip (already exists): {participant_label}",
+                    log_callback=log_callback,
+                )
+
+            if stop_after_first_existing:
+                emit(
+                    "[INFO] Quick preview complete: reached an attendee that already exists in Brella.",
+                    log_callback=log_callback,
+                )
+                break
         elif invite_id:
             would_update.append(participant_label)
             emit(
@@ -1289,8 +1374,12 @@ def preview_sync_v4(
             )
 
     if include_final_report:
+        if processed < total_valid_rows:
+            processed_msg = f"processed {processed}/{total_valid_rows} valid rows"
+        else:
+            processed_msg = f"processed {processed} valid rows"
         emit(
-            f"Preview complete: processed {len(csv_records)} valid rows.",
+            f"Preview complete: {processed_msg}.",
             log_callback=log_callback,
         )
 
@@ -1303,7 +1392,7 @@ def preview_sync_v4(
         )
 
     return {
-        "processed": len(csv_records),
+        "processed": processed,
         "failed": len(invalid_rows),
         "missing_email_participants": missing_email_participants,
         "added_participants": would_add,

@@ -576,12 +576,12 @@ def _recreate_timeslot_with_speakers(headers, org, event, timeslot_id, payload, 
     sc, _ = _api_call(_timeslots_url(org, event, timeslot_id), headers, method="DELETE")
     if sc not in (200, 202, 204):
         emit(f"[WARN] Could not delete timeslot {timeslot_id} for speaker update: {sc}",
-             log_callback=log_callback)
+            log_callback=log_callback)
         return None, None
 
     time.sleep(REQUEST_DELAY_SECONDS)
     return _api_call(_timeslots_url(org, event), headers, method="POST",
-                     payload={"timeslot": payload})
+                    payload={"timeslot": payload})
 
 
 def delete_timeslot(headers, org, event, timeslot_id):

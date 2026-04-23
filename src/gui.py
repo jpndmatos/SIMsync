@@ -742,7 +742,7 @@ class SyncTab:
     def __init__(self, parent, name, description, has_prune=False,
                  has_staff_only=False, has_remove=True,
                  run_func=None, enabled=True, app=None,
-                 csv_header_fields=None):
+                 csv_header_fields=None, has_quick_add=False):
         self.name = name
         self.run_func = run_func
         self.enabled = enabled
@@ -752,9 +752,12 @@ class SyncTab:
         self.prune = tk.BooleanVar(value=False)
         self.update_existing = tk.BooleanVar(value=False)
         self.staff_only = tk.BooleanVar(value=False)
+        self.quick_add_end = tk.BooleanVar(value=False)
         self.has_prune = has_prune
         self.has_staff_only = has_staff_only
+        self.has_quick_add = has_quick_add
         self.running = False
+        self._quick_add_mode = False
         self.action_row = None
 
         self.frame = tk.Frame(parent, bg=BG)
@@ -814,7 +817,9 @@ class SyncTab:
         self.browse_btn.pack(side="left", padx=(0, SP_MD), fill="y")
 
         # Right-to-left packing for the toggles (first packed sits furthest right).
-        # Visual order (left to right): [Browse] [entry] [Staff] [Update] [Remove]
+        # Visual order (left to right):
+        # [Browse] [entry] [Quick add] [Staff] [Update] [Remove]
+        self.quick_add_cb = None
         if has_prune:
             if has_remove:
                 self.prune_cb = make_toggle(csv_row, "Remove", self.prune)
@@ -834,6 +839,13 @@ class SyncTab:
                 self.staff_cb.config(pady=SP_MD, highlightthickness=1,
                                      highlightbackground=SURFACE_RAISED)
                 self.staff_cb.pack(side="right", padx=(SP_MD, 0), fill="y")
+
+            if has_quick_add:
+                self.quick_add_cb = make_toggle(csv_row, "Quick add",
+                                                self.quick_add_end)
+                self.quick_add_cb.config(pady=SP_MD, highlightthickness=1,
+                                         highlightbackground=SURFACE_RAISED)
+                self.quick_add_cb.pack(side="right", padx=(SP_MD, 0), fill="y")
 
         # Notices area: surfaces active-mode system messages between the
         # CSV bar and the result containers.
@@ -855,6 +867,12 @@ class SyncTab:
                 self._install_notice(
                     "staff", self.staff_only,
                     "Syncing only Staff ticket types", SUCCESS,
+                )
+            if has_quick_add:
+                self._install_notice(
+                    "quick_add", self.quick_add_end,
+                    "Quick add mode: scans CSV from end and only adds new attendees",
+                    ACCENT_LIGHT,
                 )
 
         self.path_entry = tk.Entry(
@@ -932,6 +950,8 @@ class SyncTab:
             self.path_entry.config(state="disabled")
             self.preview_btn.config(state="disabled")
             self.import_btn.config(state="disabled")
+            if self.quick_add_cb:
+                self.quick_add_cb.config(state="disabled")
 
     def _install_notice(self, key, variable, text, color):
         """Show/hide a one-line notice whenever `variable` changes.
@@ -1070,7 +1090,7 @@ class SyncTab:
         if path:
             self.csv_path.set(path)
 
-    def _run(self, dry_run=False):
+    def _run(self, dry_run=False, quick_add=False):
         if self.running:
             return
         if not self.csv_path.get().strip():
@@ -1079,28 +1099,50 @@ class SyncTab:
         if not Path(self.csv_path.get()).exists():
             self._set_status("File not found.", DANGER)
             return
+        self._quick_add_mode = bool(
+            quick_add or (self.has_quick_add and self.quick_add_end.get())
+        )
         self.dry_run.set(dry_run)
         self.running = True
         self._set_busy(True)
-        mode = "preview" if dry_run else "sync"
+        if self._quick_add_mode and dry_run:
+            mode = "quick preview"
+        elif self._quick_add_mode:
+            mode = "quick add"
+        else:
+            mode = "preview" if dry_run else "sync"
         self._set_status(f"Running {mode}...", ACCENT_LIGHT)
         if self._app:
             self._app._log_status_pulse.start(ACCENT_LIGHT)
         # Visual start marker for this run in the log.
-        self._log(f"[preview] --- {self.name} {mode} started ---"
-                  if dry_run else
-                  f"[info] --- {self.name} sync started ---")
+        if self._quick_add_mode and dry_run:
+            self._log(f"[preview] --- {self.name} quick preview started ---")
+        elif self._quick_add_mode:
+            self._log(f"[info] --- {self.name} quick add started ---")
+        elif dry_run:
+            self._log(f"[preview] --- {self.name} preview started ---")
+        else:
+            self._log(f"[info] --- {self.name} sync started ---")
         threading.Thread(target=self._run_thread, daemon=True).start()
 
     def _run_thread(self):
+        run_was_quick_add = self._quick_add_mode
+        run_was_preview = self.dry_run.get()
         try:
             if self.run_func:
                 self.run_func(self)
             else:
                 self._log(f"[{self.name}] Not implemented yet.")
-            mode = "Preview" if self.dry_run.get() else "Sync"
+            if run_was_quick_add and run_was_preview:
+                mode = "Quick preview"
+                tag = "preview"
+            elif run_was_quick_add:
+                mode = "Quick add"
+                tag = "info"
+            else:
+                mode = "Preview" if run_was_preview else "Sync"
+                tag = "preview" if run_was_preview else "info"
             # Visual end marker for this run in the log.
-            tag = "preview" if self.dry_run.get() else "info"
             self._log(f"[{tag}] --- {self.name} {mode.lower()} complete ---")
             self._set_status(f"{mode} complete.", SUCCESS)
         except Exception as exc:
@@ -1108,6 +1150,7 @@ class SyncTab:
             self._set_status(f"Failed: {exc}", DANGER)
         finally:
             self.running = False
+            self._quick_add_mode = False
             if self._app:
                 self._app._log_status_pulse.stop()
             self.frame.after(0, lambda: self._set_busy(False))
@@ -1116,6 +1159,8 @@ class SyncTab:
         state = "disabled" if busy else "normal"
         self.preview_btn.config(state=state)
         self.import_btn.config(state=state)
+        if self.quick_add_cb:
+            self.quick_add_cb.config(state=state)
         self.browse_btn.config(state=state)
 
     def _set_status(self, text, color=TEXT_TER):
@@ -1966,7 +2011,7 @@ class App:
             "Schedule": BASE_DIR / "data" / "schedule.csv",
         }
 
-        for name, desc, prune, staff_only, remove, func, en, fields in [
+        for name, desc, prune, staff_only, remove, func, en, fields, quick_add in [
             (
                 "Participants",
                 "Sync 3cket participants to Brella.",
@@ -1981,6 +2026,7 @@ class App:
                     ("Total tickets", False), ("E-mail", True),
                     ("Company // Empresa", True), ("Group", False),
                 ],
+                True,
             ),
             (
                 "Speakers",
@@ -1999,6 +2045,7 @@ class App:
                     ("Media availability", False), ("Submitted At", False),
                     ("Token", True), ("Publish", True),
                 ],
+                False,
             ),
             (
                 "Schedule",
@@ -2011,13 +2058,15 @@ class App:
                     ("title", True), ("content", False), ("track", True),
                     ("speakers", False),
                 ],
+                False,
             ),
         ]:
             self._add_nav(sidebar, name)
             tab = SyncTab(self.content, name, desc, has_prune=prune,
                           has_staff_only=staff_only, has_remove=remove,
                           run_func=func, enabled=en, app=self,
-                          csv_header_fields=fields)
+                          csv_header_fields=fields,
+                          has_quick_add=quick_add)
             tab._log_callback = self.log
             default_csv = _default_csvs.get(name)
             if default_csv and default_csv.exists():
@@ -2264,23 +2313,46 @@ class App:
         api.ORG_ID = os.environ.get("BRELLA_ORG_ID", "1218")
         api.EVENT_ID = os.environ.get("BRELLA_EVENT_ID", "10672")
         csv_path = Path(tab.csv_path.get())
+        quick_add_mode = bool(getattr(tab, "_quick_add_mode", False))
+
+        prune_missing = False if quick_add_mode else tab.prune.get()
+        update_existing = False if quick_add_mode else tab.update_existing.get()
+
+        if quick_add_mode:
+            self.log("[INFO] Quick add: scanning from end of CSV and showing only added attendees.")
+
         api.prepare_csv(csv_path, download_csv=False, log_callback=self.log)
         if tab.dry_run.get():
             result = api.preview_sync_v4(
                 csv_path,
-                prune_missing=tab.prune.get(),
-                update_existing=tab.update_existing.get(),
+                prune_missing=prune_missing,
+                update_existing=update_existing,
                 staff_only=tab.staff_only.get(),
                 log_callback=self.log,
+                include_final_report=not quick_add_mode,
+                reverse_csv=quick_add_mode,
+                suppress_skip_logs=quick_add_mode,
+                stop_after_first_existing=quick_add_mode,
             )
         else:
             result = api.run_sync_v4(
                 csv_path, dry_run=False,
-                prune_missing=tab.prune.get(),
-                update_existing=tab.update_existing.get(),
+                prune_missing=prune_missing,
+                update_existing=update_existing,
                 staff_only=tab.staff_only.get(),
                 log_callback=self.log,
+                include_final_report=not quick_add_mode,
+                reverse_csv=quick_add_mode,
+                suppress_skip_logs=quick_add_mode,
+                stop_after_first_existing=quick_add_mode,
             )
+
+        if quick_add_mode and result:
+            result["skipped_participants"] = []
+            result["updated_participants"] = []
+            result["removed_participants"] = []
+            result["missing_email_participants"] = []
+
         if result:
             self._apply_sync_result(tab, result, missing_key="missing_email_participants")
 
