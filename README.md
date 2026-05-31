@@ -33,36 +33,21 @@ If the test works, the app is connected to the event.
 
 ## Where to find the Brella values
 
-### Event ID
+### Event ID and Org ID
 
-Open the event in Brella Manager.
-Look at the URL in the browser. It usually contains the event ID.
-Example:
-
-```text
-https://manager.brella.io/events/10672/...
-```
-
-In this example, the `Event ID` is:
+Open the event in Brella Manager and check the browser URL.
+The event URL contains the `Event ID` and the `Org ID` is the Brella organization ID.
+Get it from an existing working setup, from the Brella organization settings, or from Brella support/admin documentation.
+If you already have an API endpoint, both values appear in the URL:
 
 ```text
-10672
-```
-
-### Org ID
-
-The `Org ID` is the Brella organization ID.
-The easiest way to get it is from an existing working setup or from Brella support/admin documentation for the organization.
-If you already have an API endpoint, it appears in the URL:
-
-```text
-https://api.brella.io/api/integration/organizations/1218/events/10672
+https://api.brella.io/api/integration/organizations/1234/events/98765
 ```
 
 In this example:
 
-- `Org ID` is `1218`
-- `Event ID` is `10672`
+- `Org ID` is `1234`
+- `Event ID` is `98765`
 
 ### API Key
 
@@ -93,16 +78,15 @@ The fields are:
 These values come from the authenticated Brella Manager session.
 To find them in the browser:
 
-1. Open Brella Manager in Chrome or Edge
-2. Log in with an admin account that can access the event
-3. Press `F12` to open Developer Tools
-4. Go to the `Network` tab
-5. Keep Developer Tools open and refresh Brella Manager
-6. Click inside the event, for example open a speaker or schedule page
-7. In the `Network` request list, click a request to `manager.brella.io` or `api.brella.io`
-8. Open `Headers`
-9. Look under `Request Headers`
-10. Copy the values for `access-token`, `client`, and `uid`
+1. Log in with an admin account that can access the event
+2. Press `F12` to open Developer Tools
+3. Go to the `Network` tab
+4. Keep Developer Tools open and refresh Brella Manager
+5. Click inside the event, for example open a speaker or schedule page
+6. In the `Network` request list, click a request to `manager.brella.io` or `api.brella.io`
+7. Open `Headers`
+8. Look under `Request Headers`
+9. Copy the values for `access-token`, `client`, and `uid`
 
 Paste those values into SIMsync like this:
 
@@ -131,6 +115,7 @@ If the event has different attendee groups or ticket types, update `Groups & Tic
 ## Participants
 
 Use a participants CSV exported from 3cket.
+Expected columns used by SIMsync: 3cket id or qr; full name; email; tickets; fallback email; company.
 
 1. Go to `Participants`
 2. Click `Browse`
@@ -155,6 +140,7 @@ Recommended flow:
 ## Speakers
 
 Use a speakers CSV.
+Expected columns used by SIMsync: first name; last name; company; job title; bio; photo url; contact email; speaker email; token; publish.
 
 1. Go to `Speakers`
 2. Click `Browse`
@@ -169,15 +155,7 @@ If the CSV has photo URLs, SIMsync tries to upload speaker photos using the Admi
 ## Schedule
 
 Use a schedule CSV.
-Expected columns:
-
-- `date`
-- `start_time`
-- `duration`
-- `title`
-- `content`
-- `track`
-- `speakers`
+Expected columns: date; start_time; duration; title; content; track; speakers; sync (optional).
 
 Usage:
 
@@ -198,6 +176,8 @@ Important:
 ## Debug
 
 The `Debug` tab is used to inspect Brella invites and fix missing QR codes.
+Use the same participants CSV as the `Participants` tab.
+Expected columns used by SIMsync: 3cket id or qr; full name; email; tickets; fallback email; company.
 Normal use:
 
 1. Go to `Debug`
@@ -223,15 +203,6 @@ The result boxes show:
 
 If something fails, check the log message. It usually explains what needs to be fixed.
 
-## Safe usage rules
-
-- Always run `Preview` before `Sync`
-- Use `Remove` only when the CSV is the correct source of truth
-- Do not rename live schedule sessions unless necessary
-- If you need to change a session time, keep the title unchanged
-- Store credentials only on the computer that runs the tool
-- Do not share API keys in chat or email
-
 ## Rebuilding the executable
 
 Only rebuild if someone changed files inside `src`.
@@ -240,5 +211,3 @@ Only rebuild if someone changed files inside `src`.
 2. Run `build.bat`
 3. Wait for the build to finish
 4. Open the new `SIMsync.exe`
-
-If the build fails because the executable is locked, close all open SIMsync windows and run `build.bat` again.
