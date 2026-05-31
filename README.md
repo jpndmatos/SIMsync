@@ -36,9 +36,8 @@ If the test works, the app is connected to the event.
 ### Event ID and Org ID
 
 Open the event in Brella Manager and check the browser URL.
-The event URL contains the `Event ID` and the `Org ID` is the Brella organization ID.
-Get it from an existing working setup, from the Brella organization settings, or from Brella support/admin documentation.
-If you already have an API endpoint, both values appear in the URL:
+The event URL contains the `Event ID` and the `Org ID`.
+Get it from an existing working setup, both values appear in the URL:
 
 ```text
 https://api.brella.io/api/integration/organizations/1234/events/98765
