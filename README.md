@@ -111,6 +111,36 @@ To use the tool with a different event:
 
 If the event has different attendee groups or ticket types, update `Groups & Tickets` in `Setup`.
 
+## Groups and ticket types
+
+SIMsync uses the `Groups & Tickets` area inside `Setup` to decide which Brella attendee group each participant should enter.
+This is only needed when the event has different Brella groups or different 3cket ticket names.
+
+In `Setup`, change:
+
+- `Group numbers` when the Brella attendee group IDs are different
+- `Priority group IDs` when one participant can match more than one group and SIMsync needs to choose the most important one
+- `Ticket types` when a 3cket ticket name should point to a specific Brella group
+
+The format is always `name=id`, separated by `;`.
+
+Example:
+
+```text
+general=36042; investors=36333; speakers=36334
+```
+
+Ticket type example:
+
+```text
+general//standard=36042; investor//standard=36333; speaker/=36334
+```
+
+The text on the left must match the ticket type from the 3cket CSV.
+The number on the right must be the Brella attendee group ID.
+After changing the mappings, click `Save`.
+The changes are stored in `config.json`, so they stay available the next time SIMsync opens.
+
 ## Participants
 
 Use a participants CSV exported from 3cket.
