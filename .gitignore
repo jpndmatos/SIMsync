@@ -1,9 +1,0 @@
-.env
-__pycache__/
-*.pyc
-build/
-*.spec
-SIMsync.exe
-CLAUDE.md
-.claude/
-data/

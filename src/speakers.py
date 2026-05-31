@@ -1,20 +1,3 @@
-"""
-Speakers sync — import published speakers from CSV into Brella's speakers section.
-
-Uses the Brella speakers API (not invites):
-  GET    /speakers           — list all speakers
-  POST   /speakers           — create speaker
-  PATCH  /speakers/{id}      — update speaker
-  DELETE /speakers/{id}      — delete speaker
-
-CSV format (Typeform export, comma-delimited):
-  First name, Last Name, Company, Job Title, Bio, [consent fields],
-  Photo, Social media links, Email Contact, Speaker Email,
-  [survey fields], Submitted At, Token, Publish
-Only rows with Publish column == "Publish" are synced.
-Token is used as external_id and external_qr_string for participant invites.
-"""
-
 import csv
 import json
 import os
@@ -27,22 +10,14 @@ from api import (
     REQUEST_DELAY_SECONDS,
 )
 
-# CSV column indices (Typeform export layout)
 COL_FIRST_NAME = 0
 COL_LAST_NAME = 1
 COL_COMPANY = 2
 COL_JOB_TITLE = 3
 COL_BIO = 4
-# 5 = Privacy Policy consent (unused)
-# 6 = Optional consents (unused)
 COL_PHOTO = 7
-COL_LINKEDIN = 8       # "Social media links"
 COL_EMAIL_CONTACT = 9
 COL_SPEAKER_EMAIL = 10
-# 11 = Phone Contact (unused)
-# 12 = Pre-event communication interest (unused)
-# 13 = Media availability (unused)
-# 14 = Submitted At (unused)
 COL_TOKEN = 15
 COL_PUBLISH = 16
 
@@ -69,7 +44,7 @@ def _api_call(url, headers, method="GET", payload=None):
 
 
 def _admin_headers():
-    """Build DeviseTokenAuth headers for the Brella admin panel API."""
+
     token = os.environ.get("BRELLA_ADMIN_ACCESS_TOKEN", "")
     client = os.environ.get("BRELLA_ADMIN_CLIENT", "")
     uid = os.environ.get("BRELLA_ADMIN_UID", "")
@@ -95,18 +70,17 @@ def _admin_headers():
     }
 
 
-MAX_PHOTO_BYTES = 2 * 1024 * 1024  # 2MB — compress if larger
+MAX_PHOTO_BYTES = 2 * 1024 * 1024
 
 
 def _compress_image(image_data, mime, max_bytes=MAX_PHOTO_BYTES, log_callback=None):
-    """Compress image to fit within max_bytes using stdlib subprocess + PowerShell."""
+
     if len(image_data) <= max_bytes:
         return image_data, mime
 
     import subprocess
     import tempfile
 
-    # Write original to temp file
     ext = ".jpg" if "jpeg" in mime or "jpg" in mime else ".png"
     with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as src:
         src.write(image_data)
@@ -114,7 +88,7 @@ def _compress_image(image_data, mime, max_bytes=MAX_PHOTO_BYTES, log_callback=No
     out_path = src_path + "_resized.jpg"
 
     try:
-        # Use PowerShell + .NET System.Drawing to resize
+
         ps_script = f"""
 Add-Type -AssemblyName System.Drawing
 $img = [System.Drawing.Image]::FromFile('{src_path}')
@@ -153,11 +127,11 @@ $bmp.Dispose()
             except OSError:
                 pass
 
-    return image_data, mime  # return original if compression failed
+    return image_data, mime
 
 
 def _download_photo(photo_url, log_callback=None):
-    """Download photo from URL, return (image_data, mime) or (None, None)."""
+
     from urllib.parse import quote
     try:
         encoded_url = quote(photo_url, safe=':/?#[]@!$&\'()*+,;=-_.~')
@@ -178,7 +152,7 @@ def _download_photo(photo_url, log_callback=None):
 
 
 def _upload_photo_base64(url, admin_hdrs, image_data, mime, log_callback=None):
-    """Upload photo as base64 data URI in JSON payload."""
+
     import base64
     b64 = base64.b64encode(image_data).decode("ascii")
     data_uri = f"data:{mime};base64,{b64}"
@@ -197,7 +171,7 @@ def _upload_photo_base64(url, admin_hdrs, image_data, mime, log_callback=None):
 
 
 def _upload_photo_multipart(url, admin_hdrs, image_data, mime, filename, log_callback=None):
-    """Upload photo as multipart/form-data."""
+
     import uuid
     boundary = uuid.uuid4().hex
     body = (
@@ -218,7 +192,7 @@ def _upload_photo_multipart(url, admin_hdrs, image_data, mime, filename, log_cal
 
 
 def _upload_speaker_photo(speaker_id, photo_url, log_callback=None):
-    """Download photo from URL and upload to Brella via admin panel API."""
+
     from urllib.parse import urlparse
 
     admin_hdrs = _admin_headers()
@@ -230,19 +204,17 @@ def _upload_speaker_photo(speaker_id, photo_url, log_callback=None):
     if not image_data:
         return None
 
-    # Compress oversized images
     image_data, mime = _compress_image(image_data, mime, log_callback=log_callback)
 
     event = os.environ.get("BRELLA_EVENT_ID", "10672")
     url = f"https://api.brella.io/api/admin_panel/events/{event}/speakers/{speaker_id}"
     filename = urlparse(photo_url).path.split("/")[-1] or "photo.jpg"
 
-    # Try base64 first (works for most), fall back to multipart for large images
     sc = _upload_photo_base64(url, admin_hdrs, image_data, mime, log_callback=log_callback)
     if sc in (200, 201, 204):
         return sc
 
-    # Fallback: multipart upload
+
     sc = _upload_photo_multipart(url, admin_hdrs, image_data, mime, filename, log_callback=log_callback)
     return sc
 
@@ -280,7 +252,7 @@ def parse_speakers_csv(csv_path, log_callback=None):
     missing_info = []
 
     reader = csv.reader(text.splitlines(), delimiter=",")
-    next(reader, None)  # skip header
+    next(reader, None)
 
     for line_num, row in enumerate(reader, start=2):
         if len(row) <= COL_PUBLISH:
@@ -315,6 +287,7 @@ def parse_speakers_csv(csv_path, log_callback=None):
                  log_callback=log_callback)
             continue
 
+
         external_id = token if token else email
 
         speaker_data = {
@@ -336,7 +309,6 @@ def parse_speakers_csv(csv_path, log_callback=None):
 
 def run_speakers_sync(csv_path, dry_run=False, prune_missing=False,
                        update_existing=False, log_callback=None):
-    # Reload config
     import api
     api.API_KEY = os.environ.get("BRELLA_API_KEY", "")
     api.ORG_ID = os.environ.get("BRELLA_ORG_ID", "1218")
@@ -347,9 +319,8 @@ def run_speakers_sync(csv_path, dry_run=False, prune_missing=False,
 
     records, missing_info = parse_speakers_csv(csv_path, log_callback=log_callback)
 
-    # Build external_id -> brella speaker map
     existing_speakers = list_speakers(headers)
-    existing_map = {}  # external_id -> speaker dict
+    existing_map = {}
     for sp in existing_speakers:
         ext_id = sp.get("attributes", {}).get("external-id")
         if ext_id:
@@ -386,7 +357,6 @@ def run_speakers_sync(csv_path, dry_run=False, prune_missing=False,
             continue
 
         try:
-            # --- Speaker profile ---
             sp_id = None
             if ext_id in existing_map and not update_existing:
                 skipped.append(name)
@@ -414,7 +384,6 @@ def run_speakers_sync(csv_path, dry_run=False, prune_missing=False,
                     emit(f"[ERROR] line {line_num} speaker create: {status} {resp}",
                          log_callback=log_callback)
 
-            # --- Upload photo via admin panel API ---
             if sp_id and photo_url:
                 sc = _upload_speaker_photo(sp_id, photo_url, log_callback=log_callback)
                 if sc and sc in (200, 201, 204):
@@ -426,7 +395,6 @@ def run_speakers_sync(csv_path, dry_run=False, prune_missing=False,
             failed += 1
             emit(f"[ERROR] line {line_num} {email}: {exc}", log_callback=log_callback)
 
-    # Prune: remove speakers in Brella that are not in the CSV
     if prune_missing:
         emit("Checking for speakers to prune...", log_callback=log_callback)
         for ext_id, sp in existing_map.items():

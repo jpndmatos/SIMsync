@@ -1,4 +1,3 @@
-import argparse
 import csv
 import json
 import os
@@ -6,7 +5,6 @@ import re
 import sys
 import time
 from pathlib import Path
-from typing import Callable
 from urllib import parse
 from urllib import error, request
 
@@ -14,11 +12,12 @@ from urllib import error, request
 def get_runtime_dir():
     if getattr(sys, "frozen", False):
         return Path(sys.executable).resolve().parent
-    return Path(__file__).resolve().parent.parent  # src/ -> project root
+    return Path(__file__).resolve().parent.parent
 
 
 def resolve_runtime_file(filename):
     runtime_dir = get_runtime_dir()
+
     candidate_paths = [runtime_dir / filename]
 
     if getattr(sys, "frozen", False):
@@ -32,7 +31,6 @@ def resolve_runtime_file(filename):
 
 
 RUNTIME_DIR = get_runtime_dir()
-DEFAULT_CSV_PATH = resolve_runtime_file("data/participants.csv")
 ENV_FILE = resolve_runtime_file(".env")
 DEFAULT_THREECKET_CSV_URL = (
     "https://app.3cket.com/webservices/backoffice/event-manager/participants/"
@@ -96,9 +94,6 @@ THREECKET_COOKIE = os.getenv("THREECKET_COOKIE", "").strip()
 THREECKET_AUTH_HEADER_NAME = os.getenv("THREECKET_AUTH_HEADER_NAME", "").strip()
 THREECKET_AUTH_HEADER_VALUE = os.getenv("THREECKET_AUTH_HEADER_VALUE", "").strip()
 THREECKET_HTTP_USER_AGENT = os.getenv("THREECKET_HTTP_USER_AGENT", USER_AGENT).strip()
-LIST_PAGE_SIZE = int(os.getenv("BRELLA_LIST_PAGE_SIZE", "100"))
-LIST_MAX_PAGES = int(os.getenv("BRELLA_LIST_MAX_PAGES", "100"))
-PAUSE_ON_EXIT_DEFAULT = os.getenv("BRELLA_PAUSE_ON_EXIT", "auto").strip().lower()
 TICKETS_COLUMN = int(os.getenv("BRELLA_TICKETS_COLUMN", "10"))
 
 BRELLA_ATTENDEE_GROUP_IDS = {
@@ -186,14 +181,12 @@ TICKET_TYPE_TO_GROUP_ID = {
     "student//standard": BRELLA_ATTENDEE_GROUP_IDS["student"],
 }
 
-# --- Persistent config (config.json) ---
-# Overrides the hardcoded defaults above when present.
 
 CONFIG_FILE = RUNTIME_DIR / "config.json"
 
 
 def _load_config():
-    """Load overrides from config.json if it exists."""
+
     global BRELLA_ATTENDEE_GROUP_IDS, GROUP_PRIORITY, TICKET_TYPE_TO_GROUP_ID
     if not CONFIG_FILE.exists():
         return
@@ -210,7 +203,7 @@ def _load_config():
 
 
 def save_config(attendee_groups=None, group_priority=None, ticket_type_to_group=None):
-    """Write current values to config.json and update module-level vars."""
+
     global BRELLA_ATTENDEE_GROUP_IDS, GROUP_PRIORITY, TICKET_TYPE_TO_GROUP_ID
     data = {}
     if CONFIG_FILE.exists():
@@ -232,68 +225,6 @@ def save_config(attendee_groups=None, group_priority=None, ticket_type_to_group=
 
 
 _load_config()
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(
-        description="Import 3cket attendees into Brella while preserving the 3cket QR value."
-    )
-    parser.add_argument(
-        "--csv",
-        dest="csv_path",
-        default=str(DEFAULT_CSV_PATH),
-        help="Path to the 3cket CSV export.",
-    )
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Validate and print payloads without sending them to Brella.",
-    )
-    parser.add_argument(
-        "--limit",
-        type=int,
-        default=0,
-        help="Only process the first N valid attendees. Use 0 for no limit.",
-    )
-    parser.add_argument(
-        "--prune-missing",
-        action=argparse.BooleanOptionalAction,
-        default=True,
-        help="Delete Brella invites whose external_id is not present in the CSV.",
-    )
-    parser.add_argument(
-        "--pause-on-exit",
-        action="store_true",
-        help="Wait for Enter before closing at the end of execution.",
-    )
-    parser.add_argument(
-        "--download-csv",
-        action=argparse.BooleanOptionalAction,
-        default=True,
-        help="Download the participants CSV from 3cket before importing.",
-    )
-    return parser.parse_args()
-
-def should_pause_on_exit(force_pause=False):
-    if force_pause:
-        return True
-
-    if PAUSE_ON_EXIT_DEFAULT in ("1", "true", "yes", "on"):
-        return True
-    if PAUSE_ON_EXIT_DEFAULT in ("0", "false", "no", "off"):
-        return False
-
-    return bool(getattr(sys, "frozen", False))
-
-
-def pause_on_exit(force_pause=False):
-    if not should_pause_on_exit(force_pause=force_pause):
-        return
-
-    try:
-        input("\nCarrega em Enter para fechar...")
-    except EOFError:
-        pass
 
 
 def emit(message, log_callback=None):
@@ -497,11 +428,11 @@ def build_payload(row):
     full_name = pick_full_name(row)
     email = pick_email(row)
     company = clean_csv_value(row[13]) if len(row) > 13 else ""
-    external_qr_string = pick_external_qr(row, threecket_id)
+
+    external_id = email
+    external_qr_string = pick_external_qr(row, threecket_id or external_id)
     attendee_group_id = pick_attendee_group_id(row)
 
-    if not threecket_id:
-        raise ValueError("Missing 3cket attendee ID")
     if not email:
         raise ValueError("Missing attendee email")
 
@@ -514,7 +445,7 @@ def build_payload(row):
     payload = {
         "event_invite": {
             "external_email": email,
-            "external_id": threecket_id,
+            "external_id": external_id,
             "external_first_name": first_name,
             "external_last_name": last_name,
             "seats": 1,
@@ -641,6 +572,11 @@ def delete_invite(url, headers):
     return api_request(url, headers, "DELETE")
 
 
+def sleep_request_delay():
+    if REQUEST_DELAY_SECONDS > 0:
+        time.sleep(REQUEST_DELAY_SECONDS)
+
+
 def find_invite_by_external_id(headers, external_id):
     base_url = build_url(FIND_INVITE_URL_TEMPLATE)
     query = parse.urlencode({"external_id": external_id})
@@ -663,7 +599,7 @@ def find_invite_by_external_id(headers, external_id):
 
 
 def row_is_staff(row):
-    """True if any of the row's 3cket ticket types contains 'staff'."""
+
     for ticket in pick_ticket_types(row):
         if "staff" in ticket.lower():
             return True
@@ -893,6 +829,7 @@ def list_invites(headers):
         )
 
     meta = response_json.get("meta")
+
     if isinstance(meta, dict):
         total_pages = meta.get("total_pages")
         if isinstance(total_pages, int) and total_pages > 1:
@@ -904,8 +841,9 @@ def list_invites(headers):
     return data
 
 
-def build_existing_invite_id_map(headers):
-    invites = list_invites(headers)
+def build_existing_invite_id_map(headers, invites=None):
+    if invites is None:
+        invites = list_invites(headers)
     invite_map = {}
     email_map = {}
     seen_ext_ids = set()
@@ -924,7 +862,6 @@ def build_existing_invite_id_map(headers):
         email = extract_invite_email(invite)
         name = extract_invite_name(invite)
 
-        # Duplicate detection: same external_id OR same email across 2+ invites.
         dup_reason = None
         if external_id and external_id in seen_ext_ids:
             dup_reason = f"external_id {external_id}"
@@ -941,19 +878,25 @@ def build_existing_invite_id_map(headers):
             email_map[email] = invite_id
             seen_emails.add(email)
 
-    return invite_map, email_map, duplicates
+    return invite_map, email_map, duplicates, invites
 
 
 def preflight_check(url, headers):
     return api_request(url, headers, "GET")
 
 
-def collect_prune_candidates(headers, desired_external_ids, desired_emails=None):
-    """Return Brella invites not present in the desired set.
-    An invite is kept if its external_id OR email is in `desired_*`.
-    Matching by email lets us prune invites that were created manually in
-    Brella (no external_id) but whose attendee is covered by the CSV."""
-    existing_invites = list_invites(headers)
+def collect_prune_candidates(
+    headers,
+    desired_external_ids,
+    desired_emails=None,
+    existing_invites=None,
+):
+\
+\
+\
+
+    if existing_invites is None:
+        existing_invites = list_invites(headers)
     desired_emails = desired_emails or set()
     prune_candidates = []
 
@@ -965,10 +908,10 @@ def collect_prune_candidates(headers, desired_external_ids, desired_emails=None)
         external_id = extract_invite_external_id(invite)
         email = extract_invite_email(invite)
 
-        # Skip invites with no identity — too risky to prune blindly.
+
         if not external_id and not email:
             continue
-        # Covered by CSV → keep.
+
         if external_id and external_id in desired_external_ids:
             continue
         if email and email in desired_emails:
@@ -1037,9 +980,10 @@ def run_sync_v4(
     existing_invite_id_map = {}
     existing_email_map = {}
     duplicate_invites = []
+    existing_invites = None
     if not dry_run:
         try:
-            (existing_invite_id_map, existing_email_map, duplicate_invites
+            (existing_invite_id_map, existing_email_map, duplicate_invites, existing_invites
              ) = build_existing_invite_id_map(headers)
             if not suppress_skip_logs:
                 for dup_label in duplicate_invites:
@@ -1080,6 +1024,7 @@ def run_sync_v4(
     failed = len(invalid_rows)
 
     if reverse_csv:
+
         emit(
             "[INFO] Quick add mode: processing CSV from end (latest rows first).",
             log_callback=log_callback,
@@ -1094,6 +1039,7 @@ def run_sync_v4(
         print_invalid_rows(invalid_rows, log_callback=log_callback)
 
     existing_skip_streak = 0
+    find_lookup_cache = {}
 
     for line_number, payload in csv_records:
         processed += 1
@@ -1113,7 +1059,16 @@ def run_sync_v4(
             if not invite_id and email:
                 invite_id = existing_email_map.get(email)
             if not invite_id:
-                invite_id = find_invite_by_external_id(headers, external_id)
+
+                if external_id in find_lookup_cache:
+                    invite_id = find_lookup_cache[external_id]
+                else:
+                    invite_id = find_invite_by_external_id(headers, external_id)
+                    find_lookup_cache[external_id] = invite_id
+                if invite_id:
+                    existing_invite_id_map[external_id] = invite_id
+                    if email:
+                        existing_email_map[email] = invite_id
 
             if invite_id and not update_existing:
                 existing_skip_streak += 1
@@ -1130,6 +1085,7 @@ def run_sync_v4(
                     and existing_skip_streak >= stop_after_existing_skips
                 )
                 if stop_on_existing:
+
                     if stop_after_existing_skips:
                         emit(
                             f"[INFO] Quick add complete: reached {stop_after_existing_skips} consecutive attendees that already exist in Brella.",
@@ -1142,7 +1098,6 @@ def run_sync_v4(
                         )
                     break
 
-                time.sleep(REQUEST_DELAY_SECONDS)
                 continue
 
             existing_skip_streak = 0
@@ -1157,6 +1112,7 @@ def run_sync_v4(
             else:
                 status_code, response_text = create_invite(url, headers, payload)
                 operation = "ADDED"
+
 
             if status_code in (200, 201):
                 succeeded += 1
@@ -1183,14 +1139,17 @@ def run_sync_v4(
                     log_callback=log_callback,
                 )
 
-            time.sleep(REQUEST_DELAY_SECONDS)
+            sleep_request_delay()
         except Exception as exc:
             failed += 1
             emit(f"[SKIPPED] line {line_number}: {exc}", log_callback=log_callback)
 
     if prune_missing:
         prune_candidates = collect_prune_candidates(
-            headers, desired_external_ids, desired_emails
+            headers,
+            desired_external_ids,
+            desired_emails,
+            existing_invites=existing_invites,
         )
 
         if dry_run:
@@ -1224,7 +1183,7 @@ def run_sync_v4(
                         log_callback=log_callback,
                     )
 
-                time.sleep(REQUEST_DELAY_SECONDS)
+                sleep_request_delay()
 
     if include_final_report:
         if processed < total_valid_rows:
@@ -1298,7 +1257,7 @@ def preview_sync_v4(
             f"URL: {preflight_url} Response: {response_text}"
         )
 
-    (existing_invite_id_map, existing_email_map, duplicate_invites
+    (existing_invite_id_map, existing_email_map, duplicate_invites, existing_invites
      ) = build_existing_invite_id_map(headers)
     if not suppress_skip_logs:
         for dup_label in duplicate_invites:
@@ -1396,7 +1355,10 @@ def preview_sync_v4(
 
     if prune_missing:
         prune_candidates = collect_prune_candidates(
-            headers, desired_external_ids, desired_emails
+            headers,
+            desired_external_ids,
+            desired_emails,
+            existing_invites=existing_invites,
         )
         for candidate in prune_candidates:
             label = format_removed_participant_label(candidate)
@@ -1443,6 +1405,7 @@ def prepare_csv(csv_path, download_csv=True, log_callback=None):
             if downloaded:
                 return
         except RuntimeError:
+
             if not csv_path.exists():
                 raise
             emit(
@@ -1453,20 +1416,3 @@ def prepare_csv(csv_path, download_csv=True, log_callback=None):
 
     if not csv_path.exists():
         raise RuntimeError(f"CSV file not found: {csv_path}")
-
-
-if __name__ == "__main__":
-    try:
-        args = parse_args()
-        csv_path = Path(args.csv_path)
-        prepare_csv(csv_path, download_csv=args.download_csv)
-        run_sync_v4(
-            csv_path,
-            dry_run=args.dry_run,
-            limit=args.limit,
-            prune_missing=args.prune_missing,
-        )
-    except Exception as exc:
-        print(f"[ERRO FATAL] {exc}")
-    finally:
-        pause_on_exit(force_pause="args" in locals() and args.pause_on_exit)

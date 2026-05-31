@@ -1,9 +1,4 @@
-"""
-SIMsync GUI — local desktop app to sync event CSVs to Brella.
-"""
-
 import ctypes
-import datetime
 import os
 import sys
 import threading
@@ -11,20 +6,15 @@ import tkinter as tk
 from tkinter import filedialog, ttk
 from pathlib import Path
 
-# Import api early so it runs load_env_file (which handles exe path resolution),
-# populating os.environ before the Setup tab reads values via load_env_value.
-import api as _api  # noqa: F401
-
-# --- Paths ---
 def get_base_dir():
     if getattr(sys, "frozen", False):
         return Path(sys.executable).resolve().parent
-    return Path(__file__).resolve().parent.parent  # src/ -> project root
+
+    return Path(__file__).resolve().parent.parent
 
 BASE_DIR = get_base_dir()
 ENV_PATH = BASE_DIR / ".env"
 
-# --- Theme ---
 BG = "#101016"
 SURFACE = "#19191f"
 SURFACE_RAISED = "#222229"
@@ -40,24 +30,20 @@ SUCCESS = "#2dd4a8"
 DANGER = "#f85149"
 WARN = "#f0a030"
 
-# --- Typography ---
-# Poppins regular everywhere. Hierarchy comes from size and color, not weight.
 FONT = ("Poppins", 10)
-FONT_BOLD = FONT              # legacy alias — no bold variants anywhere
+FONT_BOLD = FONT
 FONT_SMALL = FONT
 FONT_MONO = FONT
 FONT_SECTION = FONT
-FONT_TITLE = FONT               # section titles match sidebar labels
-FONT_DISPLAY = ("Poppins", 16)  # big stat numbers
+FONT_TITLE = FONT
+FONT_DISPLAY = ("Poppins", 16)
 
-# --- Spacing scale ---
 SP_XS = 2
 SP_SM = 4
 SP_MD = 8
 SP_LG = 12
 SP_XL = 16
 
-# Canonical input-bar height — Entry + Browse button always render at exactly this.
 BAR_H = 34
 
 CARD_PAD_X = SP_MD
@@ -65,13 +51,12 @@ CARD_PAD_INNER = SP_MD
 CARD_PAD_Y_TOP = SP_SM
 CARD_PAD_Y_BOT = SP_SM
 
-SIDEBAR_W = 280            # minimum sidebar width
-SIDEBAR_MAX_W = 800        # cap only to prevent runaway growth on ultrawide
+SIDEBAR_W = 280
+SIDEBAR_MAX_W = 800
 SIDEBAR_WIDTH_RATIO = 0.38
 
 APP_VERSION = "v1.0"
 
-# --- Animation constants ---
 ANIM_INTERVAL = 16
 NAV_ANIM_STEPS = 10
 BUTTON_FLASH_MS = 120
@@ -87,7 +72,6 @@ ACTION_BTN_PADY = SP_SM
 ACTION_BTN_GAP = SP_MD
 
 
-# --- Color interpolation helpers ---
 
 def _hex_to_rgb(hex_color):
     h = hex_color.lstrip("#")
@@ -105,7 +89,6 @@ def _lerp_color(color_a, color_b, t):
     )
 
 
-# --- .env helpers ---
 
 def load_env_value(key, default=""):
     if ENV_PATH.exists():
@@ -134,13 +117,24 @@ def save_env_values(updates):
     for k, v in updates.items():
         if k not in existing_keys:
             lines.append(f"{k}={v}")
+
     ENV_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-# --- Scrollable list helper ---
+def parse_env_bool(value, default=False):
+    raw = str(value if value is not None else "").strip().lower()
+    if not raw:
+        return default
+    if raw in ("1", "true", "yes", "on"):
+        return True
+    if raw in ("0", "false", "no", "off"):
+        return False
+    return default
+
+
 
 def _make_scroll_list(parent, bg=None):
-    """Create a vertically scrollable frame inside parent. Returns (canvas, frame)."""
+
     if bg is None:
         bg = SURFACE
     canvas = tk.Canvas(parent, bg=bg, highlightthickness=0, borderwidth=0)
@@ -155,14 +149,13 @@ def _make_scroll_list(parent, bg=None):
     return canvas, frame
 
 
-# --- Card helpers ---
 
 def make_field(parent, label, var, show=None, placeholder=""):
     parent_bg = parent.cget("bg") if hasattr(parent, "cget") else SURFACE
     tk.Label(parent, text=label, font=FONT, fg=TEXT_SEC, bg=parent_bg,
              anchor="w").pack(fill="x", pady=(0, SP_XS))
     kw = dict(textvariable=var, font=FONT, bg=BG, fg=TEXT, insertbackground=TEXT,
-              relief="flat", bd=SP_MD,  # internal horizontal padding
+              relief="flat", bd=SP_MD,
               highlightthickness=1, highlightbackground=SURFACE_RAISED,
               highlightcolor=ACCENT)
     if show:
@@ -173,10 +166,10 @@ def make_field(parent, label, var, show=None, placeholder=""):
 
 
 def make_section(parent, title, subtitle=None, pady=(0, SP_LG)):
-    """Consistent section: title (accent) + subtitle (muted) + body. A thin
-    divider is drawn on TOP of the section (skipped for the first section
-    in its parent), so dividers separate consecutive sections rather than
-    splitting a section's title from its body."""
+\
+\
+\
+
     is_first = len(parent.winfo_children()) == 0
 
     section = tk.Frame(parent, bg=BG)
@@ -197,7 +190,7 @@ def make_section(parent, title, subtitle=None, pady=(0, SP_LG)):
 
 
 def make_page(parent):
-    """Consistent outer page padding; returns inner frame to populate."""
+
     outer = tk.Frame(parent, bg=BG)
     outer.pack(fill="both", expand=True, padx=SP_LG, pady=SP_LG)
     return outer
@@ -214,9 +207,9 @@ def make_checkbox(parent, text, variable, command=None):
 
 
 def make_toggle(parent, text, variable, command=None):
-    """Button-styled boolean toggle bound to a tk.BooleanVar.
-    Active = accent pink text (same as other buttons).
-    Inactive = muted text on the same raised surface."""
+\
+\
+
     btn = tk.Button(
         parent, text=text, font=FONT,
         bg=SURFACE_RAISED,
@@ -247,7 +240,6 @@ def make_toggle(parent, text, variable, command=None):
     return btn
 
 
-# --- Scrollable frame wrapper ---
 
 class ScrollableFrame:
     def __init__(self, parent):
@@ -272,7 +264,6 @@ class ScrollableFrame:
         self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
 
-# --- Button press flash helper ---
 
 def _bind_button_flash(btn, rest_color, flash_color):
     def on_press(e):
@@ -281,14 +272,13 @@ def _bind_button_flash(btn, rest_color, flash_color):
     btn.bind("<ButtonPress-1>", on_press, add="+")
 
 
-# --- Button factory (consistent styling) ---
 
 def make_button(parent, text, command, primary=False, danger=False):
-    """Unified button style.
-    - primary: pink background, white text — for important actions (Sync, Save).
-    - danger:  dark background with danger-colored text.
-    - default: dark raised surface with accent pink text.
-    """
+\
+\
+\
+\
+
     if primary:
         bg = ACCENT
         fg = "#ffffff"
@@ -330,8 +320,8 @@ def make_button(parent, text, command, primary=False, danger=False):
 
 
 def make_card(parent, accent_color=None, pady=(0, SP_MD), padx=0):
-    """Card-like container: thin accent top line + 1px border + padded body.
-    Returns the inner content frame (BG background) to populate with widgets."""
+\
+
     outer = tk.Frame(parent, bg=SURFACE_RAISED)
     outer.pack(fill="x", pady=pady, padx=padx)
 
@@ -346,7 +336,6 @@ def make_card(parent, accent_color=None, pady=(0, SP_MD), padx=0):
     return content
 
 
-# --- ttk styling (scrollbars, treeview) ---
 
 def _configure_ttk_styles():
     style = ttk.Style()
@@ -355,7 +344,6 @@ def _configure_ttk_styles():
     except Exception:
         pass
 
-    # Vertical + horizontal scrollbar — dark, slim, no arrows.
     style.configure(
         "Dark.Vertical.TScrollbar",
         background=SURFACE_RAISED, troughcolor=SURFACE,
@@ -380,7 +368,6 @@ def _configure_ttk_styles():
     )
 
 
-# --- Status dot pulse animation ---
 
 class StatusPulse:
     def __init__(self, widget):
@@ -437,7 +424,6 @@ class StatusPulse:
         self._after_id = self.widget.after(PULSE_INTERVAL, self._tick)
 
 
-# --- Setup Tab (merged: API config + Values) ---
 
 class SetupTab:
     def __init__(self, parent, log_callback=None, app=None):
@@ -455,10 +441,15 @@ class SetupTab:
         self.quick_add_skip_limit = tk.StringVar(
             value=load_env_value("SIMSYNC_QUICK_ADD_STOP_AFTER_SKIPS", "10")
         )
+        self.request_delay = tk.StringVar(
+            value=load_env_value("BRELLA_REQUEST_DELAY", "0.1")
+        )
+        self.download_threecket_csv = tk.BooleanVar(
+            value=parse_env_bool(load_env_value("SIMSYNC_DOWNLOAD_3CKET_CSV", "1"), True)
+        )
 
         page = make_page(self.frame)
 
-        # ===== CONNECTION — custom header with status pill on the right =====
         conn_section = tk.Frame(page, bg=BG)
         conn_section.pack(fill="x", pady=(0, SP_LG))
 
@@ -475,7 +466,6 @@ class SetupTab:
             font=FONT, fg=TEXT_TER, bg=BG, anchor="w",
         ).pack(fill="x", pady=(0, SP_SM))
 
-        # Status pill anchored top-right
         api_loaded = bool(self.api_key.get())
         status_col = tk.Frame(hdr_row, bg=BG)
         status_col.pack(side="right", padx=(SP_LG, 0), pady=(SP_XS, 0))
@@ -492,13 +482,11 @@ class SetupTab:
         )
         self._api_status_lbl.pack(side="left")
 
-        # Two credential cards: Integration API | Admin Panel
         creds_grid = tk.Frame(conn_section, bg=BG)
         creds_grid.pack(fill="x", pady=(SP_SM, 0))
         creds_grid.columnconfigure(0, weight=1, uniform="creds")
         creds_grid.columnconfigure(1, weight=1, uniform="creds")
 
-        # --- Integration API card ---
         api_wrap = tk.Frame(creds_grid, bg=BG)
         api_wrap.grid(row=0, column=0, sticky="nsew", padx=(0, SP_MD))
         api_col = make_card(api_wrap, accent_color=ACCENT, pady=(0, 0))
@@ -521,8 +509,18 @@ class SetupTab:
             "Quick add: stop after existing skips",
             self.quick_add_skip_limit,
         )
+        make_field(
+            api_col,
+            "Request delay (seconds)",
+            self.request_delay,
+        )
+        self.download_csv_cb = make_checkbox(
+            api_col,
+            "Auto-download participants CSV from 3cket",
+            self.download_threecket_csv,
+        )
+        self.download_csv_cb.pack(fill="x", pady=(0, SP_SM))
 
-        # --- Admin Panel card ---
         admin_wrap = tk.Frame(creds_grid, bg=BG)
         admin_wrap.grid(row=0, column=1, sticky="nsew", padx=(SP_MD, 0))
         admin_col = make_card(admin_wrap, accent_color=ACCENT, pady=(0, 0))
@@ -541,7 +539,6 @@ class SetupTab:
         make_field(al, "Client", self.admin_client)
         make_field(ar, "UID", self.admin_uid)
 
-        # Connection test result (below the cards)
         self._api_status_var = tk.StringVar(value="")
         self._api_status_result = tk.Label(
             conn_section, textvariable=self._api_status_var,
@@ -549,7 +546,6 @@ class SetupTab:
         )
         self._api_status_result.pack(fill="x", pady=(SP_MD, 0))
 
-        # ===== MAPPINGS =====
         import api
 
         maps_body = make_section(
@@ -598,7 +594,6 @@ class SetupTab:
             "1.0", self._format_mapping_inline(api.TICKET_TYPE_TO_GROUP_ID)
         )
 
-        # Log-hosted action row for Setup
         if self._app and hasattr(self._app, "_log_action_host"):
             self.action_row = tk.Frame(self._app._log_action_host, bg=SURFACE)
             action_parent = self.action_row
@@ -613,7 +608,6 @@ class SetupTab:
         self.save_btn.pack(side="left", padx=(0, ACTION_BTN_GAP))
         self.test_btn.pack(side="left")
 
-    # --- Inline value helpers ---
 
     def _format_mapping_inline(self, mapping):
         return "; ".join(f"{k}={v}" for k, v in mapping.items())
@@ -649,10 +643,9 @@ class SetupTab:
     def _parse_priority_inline(self, raw_text):
         return [item.strip() for item in raw_text.split(";") if item.strip()]
 
-    # --- Save / Test ---
 
     def _save_all(self):
-        """Save credentials + groups/tickets mappings in one click."""
+
         self._save_api()
         self._save_values()
 
@@ -668,6 +661,20 @@ class SetupTab:
                 )
         self.quick_add_skip_limit.set(quick_limit)
 
+        request_delay_raw = self.request_delay.get().strip() or "0.1"
+        try:
+            request_delay_value = max(0.0, float(request_delay_raw))
+            request_delay = f"{request_delay_value:g}"
+        except ValueError:
+            request_delay = "0.1"
+            if self.log_callback:
+                self.log_callback(
+                    "[WARN] Request delay invalid; using default 0.1 seconds."
+                )
+        self.request_delay.set(request_delay)
+
+        download_csv_value = "1" if self.download_threecket_csv.get() else "0"
+
         save_env_values({
             "BRELLA_API_KEY": self.api_key.get().strip(),
             "BRELLA_ORG_ID": self.org_id.get().strip(),
@@ -676,14 +683,18 @@ class SetupTab:
             "BRELLA_ADMIN_CLIENT": self.admin_client.get().strip(),
             "BRELLA_ADMIN_UID": self.admin_uid.get().strip(),
             "SIMSYNC_QUICK_ADD_STOP_AFTER_SKIPS": quick_limit,
+            "BRELLA_REQUEST_DELAY": request_delay,
+            "SIMSYNC_DOWNLOAD_3CKET_CSV": download_csv_value,
         })
         for k, var in [("BRELLA_API_KEY", self.api_key), ("BRELLA_ORG_ID", self.org_id),
                        ("BRELLA_EVENT_ID", self.event_id),
                        ("BRELLA_ADMIN_ACCESS_TOKEN", self.admin_token),
                        ("BRELLA_ADMIN_CLIENT", self.admin_client),
                        ("BRELLA_ADMIN_UID", self.admin_uid),
-                       ("SIMSYNC_QUICK_ADD_STOP_AFTER_SKIPS", self.quick_add_skip_limit)]:
+                       ("SIMSYNC_QUICK_ADD_STOP_AFTER_SKIPS", self.quick_add_skip_limit),
+                       ("BRELLA_REQUEST_DELAY", self.request_delay)]:
             os.environ[k] = var.get().strip()
+        os.environ["SIMSYNC_DOWNLOAD_3CKET_CSV"] = download_csv_value
 
         api_ok = bool(self.api_key.get().strip())
         self._api_status_dot.config(bg=SUCCESS if api_ok else DANGER)
@@ -744,7 +755,6 @@ class SetupTab:
             ticket_type_to_group=tickets,
         )
 
-        # Normalize UI text after save so format stays clean and compact.
         self.groups_inline_var.set(self._format_mapping_inline(groups))
         self.priority_inline_var.set("; ".join(priority))
         self.tickets_inline_text.delete("1.0", "end")
@@ -757,7 +767,6 @@ class SetupTab:
             )
 
 
-# --- Sync Tab ---
 
 class SyncTab:
     def __init__(self, parent, name, description, has_prune=False,
@@ -785,7 +794,6 @@ class SyncTab:
 
         page = make_page(self.frame)
 
-        # ===== CSV header preview (inline: prefix + values + hint) =====
         req_fields = [f for f, req in (csv_header_fields or []) if req]
         if req_fields:
             hdr_body = make_section(page, "CSV Header")
@@ -826,7 +834,6 @@ class SyncTab:
                 widget.config(state="disabled")
             txt.bind("<Button-1>", _copy_header)
 
-        # ===== CSV file picker (path + optional prune toggle + browse) =====
         csv_body = make_section(page, "CSV File")
         csv_row = tk.Frame(csv_body, bg=BG)
         csv_row.pack(fill="x")
@@ -834,12 +841,8 @@ class SyncTab:
         self.browse_btn = make_button(csv_row, "Browse", command=self._browse)
         self.browse_btn.config(pady=SP_MD, highlightthickness=1,
                                highlightbackground=SURFACE_RAISED)
-        # Browse on the left of the input bar.
         self.browse_btn.pack(side="left", padx=(0, SP_MD), fill="y")
 
-        # Right-to-left packing for the toggles (first packed sits furthest right).
-        # Visual order (left to right):
-        # [Browse] [entry] [Quick add] [Staff] [Update] [Remove]
         self.quick_add_cb = None
         if has_prune:
             if has_remove:
@@ -868,8 +871,6 @@ class SyncTab:
                                          highlightbackground=SURFACE_RAISED)
                 self.quick_add_cb.pack(side="right", padx=(SP_MD, 0), fill="y")
 
-        # Notices area: surfaces active-mode system messages between the
-        # CSV bar and the result containers.
         self._notices = tk.Frame(csv_body, bg=BG)
         self._notices.pack(fill="x", pady=(SP_MD, 0))
         self._notice_labels = {}
@@ -905,9 +906,6 @@ class SyncTab:
         )
         self.path_entry.pack(side="left", fill="x", expand=True, ipady=SP_SM)
 
-        # Detail boxes: 2x2 grid. The wrapper's height is synced to the
-        # sidebar log panel's height, so its top edge lines up with where
-        # the log starts. Wrapper is pinned to the bottom of the tab.
         self._stat_wrap = tk.Frame(self.frame, bg=SURFACE_RAISED)
         self._stat_wrap.pack(side="bottom", fill="x")
         self._stat_wrap.pack_propagate(False)
@@ -920,7 +918,6 @@ class SyncTab:
         detail_container.rowconfigure(0, weight=1)
         detail_container.rowconfigure(1, weight=1)
 
-        # Row 0: Added · Updated · Skipped
         self.card_added, self.card_added_title, self.list_added = self._make_unified_box(
             detail_container, "Added", "0", SUCCESS, row=0, col=0)
         self.card_updated, _, self.list_updated = self._make_unified_box(
@@ -928,7 +925,6 @@ class SyncTab:
         self.card_skipped, _, self.list_skipped = self._make_unified_box(
             detail_container, "Skipped", "0", TEXT_TER, row=0, col=2)
 
-        # Row 1: Removed · Missing info · Duplicates
         self.card_removed, self.card_removed_title, self.list_removed = self._make_unified_box(
             detail_container, "Removed", "0", DANGER, row=1, col=0)
         self.card_missing, _, self.list_missing = self._make_unified_box(
@@ -936,8 +932,6 @@ class SyncTab:
         self.card_duplicate, _, self.list_duplicate = self._make_unified_box(
             detail_container, "Duplicates", "0", DANGER, row=1, col=2, copyable=True)
 
-        # Sync the wrapper's height to match the log panel's height so its
-        # top edge aligns with where the log starts.
         if self._app and hasattr(self._app, "_log_frame"):
             self._app._log_frame.bind(
                 "<Configure>",
@@ -950,7 +944,6 @@ class SyncTab:
                 )
             )
 
-        # Log-hosted action row for Preview/Import
         if self._app and hasattr(self._app, "_log_action_host"):
             self.action_row = tk.Frame(self._app._log_action_host, bg=SURFACE)
             action_parent = self.action_row
@@ -975,8 +968,8 @@ class SyncTab:
                 self.quick_add_cb.config(state="disabled")
 
     def _install_notice(self, key, variable, text, color):
-        """Show/hide a one-line notice whenever `variable` changes.
-        Rendered as a small dot + muted text in the notices strip."""
+\
+
         row = tk.Frame(self._notices, bg=BG)
         dot = tk.Frame(row, bg=color, width=8, height=8)
         dot.pack(side="left", padx=(0, SP_SM), pady=(SP_XS, 0))
@@ -998,9 +991,9 @@ class SyncTab:
 
     @staticmethod
     def _attach_dark_scrollbar(parent, target):
-        """Attach a Dark.Vertical.TScrollbar to the Listbox/Text `target`
-        inside `parent`. Assumes parent is a grid-using frame with row 0 and
-        col 0 holding `target`."""
+\
+\
+
         _configure_ttk_styles()
         vsb = ttk.Scrollbar(parent, orient="vertical",
                             style="Dark.Vertical.TScrollbar",
@@ -1012,8 +1005,6 @@ class SyncTab:
 
     def _make_unified_box(self, parent, title, value, color, row=0, col=0, copyable=False):
         outer = tk.Frame(parent, bg=BG)
-        # 1px separator between columns and rows. Rightmost column (index 2
-        # in the 3-col layout) drops the right border so it meets the edge.
         padx = (0, 1) if col < 2 else (0, 0)
         pady = (0, 1) if row == 0 else (0, 0)
         outer.grid(row=row, column=col, sticky="nsew", padx=padx, pady=pady)
@@ -1135,7 +1126,6 @@ class SyncTab:
         self._set_status(f"Running {mode}...", ACCENT_LIGHT)
         if self._app:
             self._app._log_status_pulse.start(ACCENT_LIGHT)
-        # Visual start marker for this run in the log.
         if self._quick_add_mode and dry_run:
             self._log(f"[preview] --- {self.name} quick preview started ---")
         elif self._quick_add_mode:
@@ -1163,7 +1153,6 @@ class SyncTab:
             else:
                 mode = "Preview" if run_was_preview else "Sync"
                 tag = "preview" if run_was_preview else "info"
-            # Visual end marker for this run in the log.
             self._log(f"[{tag}] --- {self.name} {mode.lower()} complete ---")
             self._set_status(f"{mode} complete.", SUCCESS)
         except Exception as exc:
@@ -1201,15 +1190,8 @@ class SyncTab:
             self.frame.after(0, lambda: self._log_callback(msg))
 
 
-# --- Debug Tab ---
 
 class DebugTab:
-    """
-    Inspect every Brella invite, highlight ones whose external_qr_string
-    is missing or still falling back to `brella_invite_id=...`, and patch
-    them individually (auto from 3cket CSV, or manual value).
-    """
-
     BRELLA_FALLBACK_PREFIX = "brella_invite_id="
 
     def __init__(self, parent, app=None, log_callback=None):
@@ -1218,12 +1200,12 @@ class DebugTab:
         self.frame = tk.Frame(parent, bg=BG)
         self.action_row = None
 
-        self._invites = []            # raw Brella invites
-        self._csv_ticket_map = {}     # email -> "ticket / ticket" string
-        self._csv_qr_map = {}         # email -> expected external_qr_string (from 3cket)
+        self._invites = []
+        self._csv_ticket_map = {}
+        self._csv_qr_map = {}
         self._loading = False
 
-        self.csv_path = tk.StringVar(value=str(BASE_DIR / "data" / "participants.csv"))
+        self.csv_path = tk.StringVar(value="")
         self.filter_missing_only = tk.BooleanVar(value=False)
         self.search_var = tk.StringVar(value="")
         self.total_var = tk.StringVar(value="—")
@@ -1231,7 +1213,6 @@ class DebugTab:
 
         page = make_page(self.frame)
 
-        # ===== CSV picker =====
         csv_body = make_section(
             page, "3cket CSV",
             subtitle="Used to show ticket types and auto-fill 'Fix from CSV'.",
@@ -1253,7 +1234,6 @@ class DebugTab:
         )
         self.csv_entry.pack(side="left", fill="x", expand=True, ipady=SP_SM)
 
-        # ===== Filter / search bar =====
         filter_bar = tk.Frame(page, bg=BG)
         filter_bar.pack(fill="x", pady=(0, SP_SM))
 
@@ -1275,7 +1255,6 @@ class DebugTab:
         search_entry.pack(side="left", ipady=0)
         self.search_var.trace_add("write", lambda *a: self._refresh_display())
 
-        # Summary counters (right) — just two labels, no separator dot.
         summary = tk.Frame(filter_bar, bg=BG)
         summary.pack(side="right")
         tk.Label(summary, textvariable=self.total_var, font=FONT,
@@ -1286,7 +1265,6 @@ class DebugTab:
         )
         self._missing_label.pack(side="right", padx=(0, SP_LG))
 
-        # ===== Treeview =====
         self._configure_tree_style()
 
         tree_wrap = tk.Frame(page, bg=SURFACE_RAISED)
@@ -1316,12 +1294,8 @@ class DebugTab:
         vsb.pack(side="right", fill="y")
         self.tree.pack(side="left", fill="both", expand=True)
 
-        # Column separator overlay: thin vertical frames placed on top of the
-        # tree at column boundaries. Redrawn whenever the tree is resized.
         self._column_separators = []
         self._tree_wrap = tree_wrap
-        # Use after_idle so widths are read AFTER Tk finishes laying out
-        # stretch columns for the new tree size.
         self.tree.bind(
             "<Configure>",
             lambda _e: self.tree.after_idle(self._draw_column_separators),
@@ -1340,11 +1314,9 @@ class DebugTab:
         self.tree.bind("<<TreeviewSelect>>", self._on_select)
         self.tree.bind("<Double-1>", lambda e: self._edit_qr_dialog())
 
-        # First-paint separators after Tk settles the tree's stretch columns.
         self.tree.after(100, self._draw_column_separators)
         self.tree.after(400, self._draw_column_separators)
 
-        # === Action buttons (hosted in log panel like other tabs) ===
         if self._app and hasattr(self._app, "_log_action_host"):
             self.action_row = tk.Frame(self._app._log_action_host, bg=SURFACE)
             action_parent = self.action_row
@@ -1360,11 +1332,10 @@ class DebugTab:
         self.fix_btn.pack(side="left", padx=(0, ACTION_BTN_GAP))
         self.refresh_btn.pack(side="left")
 
-    # --- Styling ---
 
     def _draw_column_separators(self, _event=None):
-        """Overlay 1px vertical dividers at column boundaries.
-        Re-runs on tree resize so dividers track the current column widths."""
+\
+
         for sep in self._column_separators:
             try:
                 sep.destroy()
@@ -1375,10 +1346,9 @@ class DebugTab:
         try:
             cols = self.tree["columns"]
             x = 0
-            for col in cols[:-1]:  # no divider after the last column
+            for col in cols[:-1]:
                 x += int(self.tree.column(col, option="width"))
                 sep = tk.Frame(self.tree, bg=SURFACE_RAISED, width=1)
-                # place uses tree's client area; height takes full tree height.
                 sep.place(x=x - 1, y=0, relheight=1.0, width=1)
                 self._column_separators.append(sep)
         except Exception:
@@ -1411,7 +1381,6 @@ class DebugTab:
         )
         style.layout("Debug.Treeview", style.layout("Treeview"))
 
-    # --- Actions ---
 
     def _browse_csv(self):
         path = filedialog.askopenfilename(
@@ -1453,7 +1422,6 @@ class DebugTab:
             invites = api.list_invites(headers)
             self._invites = invites
             self._log(f"[OK] Loaded {len(invites)} invites from Brella. Fetching details...")
-            # First render (QR still empty) so the UI feels responsive.
             self.frame.after(0, self._refresh_display)
 
             self._fetch_invite_details(headers, invites)
@@ -1476,8 +1444,8 @@ class DebugTab:
                 self.frame.after(0, self._app._log_status_pulse.stop)
 
     def _fetch_invite_details(self, headers, invites):
-        """GET per-invite detail to populate fields not returned by the list endpoint
-        (notably external_qr_string). Runs concurrently to stay responsive."""
+\
+
         import api
         import json as _json
         from concurrent.futures import ThreadPoolExecutor
@@ -1486,8 +1454,6 @@ class DebugTab:
         sample = {"logged": False}
 
         def merge_detail_into(invite, detail):
-            # Detail shape may be JSON:API ({"data": {"attributes": {...}}})
-            # or legacy ({"event_invite": {...}}) or flat.
             data = detail.get("data", detail) if isinstance(detail, dict) else None
             if isinstance(data, dict):
                 attrs = data.get("attributes")
@@ -1520,7 +1486,6 @@ class DebugTab:
                         self._log(f"[WARN] detail GET {invite_id} -> {status}: {resp[:200]}")
                     return
                 payload = _json.loads(resp)
-                # Log the first successful payload shape so we can see the keys.
                 if not sample["logged"]:
                     sample["logged"] = True
                     self._log_detail_sample(invite_id, payload)
@@ -1538,8 +1503,8 @@ class DebugTab:
         self._log(f"[INFO] Detail fetches: {stats['ok']} ok, {stats['fail']} failed.")
 
     def _log_detail_sample(self, invite_id, payload):
-        """Dump attribute/event_invite keys from one response so we can see
-        what fields Brella actually returns for an invite detail."""
+\
+
         keys_found = []
         if isinstance(payload, dict):
             data = payload.get("data", payload)
@@ -1569,11 +1534,10 @@ class DebugTab:
             if expected_qr:
                 self._csv_qr_map[email] = expected_qr
 
-    # --- Display ---
 
     def _invite_field(self, invite, *field_names):
-        """Read a field from an invite, trying event_invite wrapper, top-level,
-        and JSON:API `attributes` (both snake_case and kebab-case)."""
+\
+
         if not isinstance(invite, dict):
             return ""
 
@@ -1649,7 +1613,6 @@ class DebugTab:
                 tag = "missing"
                 missing_count += 1
             else:
-                # Zebra stripe OK rows for readability.
                 tag = "ok_alt" if (total_count % 2) else "ok"
 
             total_count += 1
@@ -1684,10 +1647,8 @@ class DebugTab:
         self.missing_var.set(f"{missing_count} missing")
         self._missing_label.config(fg=WARN if missing_count else TEXT_TER)
 
-        # Redraw column separators on top of the refreshed content.
         self.tree.after_idle(self._draw_column_separators)
 
-        # Clear selection-dependent buttons since the tree was rebuilt.
         self._update_action_buttons()
 
     def _on_select(self, _event=None):
@@ -1715,7 +1676,6 @@ class DebugTab:
                 return invite
         return None
 
-    # --- Patch actions ---
 
     def _fix_from_csv(self):
         invite = self._selected_invite()
@@ -1842,7 +1802,6 @@ class DebugTab:
                 event_invite["external_qr_string"] = new_qr
             attributes = invite.get("attributes")
             if isinstance(attributes, dict):
-                # Write back to whichever key variant exists so UI reflects the change.
                 if "external-qr-string" in attributes:
                     attributes["external-qr-string"] = new_qr
                 if "external_qr_string" in attributes:
@@ -1853,7 +1812,6 @@ class DebugTab:
                 invite["external_qr_string"] = new_qr
             return
 
-    # --- Helpers ---
 
     def _invite_label(self, invite):
         first = self._invite_field(invite, "external_first_name")
@@ -1884,7 +1842,6 @@ class DebugTab:
             print(msg)
 
 
-# --- App ---
 
 def _apply_dark_title_bar(root):
     try:
@@ -1913,12 +1870,10 @@ class App:
         self._ind_anim_ids = {}
         self._log_fade_counter = 0
 
-        # Main layout: sidebar left, right side = content top + log bottom
         outer = tk.Frame(self.root, bg=BG)
         outer.pack(fill="both", expand=True)
         self._outer = outer
 
-        # Sidebar
         sidebar = tk.Frame(outer, bg=SURFACE, width=SIDEBAR_W)
         sidebar.pack(side="left", fill="y")
         sidebar.pack_propagate(False)
@@ -1928,7 +1883,6 @@ class App:
 
         tk.Frame(sidebar, bg=SURFACE, height=10).pack(fill="x")
 
-        # Nav
         self.nav_buttons = []
         self.nav_indicators = []
         self.panels = {}
@@ -1938,14 +1892,11 @@ class App:
         self._nav_current_fg = {}
         self._nav_hovered = {}
 
-        # Content area (fills remaining space after sidebar)
         self.content = tk.Frame(outer, bg=BG)
         self.content.pack(side="left", fill="both", expand=True)
 
-        # Log panel (inside sidebar — packed after nav items below)
         self._log_frame = tk.Frame(sidebar, bg=SURFACE)
 
-        # Log text — smaller, muted body; only the [label] carries color.
         _configure_ttk_styles()
         log_wrap = tk.Frame(self._log_frame, bg=SURFACE)
         log_wrap.pack(fill="both", expand=True, padx=SP_SM, pady=(SP_SM, SP_XS))
@@ -1966,7 +1917,6 @@ class App:
         self.log_text.configure(yscrollcommand=log_vsb.set)
         log_vsb.grid(row=0, column=1, sticky="ns")
 
-        # Shared host for per-page floating actions inside log panel.
         self._log_action_host = tk.Frame(self._log_frame, bg=SURFACE)
         self._log_action_host.pack(side="bottom", fill="x", padx=4, pady=(0, 4))
 
@@ -1991,7 +1941,6 @@ class App:
 
         self._panel_action_rows = {}
 
-        # Log tags: muted body + colored bracket labels. (No timestamps.)
         self.log_text.tag_configure("body", foreground=TEXT_SEC)
         self.log_text.tag_configure("highlight", foreground=ACCENT_LIGHT)
         self.log_text.tag_configure("label_add", foreground=SUCCESS)
@@ -2006,7 +1955,6 @@ class App:
         self.log_text.tag_configure("label_info", foreground=TEXT_SEC)
         self.log_text.tag_configure("label_preview", foreground=ACCENT_LIGHT)
 
-        # --- Setup tab ---
         self._add_nav(sidebar, "Setup")
         setup = SetupTab(self.content, log_callback=self.log, app=self)
         self._setup_tab = setup
@@ -2014,7 +1962,6 @@ class App:
         if getattr(setup, "action_row", None) is not None:
             self._panel_action_rows["Setup"] = setup.action_row
 
-        # --- Debug tab (right below Setup, no separator) ---
         self._add_nav(sidebar, "Debug")
         debug = DebugTab(self.content, app=self, log_callback=self.log)
         self._debug_tab = debug
@@ -2024,13 +1971,6 @@ class App:
 
         nav_sep = tk.Frame(sidebar, bg=SURFACE_RAISED, height=1)
         nav_sep.pack(fill="x", padx=16, pady=(6, 6))
-
-        # --- Sync tabs ---
-        _default_csvs = {
-            "Participants": BASE_DIR / "data" / "participants.csv",
-            "Speakers": BASE_DIR / "data" / "speakers.csv",
-            "Schedule": BASE_DIR / "data" / "schedule.csv",
-        }
 
         for name, desc, prune, staff_only, remove, func, en, fields, quick_add in [
             (
@@ -2071,7 +2011,7 @@ class App:
             (
                 "Schedule",
                 "Sync event sessions to Brella.",
-                True, False, False,  # Remove toggle hidden — never prune sessions.
+                True, False, False,
                 self._run_schedule,
                 True,
                 [
@@ -2089,15 +2029,11 @@ class App:
                           csv_header_fields=fields,
                           has_quick_add=quick_add)
             tab._log_callback = self.log
-            default_csv = _default_csvs.get(name)
-            if default_csv and default_csv.exists():
-                tab.csv_path.set(str(default_csv))
             self.panels[name] = tab.frame
             self._sync_tabs[name] = tab
             if getattr(tab, "action_row", None) is not None:
                 self._panel_action_rows[name] = tab.action_row
 
-        # Pack log into sidebar below nav
         log_nav_sep = tk.Frame(sidebar, bg=SURFACE_RAISED, height=1)
         log_nav_sep.pack(fill="x", padx=10, pady=(8, 0))
         self._log_frame.pack(fill="both", expand=True, pady=(0, 0))
@@ -2225,11 +2161,7 @@ class App:
         if active_row is not None:
             active_row.pack(side="left", padx=(4, 0), pady=4)
 
-    # Parsers for the backend's log prefixes. Both English (canonical) and
-    # legacy Portuguese phrasings are matched so older messages still render
-    # as clean labels. Order matters — more specific patterns first.
     _LOG_PATTERNS = [
-        # --- preview (line-ref may be a number or '?' when not tracked) ---
         (r'^\[PREVIEW\]\s*line\s*[\d\?]+:\s*would add\s*(.*)$', 'add'),
         (r'^\[PREVIEW\]\s*line\s*[\d\?]+:\s*would update\s*(.*)$', 'update'),
         (r'^\[PREVIEW\]\s*Would remove:\s*(.*)$', 'remove'),
@@ -2237,7 +2169,6 @@ class App:
         (r'^\[PREVIEW\]\s*linha\s*\d+:\s*ADICIONARIA\s*(.*)$', 'add'),
         (r'^\[PREVIEW\]\s*linha\s*\d+:\s*ATUALIZARIA\s*(.*)$', 'update'),
         (r'^\[PREVIEW\]\s*REMOVERIA\s*(.*)$', 'remove'),
-        # --- skip (skip-existing mode, no-changes, preview or real) ---
         (r'^\[SKIP\]\s*(.*)$', 'skip'),
         (r'^\[INFO\]\s*skip(?:ped|ping| )? \(already exists\):\s*(.*)$', 'skip'),
         (r'^\[INFO\]\s*would skip \(already exists\):\s*(.*)$', 'skip'),
@@ -2245,14 +2176,11 @@ class App:
         (r'^\[INFO\]\s*skipped \(existing, changes available\):\s*(.*)$', 'skip'),
         (r'^\[INFO\]\s*no changes:\s*(.*)$', 'skip'),
         (r'^\[INFO\]\s*IGNORA\w*\s*\(ja existe\):\s*(.*)$', 'skip'),
-        # --- duplicate ---
         (r'^\[DUP\]\s*(.*)$', 'dup'),
-        # --- missing info (no email / no id) ---
         (r'^\[SKIPPED\]\s*line\s*\d+:\s*(.*)$', 'missing'),
         (r'^\[IGNORADO\]\s*linha\s*\d+:\s*participante sem email\s*-\s*(.*)$', 'missing'),
         (r'^\[IGNORADO\]\s*linha\s*\d+:\s*participante sem ID 3cket\s*-\s*(.*)$', 'missing'),
         (r'^\[IGNORADO\]\s*linha\s*\d+:\s*(.*)$', 'missing'),
-        # --- real sync confirmations ---
         (r'^\[OK(?:\s+\d+)?\]\s*ADDED:\s*(.*)$', 'add'),
         (r'^\[OK(?:\s+\d+)?\]\s*UPDATED:\s*(.*)$', 'update'),
         (r'^\[OK(?:\s+\d+)?\]\s*REMOVED:\s*(.*)$', 'remove'),
@@ -2260,7 +2188,6 @@ class App:
         (r'^\[OK(?:\s+\d+)?\]\s*ATUALIZADO:\s*(.*)$', 'update'),
         (r'^\[OK(?:\s+\d+)?\]\s*REMOVIDO:\s*(.*)$', 'remove'),
         (r'^\[OK(?:\s+\d+)?\]\s*(.*)$', 'ok'),
-        # --- errors / warnings / info ---
         (r'^\[ERROR\]\s*line\s*[\d\?]+\s*(.*)$', 'error'),
         (r'^\[ERROR\]\s*(.*)$', 'error'),
         (r'^\[ERRO\]\s*(.*)$', 'error'),
@@ -2269,7 +2196,6 @@ class App:
         (r'^\[INFO\]\s*(.*)$', 'info'),
         (r'^\[SIMULACAO\]\s*linha\s*\d+:\s*(.*)$', 'preview'),
         (r'^\[SIMULATION\]\s*line\s*\d+:\s*(.*)$', 'preview'),
-        # case-insensitive tag variants
         (r'^\[add\]\s*(.*)$', 'add'),
         (r'^\[update\]\s*(.*)$', 'update'),
         (r'^\[remove\]\s*(.*)$', 'remove'),
@@ -2284,8 +2210,8 @@ class App:
     ]
 
     def _parse_log(self, msg):
-        """Return (label, body). label is 'add'/'update'/'remove'/'skip'/
-        'missing'/'ok'/'error'/'warn'/'info'/'preview' or '' for untagged."""
+\
+
         import re
         stripped = msg.strip()
         if not stripped:
@@ -2304,7 +2230,6 @@ class App:
         if label:
             self.log_text.insert("end", f"[{label}] ", (f"label_{label}",))
         if body:
-            # Split body on «highlighted» portions so we can tag them pink.
             for piece in re.split(r'(«[^»]*»)', body):
                 if piece.startswith("«") and piece.endswith("»") and len(piece) >= 2:
                     self.log_text.insert("end", piece[1:-1], ("highlight",))
@@ -2333,6 +2258,17 @@ class App:
         api.API_KEY = os.environ.get("BRELLA_API_KEY", "")
         api.ORG_ID = os.environ.get("BRELLA_ORG_ID", "1218")
         api.EVENT_ID = os.environ.get("BRELLA_EVENT_ID", "10672")
+        request_delay_raw = os.environ.get("BRELLA_REQUEST_DELAY", "0.1").strip()
+        try:
+            api.REQUEST_DELAY_SECONDS = max(0.0, float(request_delay_raw))
+        except ValueError:
+            api.REQUEST_DELAY_SECONDS = 0.1
+            self.log("[WARN] Request delay invalid; using default 0.1 seconds.")
+
+        download_csv = parse_env_bool(
+            os.environ.get("SIMSYNC_DOWNLOAD_3CKET_CSV", "1"),
+            default=True,
+        )
         csv_path = Path(tab.csv_path.get())
         quick_add_mode = bool(getattr(tab, "_quick_add_mode", False))
 
@@ -2347,10 +2283,11 @@ class App:
         prune_missing = False if quick_add_mode else tab.prune.get()
         update_existing = False if quick_add_mode else tab.update_existing.get()
 
+
         if quick_add_mode:
             self.log("[INFO] Quick add: scanning from end of CSV and showing only added attendees.")
 
-        api.prepare_csv(csv_path, download_csv=False, log_callback=self.log)
+        api.prepare_csv(csv_path, download_csv=download_csv, log_callback=self.log)
         if tab.dry_run.get():
             result = api.preview_sync_v4(
                 csv_path,
@@ -2410,7 +2347,6 @@ class App:
             log_callback=self.log,
         )
         if result:
-            # Show "Only in Brella" sessions in the Removed card.
             only_in_brella = result.get("only_in_brella", []) or []
             result["removed_participants"] = only_in_brella
             tab.card_removed_title.config(text="Only in Brella")

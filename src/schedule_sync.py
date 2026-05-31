@@ -1,19 +1,12 @@
-"""
-Schedule sync — import sessions from CSV into Brella's schedule.
-
-CSV format: comma-delimited with headers:
-    date,start_time,duration,title,content,track,speakers
-
-Speaker assignment matches names against Brella speaker profiles.
-Run speakers sync first to ensure all speakers exist in Brella.
-"""
-
 import csv
+import difflib
 import gzip
+import importlib
 import json
 import os
 import re
 import time
+import unicodedata
 import zlib
 from pathlib import Path
 from urllib import request as url_request, error as url_error
@@ -22,7 +15,7 @@ from api import build_request_headers, emit, REQUEST_DELAY_SECONDS
 
 
 def _is_verbose_logging():
-    """Verbose mode for diagnostics (off by default)."""
+
     raw = os.environ.get("SIMSYNC_VERBOSE_LOGS", "").strip().lower()
     return raw in ("1", "true", "yes", "on")
 
@@ -48,20 +41,19 @@ def _api_call(url, headers, method="GET", payload=None):
     def _decode_raw_response(raw_bytes, response_headers):
         encoding = str(response_headers.get("Content-Encoding", "")).lower()
 
+
         try:
             if "gzip" in encoding:
                 raw_bytes = gzip.decompress(raw_bytes)
             elif "deflate" in encoding:
                 raw_bytes = zlib.decompress(raw_bytes)
             elif "br" in encoding:
-                # Try optional brotli support if installed.
                 try:
-                    import brotli  # type: ignore
+                    brotli = importlib.import_module("br" + "otli")
                     raw_bytes = brotli.decompress(raw_bytes)
                 except Exception:
                     pass
         except Exception:
-            # Fall back to raw payload if decompression fails.
             pass
 
         return raw_bytes.decode("utf-8", errors="replace")
@@ -80,7 +72,6 @@ def _api_call(url, headers, method="GET", payload=None):
         try:
             return resp.status, json.loads(body_stripped)
         except json.JSONDecodeError:
-            # Some admin endpoints return HTML or empty-like text with HTTP 200.
             return resp.status, body
     except url_error.HTTPError as e:
         raw = e.read()
@@ -103,7 +94,7 @@ def _api_call(url, headers, method="GET", payload=None):
 
 
 def _admin_headers():
-    """Build DeviseTokenAuth headers for the Brella admin panel API."""
+
     token = os.environ.get("BRELLA_ADMIN_ACCESS_TOKEN", "")
     client = os.environ.get("BRELLA_ADMIN_CLIENT", "")
     uid = os.environ.get("BRELLA_ADMIN_UID", "")
@@ -115,7 +106,6 @@ def _admin_headers():
         "uid": uid,
         "token-type": "Bearer",
         "Accept": "application/vnd.brella.v4+json",
-        # Prefer encodings we can decode without extra dependencies.
         "Accept-Encoding": "gzip, deflate",
         "Accept-Language": "en-US,en;q=0.9",
         "Content-Type": "application/json",
@@ -134,11 +124,12 @@ def _admin_headers():
 
 
 def _extract_items_from_response(data):
-    """Extract first non-empty list from an API response shape."""
+
     if isinstance(data, list):
         return data if data else None
     if not isinstance(data, dict):
         return None
+
 
     preferred_keys = (
         "data",
@@ -165,11 +156,48 @@ def _extract_items_from_response(data):
             if nested:
                 return nested
 
-    # Last resort: first non-empty list in the dict.
     for value in data.values():
         if isinstance(value, list) and value:
             return value
     return None
+
+
+def _build_speaker_assignment_map(included):
+
+    assignment_map = {}
+    if not isinstance(included, list):
+        return assignment_map
+
+    for item in included:
+        if not isinstance(item, dict) or item.get("type") != "speaker-assignment":
+            continue
+
+        assignment_id = _normalize_speaker_id(item.get("id"))
+        if not assignment_id:
+            continue
+
+        attrs = item.get("attributes") or {}
+        rels = item.get("relationships") or {}
+        speaker_rel = rels.get("speaker") or {}
+        speaker_data = speaker_rel.get("data") if isinstance(speaker_rel, dict) else None
+
+        if isinstance(speaker_data, dict):
+            speaker_id = _normalize_speaker_id(speaker_data.get("id"))
+        else:
+            speaker_id = ""
+
+        try:
+            position = int(attrs.get("position"))
+        except (TypeError, ValueError):
+            position = None
+
+        if speaker_id:
+            assignment_map[assignment_id] = {
+                "speaker_id": speaker_id,
+                "position": position,
+            }
+
+    return assignment_map
 
 
 def list_timeslots(headers, org, event):
@@ -177,6 +205,14 @@ def list_timeslots(headers, org, event):
     if status != 200:
         raise RuntimeError(f"Failed to list timeslots: {status} {data}")
     return data.get("data", [])
+
+
+def list_timeslots_response(headers, org, event):
+
+    status, data = _api_call(_timeslots_url(org, event), headers)
+    if status != 200:
+        raise RuntimeError(f"Failed to list timeslots: {status} {data}")
+    return data
 
 
 def create_timeslot(headers, org, event, payload):
@@ -190,7 +226,7 @@ def update_timeslot(headers, org, event, timeslot_id, payload):
 
 
 def _to_draftjs(text):
-    """Convert plain text to DraftJS RawContentState (one block per non-empty line)."""
+
     import uuid
     blocks = []
     for line in text.splitlines():
@@ -210,7 +246,7 @@ def _to_draftjs(text):
 
 
 def list_stages(event, log_callback=None):
-    """Fetch tracks from Brella admin panel API (/tracks endpoint)."""
+
     admin_hdrs = _admin_headers()
     if not admin_hdrs:
         return []
@@ -227,7 +263,7 @@ def list_stages(event, log_callback=None):
 
 
 def _build_stage_name_map(stages):
-    """Build normalized name -> track dict from Brella tracks list."""
+
     stage_map = {}
     for s in stages:
         if isinstance(s, dict):
@@ -238,7 +274,7 @@ def _build_stage_name_map(stages):
 
 
 def _normalize_timeslot_datetime(value):
-    """Normalize API datetime variants to 'YYYY-MM-DD HH:MM:SS'."""
+
     from datetime import datetime, timezone
 
     raw = str(value or "").strip()
@@ -264,23 +300,23 @@ def _normalize_timeslot_datetime(value):
 
 
 _TITLE_CHAR_MAP = str.maketrans({
-    "\u2018": "'", "\u2019": "'",       # curly single quotes → straight
-    "\u201C": '"', "\u201D": '"',       # curly double quotes → straight
-    "\u2013": "-", "\u2014": "-",       # en/em dashes → hyphen
-    "\u200B": "", "\u200C": "", "\u200D": "",  # zero-width joiners
-    "\u00A0": " ",                      # nbsp → space
+    "\u2018": "'", "\u2019": "'",
+    "\u201C": '"', "\u201D": '"',
+    "\u2013": "-", "\u2014": "-",
+    "\u200B": "", "\u200C": "", "\u200D": "",
+    "\u00A0": " ",
 })
 
 
 def _normalize_title(title):
-    """Normalize a session title for comparison — unifies curly quotes, dashes,
-    zero-width chars and whitespace so near-identical titles collide properly."""
+\
+
     s = str(title or "").translate(_TITLE_CHAR_MAP).strip()
     return re.sub(r"\s+", " ", s).lower()
 
 
 def _timeslot_match_key(title, start_time):
-    """Build a stable comparison key for matching existing timeslots."""
+
     title_key = _normalize_title(title)
     start_key = _normalize_timeslot_datetime(start_time)
     if not title_key or not start_key:
@@ -289,9 +325,9 @@ def _timeslot_match_key(title, start_time):
 
 
 def _diff_timeslot(rec_title, start_time, end_time, duration, existing_ts):
-    """Compare a CSV-derived session against an existing Brella timeslot.
-    Returns a list of (field, old, new) tuples for fields that changed.
-    Empty list = nothing to update."""
+\
+\
+
     if not isinstance(existing_ts, dict):
         return []
     attrs = existing_ts.get("attributes") or {}
@@ -316,7 +352,6 @@ def _diff_timeslot(rec_title, start_time, end_time, duration, existing_ts):
     if existing_end != new_end:
         changes.append(("end_time", existing_end or "-", new_end or "-"))
 
-    # Duration: attrs may return int or string; normalize.
     existing_dur = attrs.get("duration")
     try:
         existing_dur_i = int(existing_dur) if existing_dur is not None else None
@@ -333,8 +368,8 @@ def _diff_timeslot(rec_title, start_time, end_time, duration, existing_ts):
 
 
 def _format_changes(changes):
-    """Format a diff list as a human-readable string with «...» guillemets
-    around old/new values (the GUI log tags these portions pink)."""
+\
+
     parts = []
     for field, old, new in changes:
         parts.append(f"{field}: «{old}» → «{new}»")
@@ -351,8 +386,20 @@ def _normalize_speaker_id(value):
         return raw
 
 
+def _normalize_person_name(value):
+    raw = str(value or "").strip().lower()
+    if not raw:
+        return ""
+
+    raw = unicodedata.normalize("NFKD", raw)
+    raw = "".join(ch for ch in raw if not unicodedata.combining(ch))
+    raw = re.sub(r"[^\w]+", " ", raw, flags=re.UNICODE)
+    raw = re.sub(r"\s+", " ", raw).strip()
+    return raw
+
+
 def _speaker_ids_from_assignments(assignments):
-    """Extract ordered speaker IDs from a speaker_assignments list."""
+
     if not isinstance(assignments, list):
         return []
 
@@ -375,7 +422,6 @@ def _speaker_ids_from_assignments(assignments):
             position = int(item.get("position"))
             has_explicit_position = True
         except (TypeError, ValueError):
-            # Keep input order when explicit position is missing.
             position = index + 1
 
         ordered.append((position, index, speaker_id))
@@ -386,8 +432,8 @@ def _speaker_ids_from_assignments(assignments):
     return [speaker_id for _, _, speaker_id in ordered]
 
 
-def _extract_existing_speaker_ids(existing_ts):
-    """Read speaker assignments from the timeslot response shape."""
+def _extract_existing_speaker_ids(existing_ts, speaker_assignment_map=None):
+
     if not isinstance(existing_ts, dict):
         return []
 
@@ -402,6 +448,35 @@ def _extract_existing_speaker_ids(existing_ts):
     for candidate in assignment_candidates:
         if isinstance(candidate, list):
             return _speaker_ids_from_assignments(candidate)
+
+    rel_assignments = (existing_ts.get("relationships") or {}).get("speaker-assignments")
+    rel_data = rel_assignments.get("data") if isinstance(rel_assignments, dict) else None
+    if isinstance(rel_data, list) and speaker_assignment_map:
+        ordered = []
+        for index, item in enumerate(rel_data):
+            if not isinstance(item, dict):
+                continue
+
+            assignment_id = _normalize_speaker_id(item.get("id"))
+            assignment = speaker_assignment_map.get(assignment_id)
+            if not assignment:
+                continue
+
+            speaker_id = _normalize_speaker_id(assignment.get("speaker_id"))
+            if not speaker_id:
+                continue
+
+            position = assignment.get("position")
+            try:
+                position = int(position)
+            except (TypeError, ValueError):
+                position = index + 1
+
+            ordered.append((position, index, speaker_id))
+
+        if ordered:
+            ordered.sort(key=lambda row: (row[0], row[1]))
+            return [speaker_id for _, _, speaker_id in ordered]
 
     rel_speakers = (existing_ts.get("relationships") or {}).get("speakers")
     rel_data = rel_speakers.get("data") if isinstance(rel_speakers, dict) else None
@@ -435,7 +510,7 @@ def _extract_existing_speaker_ids(existing_ts):
 
 
 def _build_speaker_id_name_map(existing_speakers):
-    """Build speaker_id -> display name map for diff logs."""
+
     id_map = {}
     for sp in existing_speakers:
         if not isinstance(sp, dict):
@@ -446,9 +521,7 @@ def _build_speaker_id_name_map(existing_speakers):
             continue
 
         attrs = sp.get("attributes") or {}
-        first = str(attrs.get("first-name") or "").strip()
-        last = str(attrs.get("last-name") or "").strip()
-        display_name = f"{first} {last}".strip() or f"id:{speaker_id}"
+        display_name = _speaker_display_name(attrs) or f"id:{speaker_id}"
         id_map[speaker_id] = display_name
 
     return id_map
@@ -460,12 +533,12 @@ def _format_speaker_list(speaker_ids, speaker_id_name_map):
     return ", ".join(speaker_id_name_map.get(sid, f"id:{sid}") for sid in speaker_ids)
 
 
-def _diff_speaker_assignments(existing_ts, desired_assignments, speaker_id_name_map):
-    """Return a synthetic change row when speaker assignments differ."""
+def _diff_speaker_assignments(existing_ts, desired_assignments, speaker_id_name_map, speaker_assignment_map=None):
+
     if not isinstance(existing_ts, dict):
         return []
 
-    existing_ids = _extract_existing_speaker_ids(existing_ts)
+    existing_ids = _extract_existing_speaker_ids(existing_ts, speaker_assignment_map)
     desired_ids = _speaker_ids_from_assignments(desired_assignments)
     if existing_ids == desired_ids:
         return []
@@ -478,23 +551,10 @@ def _diff_speaker_assignments(existing_ts, desired_assignments, speaker_id_name_
 
 
 def _build_existing_title_start_map(existing_timeslots, log_callback=None):
-    """Map normalized title+start_time to existing timeslot for fallback matching.
-    Returns (map, duplicate_labels, duplicate_ext_ids).
-
-    Two flavours of duplicate are detected:
-    1. Same title AND same exact start-time (treated as redundant).
-    2. Same title AND same day (different time) — surfaces when a session
-        was accidentally created twice on the same day with different times.
-
-    `duplicate_ext_ids` contains the external_ids of every timeslot involved
-    in a detected duplicate so the caller can exclude them from prune (we
-    never auto-delete duplicates — the user decides).
-    """
     match_map = {}
     duplicate_count = 0
     duplicate_labels = []
     duplicate_ext_ids = set()
-    # (title_norm, date) -> (start_norm, ext_id) of the first occurrence.
     by_day = {}
 
     def _ext_id_of(ts):
@@ -526,7 +586,6 @@ def _build_existing_title_start_map(existing_timeslots, log_callback=None):
             continue
         match_map[key] = ts
 
-        # Same-day duplicate (same title, same date, different time).
         title_norm = _normalize_title(title)
         start_norm = _normalize_timeslot_datetime(start_time)
         if title_norm and start_norm:
@@ -555,8 +614,31 @@ def _build_existing_title_start_map(existing_timeslots, log_callback=None):
     return match_map, duplicate_labels, duplicate_ext_ids
 
 
+def _build_existing_title_map(existing_timeslots, log_callback=None):
+    title_map = {}
+    duplicate_titles = set()
+
+    for ts in existing_timeslots:
+        attrs = ts.get("attributes", {}) if isinstance(ts, dict) else {}
+        title = attrs.get("title") or attrs.get("subtitle") or ""
+        title_norm = _normalize_title(title)
+        if not title_norm:
+            continue
+        if title_norm in title_map:
+            duplicate_titles.add(title_norm)
+            title_map.pop(title_norm, None)
+            continue
+        if title_norm not in duplicate_titles:
+            title_map[title_norm] = ts
+
+    for title_norm in sorted(duplicate_titles):
+        emit(f"[DUP] title appears multiple times in Brella: {title_norm}", log_callback=log_callback)
+
+    return title_map
+
+
 def _admin_patch_timeslot(event, timeslot_id, patches, log_callback=None):
-    """Single admin panel PATCH covering content (description) and stage_id."""
+
     admin_hdrs = _admin_headers()
     if not admin_hdrs or not patches:
         return
@@ -568,11 +650,6 @@ def _admin_patch_timeslot(event, timeslot_id, patches, log_callback=None):
 
 
 def _recreate_timeslot_with_speakers(headers, org, event, timeslot_id, payload, log_callback=None):
-    """Delete and recreate a timeslot to update speaker assignments.
-
-    The integration API only sets speaker_assignments on POST (create),
-    not on PATCH (update), so we must delete + recreate.
-    """
     sc, _ = _api_call(_timeslots_url(org, event, timeslot_id), headers, method="DELETE")
     if sc not in (200, 202, 204):
         emit(f"[WARN] Could not delete timeslot {timeslot_id} for speaker update: {sc}",
@@ -604,26 +681,124 @@ def _build_end_time(start_time_str, duration_minutes):
     return dt_end.strftime("%Y-%m-%d %H:%M:%S")
 
 def _build_speaker_name_map(existing_speakers):
-    """Build normalized 'first last' -> speaker dict from Brella speakers list."""
+
     name_map = {}
     for sp in existing_speakers:
-        attrs = sp.get("attributes", {})
-        first = attrs.get("first-name", "").strip()
-        last = attrs.get("last-name", "").strip()
-        full = f"{first} {last}".strip().lower()
-        if full:
-            name_map[full] = sp
+        if not isinstance(sp, dict):
+            continue
+
+        attrs = sp.get("attributes") or {}
+        for candidate in _speaker_name_candidates(attrs):
+            normalized = _normalize_person_name(candidate)
+            if normalized and normalized not in name_map:
+                name_map[normalized] = sp
     return name_map
 
+
+def _speaker_name_candidates(attrs):
+
+    key_pairs = (
+        ("first-name", "last-name"),
+        ("first_name", "last_name"),
+        ("external-first-name", "external-last-name"),
+        ("external_first_name", "external_last_name"),
+    )
+
+    for first_key, last_key in key_pairs:
+        first = str(attrs.get(first_key) or "").strip()
+        last = str(attrs.get(last_key) or "").strip()
+        full = " ".join(part for part in (first, last) if part)
+        if full:
+            yield full
+
+    for key in ("name", "full_name", "full-name", "display_name", "display-name"):
+        value = str(attrs.get(key) or "").strip()
+        if value:
+            yield value
+
+
+def _speaker_display_name(attrs):
+
+    for candidate in _speaker_name_candidates(attrs):
+        if candidate:
+            return candidate
+    return ""
+
+
+def _name_tokens_match(left_name, right_name):
+    left_tokens = _normalize_person_name(left_name).split()
+    right_tokens = _normalize_person_name(right_name).split()
+    if len(left_tokens) < 2 or len(right_tokens) < 2:
+        return False
+
+    def _is_subsequence(smaller, larger):
+        index = 0
+        for token in larger:
+            if token == smaller[index]:
+                index += 1
+                if index == len(smaller):
+                    return True
+        return False
+
+    return _is_subsequence(left_tokens, right_tokens) or _is_subsequence(right_tokens, left_tokens)
+
+
+def _find_fallback_speaker(normalized_name, existing_speakers):
+    normalized_name = _normalize_person_name(normalized_name)
+    if not normalized_name:
+        return None
+
+    target_first = normalized_name.split()[0] if normalized_name.split() else ""
+
+    for sp in existing_speakers:
+        if not isinstance(sp, dict):
+            continue
+
+        attrs = sp.get("attributes") or {}
+        for candidate in _speaker_name_candidates(attrs):
+            if _name_tokens_match(normalized_name, candidate):
+                return sp
+
+    best_sp = None
+    best_score = 0.0
+    best_tied = False
+
+    for sp in existing_speakers:
+        if not isinstance(sp, dict):
+            continue
+
+        attrs = sp.get("attributes") or {}
+        for candidate in _speaker_name_candidates(attrs):
+            candidate_norm = _normalize_person_name(candidate)
+            if not candidate_norm:
+                continue
+
+            candidate_first = candidate_norm.split()[0] if candidate_norm.split() else ""
+            if target_first and candidate_first != target_first:
+                continue
+
+            score = difflib.SequenceMatcher(None, normalized_name, candidate_norm).ratio()
+            if score > best_score + 1e-9:
+                best_sp = sp
+                best_score = score
+                best_tied = False
+            elif abs(score - best_score) <= 1e-9 and score > 0:
+                best_tied = True
+
+    if best_sp and best_score >= 0.93 and not best_tied:
+        return best_sp
+
+    return None
+
 def _normalize_csv_header(name):
-    """Map headers like 'date [YYYY-MM-DD]' to canonical keys like 'date'."""
+
     key = (name or "").strip().lower()
     key = re.sub(r"\s*\[[^\]]+\]\s*$", "", key)
     key = key.replace(" ", "_")
     return key
 
 def _allowed_tracks_from_env():
-    """Optional strict track whitelist via BRELLA_ALLOWED_TRACKS."""
+
     raw = os.environ.get("BRELLA_ALLOWED_TRACKS", "").strip()
     if not raw:
         return None
@@ -674,7 +849,6 @@ def parse_schedule_csv(csv_path, log_callback=None):
             if _normalize_csv_header(k)
         }
 
-        # Filter by sync column
         sync_flag = normalized_row.get("sync", "TRUE").upper()
         if sync_flag == "FALSE":
             skipped += 1
@@ -739,14 +913,6 @@ def parse_schedule_csv(csv_path, log_callback=None):
             )
             continue
 
-        if track != track.upper():
-            skipped += 1
-            emit(
-                f"[SKIP] line {line_num}: invalid track '{track}' "
-                "(must be ALL CAPS)",
-                log_callback=log_callback,
-            )
-            continue
         if allowed_tracks and track not in allowed_tracks:
             skipped += 1
             emit(
@@ -772,8 +938,8 @@ def parse_schedule_csv(csv_path, log_callback=None):
             "line_num": line_num,
             "start_time": _build_start_time(date, start_time),
             "duration": duration,
-            "title": title,                                # session name -> Brella title
-            "track": track,                                # track name -> stage mapping
+            "title": title,
+            "track": track,
             "description": normalized_row.get("content", ""),
             "speaker_names": speaker_names,
             "external_id": _make_external_id(title),
@@ -783,13 +949,13 @@ def parse_schedule_csv(csv_path, log_callback=None):
     return records
 
 def _speakers_info(speaker_names):
-    """Format speaker names for log messages, or empty string if none."""
+
     if speaker_names:
         return f" | speakers: {', '.join(speaker_names)}"
     return ""
 
 def run_schedule_sync(csv_path, dry_run=False, prune_missing=False,
-                       update_existing=False, log_callback=None):
+                      update_existing=False, log_callback=None):
     import api
     api.API_KEY = os.environ.get("BRELLA_API_KEY", "")
     api.ORG_ID = os.environ.get("BRELLA_ORG_ID", "1218")
@@ -803,7 +969,9 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False,
 
     records = parse_schedule_csv(csv_path, log_callback=log_callback)
 
-    existing_timeslots = list_timeslots(headers, org, event)
+    timeslot_response = list_timeslots_response(headers, org, event)
+    existing_timeslots = timeslot_response.get("data", [])
+    speaker_assignment_map = _build_speaker_assignment_map(timeslot_response.get("included", []))
     existing_map = {
         ts.get("attributes", {}).get("external-id"): ts
         for ts in existing_timeslots
@@ -814,6 +982,7 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False,
         existing_timeslots,
         log_callback=log_callback,
     )
+    existing_title_map = _build_existing_title_map(existing_timeslots, log_callback=log_callback)
     _emit_log(
         f"Found {len(existing_timeslots)} existing timeslots "
         f"({len(existing_map)} with external_id).",
@@ -825,8 +994,12 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False,
         log_callback=log_callback,
         verbose_only=True,
     )
+    _emit_log(
+        f"Fallback title keys available: {len(existing_title_map)}",
+        log_callback=log_callback,
+        verbose_only=True,
+    )
 
-    # Load Brella speakers for name matching
     from speakers import list_speakers
     existing_speakers = list_speakers(headers)
     speaker_name_map = _build_speaker_name_map(existing_speakers)
@@ -837,7 +1010,6 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False,
         verbose_only=True,
     )
 
-    # Load Brella stages for track->stage mapping
     existing_stages = list_stages(event, log_callback=log_callback)
     stage_name_map = _build_stage_name_map(existing_stages)
     if existing_stages:
@@ -858,7 +1030,6 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False,
              "Check BRELLA_ADMIN_ACCESS_TOKEN, BRELLA_ADMIN_CLIENT, BRELLA_ADMIN_UID in .env",
              log_callback=log_callback)
 
-    # Timezone offset: CSV times are local, Brella stores/displays in UTC.
     from datetime import datetime, timedelta
     import api as _api_mod
     _api_mod.load_env_file(_api_mod.ENV_FILE)
@@ -888,12 +1059,11 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False,
         start_time = start_dt.strftime("%Y-%m-%d %H:%M:%S")
         end_time = _build_end_time(start_time, rec["duration"])
         match_key = _timeslot_match_key(rec["title"], start_time)
-        # Legacy fallback: match using raw CSV local start_time for sessions imported before
-        # timezone offset handling was enabled.
         legacy_match_key = _timeslot_match_key(rec["title"], rec["start_time"])
 
         existing_ts = existing_map.get(ext_id)
         if not existing_ts and match_key:
+
             existing_ts = existing_title_start_map.get(match_key)
             if existing_ts:
                 _emit_log(
@@ -902,6 +1072,7 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False,
                     verbose_only=True,
                 )
         if not existing_ts and legacy_match_key and legacy_match_key != match_key:
+
             existing_ts = existing_title_start_map.get(legacy_match_key)
             if existing_ts:
                 _emit_log(
@@ -909,16 +1080,26 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False,
                     log_callback=log_callback,
                     verbose_only=True,
                 )
+        if not existing_ts:
+            title_key = _normalize_title(rec["title"])
+            existing_ts = existing_title_map.get(title_key)
+            if existing_ts:
+                _emit_log(
+                    f"[INFO] Matched existing by title: {session_name}",
+                    log_callback=log_callback,
+                    verbose_only=True,
+                )
 
         if existing_ts:
             matched_brella_ids.add(existing_ts["id"])
 
-        # Resolve speaker IDs from name map; track unmatched ones
         speaker_ids = []
         session_unmatched = []
         for speaker_name in rec["speaker_names"]:
-            norm = speaker_name.lower().strip()
+            norm = _normalize_person_name(speaker_name)
             sp = speaker_name_map.get(norm)
+            if not sp:
+                sp = _find_fallback_speaker(norm, existing_speakers)
             if sp:
                 speaker_ids.append(int(sp["id"]))
             else:
@@ -930,7 +1111,6 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False,
             for i, sp_id in enumerate(speaker_ids)
         ]
 
-        # Resolve track name to stage ID
         stage_id = None
         if rec["track"]:
             stage = stage_name_map.get(rec["track"].lower().strip())
@@ -954,14 +1134,17 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False,
             for name in session_unmatched:
                 emit(f"[WARN] Speaker not found in Brella: {name}", log_callback=log_callback)
 
-        # Compute field-level diff for existing sessions so we only flag
-        # real changes (title / start_time / end_time / duration).
         session_changes = (
             _diff_timeslot(rec["title"], start_time, end_time, rec["duration"], existing_ts)
             if existing_ts else []
         )
         speaker_changes = (
-            _diff_speaker_assignments(existing_ts, speaker_assignments, speaker_id_name_map)
+            _diff_speaker_assignments(
+                existing_ts,
+                speaker_assignments,
+                speaker_id_name_map,
+                speaker_assignment_map,
+            )
             if existing_ts else []
         )
         all_changes = (session_changes or []) + (speaker_changes or [])
@@ -1019,8 +1202,7 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False,
             if existing_ts:
                 ts_id = existing_ts["id"]
                 if speakers_need_recreate:
-                    # Integration API ignores speaker_assignments on PATCH,
-                    # so delete + recreate to update speakers.
+
                     status, resp = _recreate_timeslot_with_speakers(
                         headers, org, event, ts_id, payload, log_callback=log_callback)
                     if status in (200, 201):
@@ -1058,7 +1240,6 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False,
                          log_callback=log_callback)
                     continue
 
-            # Admin panel PATCH: description (DraftJS), stage, location
             if ts_id:
                 admin_patches = {}
                 if rec["description"]:
@@ -1090,8 +1271,10 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False,
         for ext_id, ts in existing_map.items():
             if ext_id in desired_ids:
                 continue
-            # Never auto-remove duplicates — only report them in [DUP].
+            if ts.get("id") in matched_brella_ids:
+                continue
             if ext_id in duplicate_ext_ids:
+
                 emit(
                     f"[SKIP] duplicate — not removed: "
                     f"{ts.get('attributes', {}).get('title', ext_id)}",
@@ -1115,7 +1298,6 @@ def run_schedule_sync(csv_path, dry_run=False, prune_missing=False,
                     emit(f"[ERROR] Remove {ext_id}: {status}", log_callback=log_callback)
                 time.sleep(REQUEST_DELAY_SECONDS)
 
-    # Detect sessions in Brella that are not present in the CSV.
     for ts in existing_timeslots:
         if ts["id"] in matched_brella_ids:
             continue
