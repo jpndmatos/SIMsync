@@ -1,4 +1,4 @@
-<h1><picture><source media="(prefers-color-scheme: dark)" srcset="docs/logo-dark.svg"><img src="docs/logo.svg" alt="SIMsync" width="400" height="72"></picture></h1>
+# SIMsync
 
 SIMsync is a desktop tool for syncing event data from CSV files into Brella.
 It can sync:
@@ -7,11 +7,6 @@ It can sync:
 - speakers
 - schedule sessions
 - missing participant QR codes
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/workflow-dark.svg">
-  <img src="docs/workflow.svg" alt="Workflow diagram: select a CSV, preview changes, then sync to Brella" width="1180">
-</picture>
 
 ## What is in this folder
 
